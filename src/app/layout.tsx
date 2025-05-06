@@ -21,17 +21,18 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={inter.className}>
-        <ToastProvider />
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-          <div className="flex flex-col flex-1 overflow-hidden">
-            <Header />
-            <main className="flex-1 overflow-auto p-4 bg-gray-50">
-              {children}
-            </main>
+        <ToastProvider>
+          <div className="flex h-screen overflow-hidden">
+            <Sidebar />
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <Header />
+              <main className="flex-1 overflow-auto p-4 bg-gray-50">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-        <Toaster />
+          <Toaster />
+        </ToastProvider>
       </body>
     </html>
   );
