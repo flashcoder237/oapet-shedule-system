@@ -38,8 +38,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center space-x-4">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <BookOpen className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-green-100 rounded-full">
+              <BookOpen className="h-6 w-6 text-green-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Cours programmés</p>
@@ -91,7 +91,7 @@ export default function Dashboard() {
         <Card className="col-span-2 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Emploi du temps</h3>
-            <Link href="/schedule" className="text-sm text-blue-600 hover:underline flex items-center">
+            <Link href="/schedule" className="text-sm text-green-600 hover:underline flex items-center">
               Voir tout
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>

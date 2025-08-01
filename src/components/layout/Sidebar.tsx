@@ -34,19 +34,19 @@ export default function Sidebar() {
   ];
   
   return (
-    <aside className={`bg-primary text-white ${collapsed ? 'w-16' : 'w-64'} transition-all duration-300 shadow-lg flex flex-col`}>
+    <aside className={`bg-green-700 text-white ${collapsed ? 'w-16' : 'w-64'} transition-all duration-300 shadow-lg flex flex-col`}>
       <div className={`p-4 flex ${collapsed ? 'justify-center' : 'justify-between'} items-center border-b border-primary-dark`}>
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
               <Image src="/logo-placeholder.png" alt="Logo" width={20} height={20} />
             </div>
-            <span className="font-bold text-lg">FM UDouala</span>
+            <span className="font-bold text-lg">FMSP-UDo</span>
           </div>
         )}
         <button 
           onClick={() => setCollapsed(!collapsed)} 
-          className="p-1 rounded-full hover:bg-primary-dark"
+          className="p-1 rounded-full hover:bg-green-700-dark"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
@@ -64,8 +64,8 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center ${collapsed ? 'justify-center' : 'px-4'} py-3 ${
                     isActive 
-                      ? 'bg-primary-dark text-white' 
-                      : 'text-white/80 hover:bg-primary-light hover:text-white'
+                      ? 'bg-green-700-dark text-white' 
+                      : 'text-white/80 hover:bg-green-700-light hover:text-white'
                   }`}
                 >
                   <item.icon size={20} className={collapsed ? '' : 'mr-3'} />

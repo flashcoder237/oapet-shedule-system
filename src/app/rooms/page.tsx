@@ -33,8 +33,8 @@ export default function RoomsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">
           <div className="flex items-center space-x-4">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <Building className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-green-100 rounded-full">
+              <Building className="h-6 w-6 text-green-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Total des salles</p>

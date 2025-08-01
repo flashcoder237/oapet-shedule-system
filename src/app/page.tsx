@@ -18,14 +18,14 @@ export default function Home() {
       <div className="flex flex-col sm:flex-row gap-4">
         <Link 
           href="/dashboard" 
-          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all"
+          className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-700-dark text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all"
         >
           Accéder au tableau de bord
           <ArrowRight size={20} />
         </Link>
         <Link 
           href="/schedule" 
-          className="flex items-center justify-center gap-2 bg-secondary hover:bg-secondary-dark text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all"
+          className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-600-dark text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all"
         >
           Consulter les emplois du temps
           <ArrowRight size={20} />
