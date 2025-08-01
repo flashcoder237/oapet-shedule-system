@@ -1,4 +1,4 @@
-// src/app/auth/login/page.tsx
+// src/app/(auth)/login/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');

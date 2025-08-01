@@ -24,3 +24,58 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Colors personnalisées pour le système */
+.bg-green-700 {
+  background-color: #15803d;
+}
+
+.bg-green-700-dark {
+  background-color: #166534;
+}
+
+.bg-green-700-light {
+  background-color: #16a34a;
+}
+
+.text-primary {
+  color: #15803d;
+}
+
+.text-primary-dark {
+  color: #166534;
+}
+
+.border-primary {
+  border-color: #15803d;
+}
+
+.border-primary-dark {
+  border-color: #166534;
+}
+
+.ring-primary {
+  --tw-ring-color: #15803d;
+  --tw-ring-opacity: 1;
+}
+
+.focus\:ring-primary:focus {
+  --tw-ring-color: #15803d;
+  --tw-ring-opacity: 1;
+}
+
+.focus\:border-primary:focus {
+  border-color: #15803d;
+}
+
+.hover\:bg-green-700-dark:hover {
+  background-color: #166534;
+}
+
+.hover\:bg-green-700-light:hover {
+  background-color: #16a34a;
+}
+
+.hover\:text-primary-dark:hover {
+  color: #166534;
+}

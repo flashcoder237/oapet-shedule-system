@@ -30,7 +30,7 @@ export default function RegisterPage() {
     { id: 'lab', name: 'Laboratoire' }
   ];
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -48,7 +48,7 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -69,7 +69,7 @@ export default function RegisterPage() {
     setTimeout(() => {
       // Dans un vrai scénario, ceci serait remplacé par un appel API
       setIsLoading(false);
-      router.push('/auth/login?registered=true');
+      router.push('/login?registered=true');
     }, 1500);
   };
 
@@ -275,7 +275,7 @@ export default function RegisterPage() {
           <div className="text-center mt-4">
             <p className="text-sm text-gray-600">
               Vous avez déjà un compte?{' '}
-              <Link href="/auth/login" className="font-medium text-primary hover:text-primary-dark">
+              <Link href="/login" className="font-medium text-primary hover:text-primary-dark">
                 Se connecter
               </Link>
             </p>

@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
 export default function RoomOccupancyChart() {
-  const chartRef = useRef(null);
+  const chartRef = useRef<HTMLDivElement>(null);
   
   // Données d'exemple pour l'occupation des salles
   const data = [
@@ -49,7 +49,7 @@ export default function RoomOccupancyChart() {
         .range([height, 0]);
       
       // Fonction pour déterminer la couleur en fonction du taux d'occupation
-      const getColor = (rate) => {
+      const getColor = (rate: number) => {
         if (rate < 50) return '#10B981'; // Vert
         if (rate < 80) return '#FBBF24'; // Jaune
         return '#EF4444'; // Rouge
@@ -61,7 +61,7 @@ export default function RoomOccupancyChart() {
         .enter()
         .append('rect')
         .attr('class', 'bar')
-        .attr('x', d => x(d.room))
+        .attr('x', d => x(d.room) || 0)
         .attr('width', x.bandwidth())
         .attr('y', d => y(d.occupancyRate))
         .attr('height', d => height - y(d.occupancyRate))
@@ -90,7 +90,7 @@ export default function RoomOccupancyChart() {
         .enter()
         .append('text')
         .attr('class', 'label')
-        .attr('x', d => x(d.room) + x.bandwidth() / 2)
+        .attr('x', d => (x(d.room) || 0) + x.bandwidth() / 2)
         .attr('y', d => y(d.occupancyRate) - 5)
         .attr('text-anchor', 'middle')
         .text(d => d.occupancyRate + '%')

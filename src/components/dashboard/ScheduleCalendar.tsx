@@ -22,7 +22,7 @@ export default function ScheduleCalendar() {
   ];
   
   // Fonction pour obtenir les cours pour un jour et une heure spécifiques
-  const getScheduleForTimeSlot = (day, time) => {
+  const getScheduleForTimeSlot = (day: string, time: string) => {
     return scheduleData.filter(schedule => 
       schedule.day === day && schedule.startTime === time
     );
