@@ -1,10 +1,11 @@
 // src/components/layout/Header.tsx
 'use client';
 
-import { Bell, Settings, User, Menu } from 'lucide-react';
+import { Bell, Settings, User, Menu, Search, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -25,92 +26,206 @@ export default function Header() {
     return 'Système de gestion des emplois du temps';
   };
 
+  const dropdownVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: -10,
+      scale: 0.95,
+      transition: { duration: 0.2 }
+    },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.2, ease: "easeOut" }
+    }
+  };
+
+  const notificationBadgeVariants = {
+    initial: { scale: 0 },
+    animate: { scale: 1 },
+    pulse: { 
+      scale: [1, 1.2, 1],
+      transition: { duration: 0.6, repeat: Infinity, repeatType: "reverse" }
+    }
+  };
+
   return (
-    <header className="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between">
-      <div className="flex items-center">
-        <button 
-          className="mr-4 lg:hidden" 
+    <motion.header 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="surface-elevated backdrop-blur-sm sticky top-0 z-50 px-6 py-4 flex items-center justify-between border-b border-subtle"
+    >
+      <div className="flex items-center gap-4">
+        <motion.button 
+          className="lg:hidden p-2 rounded-xl hover:bg-primary-muted transition-colors" 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           aria-label="Toggle menu"
         >
-          <Menu size={24} />
-        </button>
-        <h1 className="text-xl font-semibold text-gray-800">{getPageTitle()}</h1>
+          <Menu size={20} className="text-secondary" />
+        </motion.button>
+        
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <h1 className="text-xl font-bold text-primary tracking-tight">{getPageTitle()}</h1>
+          <p className="text-sm text-secondary">Gérez efficacement votre système</p>
+        </motion.div>
       </div>
+
+      {/* Barre de recherche centrale */}
+      <motion.div 
+        className="hidden md:flex items-center bg-primary-subtle/50 rounded-xl px-4 py-2 min-w-64 max-w-md flex-1 mx-8"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Search size={16} className="text-secondary mr-3" />
+        <input 
+          type="text" 
+          placeholder="Rechercher..." 
+          className="bg-transparent flex-1 outline-none text-sm placeholder-secondary"
+        />
+      </motion.div>
       
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center gap-2">
         {/* Notifications */}
         <div className="relative">
-          <button 
-            className="p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+          <motion.button 
+            className="relative p-3 rounded-xl hover:bg-primary-muted transition-colors"
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             aria-label="Notifications"
           >
-            <Bell size={20} />
-            <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs">
+            <Bell size={18} className="text-secondary" />
+            <motion.span 
+              variants={notificationBadgeVariants}
+              initial="initial"
+              animate={["animate", "pulse"]}
+              className="absolute -top-1 -right-1 bg-accent text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium"
+            >
               3
-            </span>
-          </button>
+            </motion.span>
+          </motion.button>
           
-          {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
-              <div className="px-4 py-2 font-medium border-b border-gray-200">Notifications</div>
-              <div className="max-h-64 overflow-y-auto">
-                <a href="#" className="block px-4 py-2 hover:bg-gray-100 border-b border-gray-100">
-                  <p className="text-sm font-medium">Modification de salle</p>
-                  <p className="text-xs text-gray-500">Le cours de Anatomie a changé de salle</p>
-                  <p className="text-xs text-gray-400">Il y a 10 minutes</p>
-                </a>
-                <a href="#" className="block px-4 py-2 hover:bg-gray-100 border-b border-gray-100">
-                  <p className="text-sm font-medium">Conflit d'horaire détecté</p>
-                  <p className="text-xs text-gray-500">Veuillez vérifier l'emploi du temps</p>
-                  <p className="text-xs text-gray-400">Il y a 1 heure</p>
-                </a>
-                <a href="#" className="block px-4 py-2 hover:bg-gray-100">
-                  <p className="text-sm font-medium">Nouveau cours ajouté</p>
-                  <p className="text-xs text-gray-500">Cours de Biochimie ajouté à votre emploi du temps</p>
-                  <p className="text-xs text-gray-400">Hier</p>
-                </a>
-              </div>
-              <div className="px-4 py-2 border-t border-gray-200">
-                <a href="#" className="text-sm text-primary hover:underline">Voir toutes les notifications</a>
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {isNotificationsOpen && (
+              <motion.div 
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="absolute right-0 mt-2 w-80 surface-elevated rounded-xl shadow-xl border border-subtle z-50"
+              >
+                <div className="p-4 border-b border-subtle">
+                  <h3 className="font-semibold text-primary">Notifications</h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {[
+                    { title: "Modification de salle", desc: "Le cours de Anatomie a changé de salle", time: "Il y a 10 minutes" },
+                    { title: "Conflit d'horaire détecté", desc: "Veuillez vérifier l'emploi du temps", time: "Il y a 1 heure" },
+                    { title: "Nouveau cours ajouté", desc: "Cours de Biochimie ajouté à votre emploi du temps", time: "Hier" }
+                  ].map((notif, index) => (
+                    <motion.a 
+                      key={index}
+                      href="#" 
+                      className="block p-4 hover:bg-primary-subtle/50 transition-colors border-b border-subtle last:border-b-0"
+                      whileHover={{ x: 4 }}
+                    >
+                      <p className="text-sm font-medium text-primary">{notif.title}</p>
+                      <p className="text-xs text-secondary mt-1">{notif.desc}</p>
+                      <p className="text-xs text-tertiary mt-1">{notif.time}</p>
+                    </motion.a>
+                  ))}
+                </div>
+                <div className="p-4 border-t border-subtle">
+                  <Link href="#" className="text-sm text-accent hover:text-accent-hover font-medium">
+                    Voir toutes les notifications
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         
         {/* User Menu */}
         <div className="relative">
-          <button 
-            className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+          <motion.button 
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-primary-muted transition-colors"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             aria-label="Menu utilisateur"
           >
-            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-              <User size={18} />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center">
+              <User size={18} className="text-white" />
             </div>
-            <span className="hidden md:inline text-sm font-medium">Dr. Kamga</span>
-          </button>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-primary">Dr. Kamga</p>
+              <p className="text-xs text-secondary">Administrateur</p>
+            </div>
+            <motion.div
+              animate={{ rotate: isUserMenuOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown size={16} className="text-secondary" />
+            </motion.div>
+          </motion.button>
           
-          {isUserMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
-              <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                Profil
-              </Link>
-              <Link href="/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                <div className="flex items-center">
-                  <Settings size={16} className="mr-2" />
-                  Paramètres
+          <AnimatePresence>
+            {isUserMenuOpen && (
+              <motion.div 
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="absolute right-0 mt-2 w-56 surface-elevated rounded-xl shadow-xl border border-subtle z-50"
+              >
+                <div className="p-2">
+                  <Link href="/profile">
+                    <motion.div 
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-primary-subtle/50 transition-colors"
+                      whileHover={{ x: 4 }}
+                    >
+                      <User size={16} className="text-secondary" />
+                      <span className="text-sm font-medium">Profil</span>
+                    </motion.div>
+                  </Link>
+                  <Link href="/settings">
+                    <motion.div 
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-primary-subtle/50 transition-colors"
+                      whileHover={{ x: 4 }}
+                    >
+                      <Settings size={16} className="text-secondary" />
+                      <span className="text-sm font-medium">Paramètres</span>
+                    </motion.div>
+                  </Link>
                 </div>
-              </Link>
-              <div className="border-t border-gray-100 my-1"></div>
-              <Link href="/auth/logout" className="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                Déconnexion
-              </Link>
-            </div>
-          )}
+                <div className="border-t border-subtle m-2"></div>
+                <div className="p-2">
+                  <Link href="/auth/logout">
+                    <motion.div 
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                      whileHover={{ x: 4 }}
+                    >
+                      <div className="w-4 h-4 rounded bg-red-100 flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded"></div>
+                      </div>
+                      <span className="text-sm font-medium">Déconnexion</span>
+                    </motion.div>
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

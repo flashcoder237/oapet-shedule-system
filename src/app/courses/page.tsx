@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, BookOpen, User, Clock, Users, Calendar, Building } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Search, Filter, Edit, Trash2, BookOpen, User, Clock, Users, Calendar, Building, X } from 'lucide-react';
+import { Card, CardContent, StatCard } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageLoading, CardSkeleton, LoadingSpinner } from '@/components/ui/loading';
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Example course data
   const courses = [
@@ -54,6 +58,25 @@ export default function CoursesPage() {
   const departments = ['all', 'Medecine', 'Pharmacie', 'Dentaire'];
   const levels = ['all', 'L1', 'L2', 'L3', 'L4', 'M1', 'M2'];
 
+  // Simulation du chargement initial
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Simulation de recherche avec délai
+  useEffect(() => {
+    if (searchTerm) {
+      setIsSearching(true);
+      const searchTimer = setTimeout(() => {
+        setIsSearching(false);
+      }, 500);
+      return () => clearTimeout(searchTimer);
+    }
+  }, [searchTerm]);
+
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -81,87 +104,114 @@ export default function CoursesPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <PageLoading 
+        message="Chargement des cours..." 
+        variant="detailed"
+      />
+    );
+  }
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div 
+        className="flex items-center justify-between"
+        variants={itemVariants}
+      >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Cours</h1>
-          <p className="text-gray-600 mt-1">Gerez les cours, professeurs et planifications</p>
+          <h1 className="text-3xl font-bold text-primary">Gestion des Cours</h1>
+          <p className="text-secondary mt-1">Gérez les cours, professeurs et planifications</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-green-700 hover:bg-green-700-dark">
+        <Button onClick={() => setShowAddModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Ajouter un cours
         </Button>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-green-100 rounded-full">
-              <BookOpen className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total des cours</p>
-              <h3 className="text-2xl font-bold">152</h3>
-            </div>
-          </div>
-        </Card>
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-4 gap-6"
+        variants={itemVariants}
+      >
+        <StatCard
+          title="Total des cours"
+          value="152"
+          change="+8 ce mois"
+          trend="up"
+          icon={<BookOpen className="h-6 w-6" />}
+        />
         
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-green-100 rounded-full">
-              <Calendar className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Cours actifs</p>
-              <h3 className="text-2xl font-bold">138</h3>
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Cours actifs"
+          value="138"
+          change="91% du total"
+          trend="neutral"
+          icon={<Calendar className="h-6 w-6" />}
+        />
         
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-purple-100 rounded-full">
-              <User className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Professeurs</p>
-              <h3 className="text-2xl font-bold">45</h3>
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Professeurs"
+          value="45"
+          change="+2 ce mois"
+          trend="up"
+          icon={<User className="h-6 w-6" />}
+        />
 
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-yellow-100 rounded-full">
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Heures/semaine</p>
-              <h3 className="text-2xl font-bold">1,240h</h3>
-            </div>
-          </div>
-        </Card>
-      </div>
+        <StatCard
+          title="Heures/semaine"
+          value="1,240h"
+          change="Planning complet"
+          trend="neutral"
+          icon={<Clock className="h-6 w-6" />}
+        />
+      </motion.div>
 
-      <div className="flex flex-col md:flex-row gap-4">
+      <motion.div 
+        className="flex flex-col md:flex-row gap-4"
+        variants={itemVariants}
+      >
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-4 w-4" />
           <input
             type="text"
             placeholder="Rechercher un cours, code ou professeur..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full pl-10 pr-10 py-3 border border-subtle rounded-xl focus:ring-2 focus:ring-accent focus:border-accent bg-surface transition-all"
           />
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <LoadingSpinner size="sm" />
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="px-4 py-3 border border-subtle rounded-xl focus:ring-2 focus:ring-accent focus:border-accent bg-surface transition-all"
           >
-            <option value="all">Tous les departements</option>
+            <option value="all">Tous les départements</option>
             {departments.slice(1).map(dept => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
@@ -171,89 +221,146 @@ export default function CoursesPage() {
             Filtres
           </Button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredCourses.map(course => (
-          <Card key={course.id} className="p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-xl font-bold text-gray-900">{course.name}</h3>
-                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    {course.code}
-                  </span>
-                </div>
-                <div className="flex items-center text-gray-600 mb-2">
-                  <User className="h-4 w-4 mr-1" />
-                  <span className="text-sm">{course.professor}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Building className="h-4 w-4 mr-1" />
-                  <span className="text-sm">{course.department}</span>
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm">
-                  <Edit className="h-4 w-4" />
+      <motion.div 
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        variants={itemVariants}
+      >
+        <AnimatePresence>
+          {isSearching ? (
+            // Skeleton pendant la recherche
+            Array.from({ length: 4 }).map((_, i) => (
+              <motion.div
+                key={`skeleton-${i}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <CardSkeleton rows={4} showFooter />
+              </motion.div>
+            ))
+          ) : (
+            filteredCourses.map((course, index) => (
+              <motion.div
+                key={course.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ delay: index * 0.1 }}
+                layout
+              >
+                <Card hover interactive className="group">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-xl font-bold text-primary group-hover:text-accent transition-colors">{course.name}</h3>
+                          <span className="text-sm text-secondary bg-accent-muted px-2 py-1 rounded-lg">
+                            {course.code}
+                          </span>
+                        </div>
+                        <div className="flex items-center text-secondary mb-2">
+                          <User className="h-4 w-4 mr-1" />
+                          <span className="text-sm">{course.professor}</span>
+                        </div>
+                        <div className="flex items-center text-secondary">
+                          <Building className="h-4 w-4 mr-1" />
+                          <span className="text-sm">{course.department}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border mb-4 ${getStatusColor(course.status)}`}>
+                      {getStatusText(course.status)}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 text-secondary mr-2" />
+                        <div>
+                          <p className="text-xs text-tertiary">Durée totale</p>
+                          <p className="text-sm font-medium text-primary">{course.durationHours}h</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <Users className="h-4 w-4 text-secondary mr-2" />
+                        <div>
+                          <p className="text-xs text-tertiary">Étudiants</p>
+                          <p className="text-sm font-medium text-primary">{course.studentsCount}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-4 border-t border-subtle">
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <Calendar className="mr-1 h-3 w-3" />
+                        Planning
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <Users className="mr-1 h-3 w-3" />
+                        Étudiants
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="surface-elevated rounded-xl p-6 w-full max-w-md border border-subtle"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-primary">Ajouter un nouveau cours</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowAddModal(false)}
+                  className="rounded-full"
+                >
+                  <X className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50">
-                  <Trash2 className="h-4 w-4" />
+              </div>
+              <p className="text-secondary mb-6">Formulaire d'ajout de cours à implémenter</p>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1"
+                >
+                  Annuler
+                </Button>
+                <Button className="flex-1">
+                  Ajouter
                 </Button>
               </div>
-            </div>
-
-            <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border mb-3 ${getStatusColor(course.status)}`}>
-              {getStatusText(course.status)}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 text-gray-500 mr-2" />
-                <div>
-                  <p className="text-xs text-gray-500">Duree totale</p>
-                  <p className="text-sm font-medium">{course.durationHours}h</p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <Users className="h-4 w-4 text-gray-500 mr-2" />
-                <div>
-                  <p className="text-xs text-gray-500">Etudiants</p>
-                  <p className="text-sm font-medium">{course.studentsCount}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4 border-t">
-              <Button variant="outline" size="sm" className="flex-1">
-                <Calendar className="mr-1 h-3 w-3" />
-                Planning
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <Users className="mr-1 h-3 w-3" />
-                Etudiants
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Ajouter un nouveau cours</h2>
-            <p className="text-gray-600 mb-4">Formulaire d'ajout de cours a implementer</p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                Annuler
-              </Button>
-              <Button className="bg-green-700 hover:bg-green-700-dark">
-                Ajouter
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
