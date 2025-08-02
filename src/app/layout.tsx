@@ -1,13 +1,13 @@
 // src/app/layout.tsx
 import './globals.css';
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
+import { AuthProvider } from '@/lib/auth/context';
+import AppLayout from '@/components/layout/AppLayout';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastProvider } from '@/components/ui/use-toast';
 
 export const metadata = {
-  title: 'Système de gestion des emplois du temps - Faculté de Médécine UDouala',
-  description: 'Application de gestion des emplois du temps avec flexibilité des salles',
+  title: 'OAPET Schedule System - Système de gestion des emplois du temps avec IA',
+  description: 'Application de gestion des emplois du temps universitaire avec intelligence artificielle - Université de Douala',
 };
 
 export default function RootLayout({
@@ -19,15 +19,11 @@ export default function RootLayout({
     <html lang="fr">
       <body>
         <ToastProvider>
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar />
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <Header />
-              <main className="flex-1 overflow-auto p-6">
-                {children}
-              </main>
-            </div>
-          </div>
+          <AuthProvider>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </AuthProvider>
           <Toaster />
         </ToastProvider>
       </body>

@@ -1,71 +1,75 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, MapPin, Users, Monitor, Calendar } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Search, Filter, Edit, Trash2, MapPin, Users, Monitor, Calendar, Building, X, AlertTriangle } from 'lucide-react';
+import { Card, CardContent, StatCard } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageLoading, CardSkeleton, LoadingSpinner } from '@/components/ui/loading';
+import { useToast } from '@/components/ui/use-toast';
+import { roomService } from '@/lib/api/services/rooms';
+import type { Room, RoomStats } from '@/types/api';
 import RoomOccupancyStats from '@/components/rooms/RoomOccupancyStats';
 
 export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBuilding, setSelectedBuilding] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [stats, setStats] = useState<RoomStats | null>(null);
+  const [buildings, setBuildings] = useState<string[]>(['all']);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { toast } = useToast();
 
-  // Données exemple des salles
-  const rooms = [
-    {
-      id: '1',
-      name: 'A101',
-      building: 'Bâtiment A',
-      capacity: 50,
-      features: ['Projecteur', 'Tableau interactif', 'Climatisation'],
-      occupancyRate: 85,
-      status: 'available',
-      nextBooking: 'Anatomie - 14:00'
-    },
-    {
-      id: '2',
-      name: 'A102',
-      building: 'Bâtiment A',
-      capacity: 30,
-      features: ['Projecteur', 'Ordinateurs'],
-      occupancyRate: 65,
-      status: 'occupied',
-      currentCourse: 'Biochimie - Dr. Mbarga'
-    },
-    {
-      id: '3',
-      name: 'B201',
-      building: 'Bâtiment B',
-      capacity: 80,
-      features: ['Projecteur', 'Microphone', 'Climatisation'],
-      occupancyRate: 90,
-      status: 'maintenance',
-      maintenanceReason: 'Réparation climatisation'
-    },
-    {
-      id: '4',
-      name: 'Amphi A',
-      building: 'Amphithéâtres',
-      capacity: 200,
-      features: ['Projecteur', 'Microphone', 'Enregistrement', 'Climatisation'],
-      occupancyRate: 95,
-      status: 'available',
-      nextBooking: 'Conférence - 16:00'
-    },
-    {
-      id: '5',
-      name: 'Labo Bio',
-      building: 'Laboratoires',
-      capacity: 25,
-      features: ['Microscopes', 'Paillasses', 'Équipement médical'],
-      occupancyRate: 70,
-      status: 'occupied',
-      currentCourse: 'TP Biologie - Dr. Talla'
+  // Chargement des données
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Charger les salles et statistiques en parallèle
+        const [roomsData, statsData] = await Promise.all([
+          roomService.getRooms(),
+          roomService.getRoomsStats()
+        ]);
+        
+        setRooms(roomsData);
+        setStats(statsData);
+        
+        // Extraire les bâtiments uniques
+        const uniqueBuildings = ['all', ...new Set(roomsData.map(room => room.building))];
+        setBuildings(uniqueBuildings);
+        
+      } catch (error) {
+        console.error('Erreur lors du chargement des salles:', error);
+        setError('Erreur lors du chargement des données');
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les salles. Vérifiez votre connexion.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [toast]);
+
+  // Recherche avec délai
+  useEffect(() => {
+    if (searchTerm) {
+      setIsSearching(true);
+      const searchTimer = setTimeout(() => {
+        setIsSearching(false);
+      }, 500);
+      return () => clearTimeout(searchTimer);
     }
-  ];
-
-  const buildings = ['all', 'Bâtiment A', 'Bâtiment B', 'Amphithéâtres', 'Laboratoires'];
+  }, [searchTerm]);
 
   const filteredRooms = rooms.filter(room => {
     const matchesSearch = room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -92,70 +96,89 @@ export default function RoomsPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <PageLoading 
+        message="Chargement des salles..." 
+        variant="detailed"
+      />
+    );
+  }
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <motion.div 
+        className="flex items-center justify-between"
+        variants={itemVariants}
+      >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Salles</h1>
-          <p className="text-gray-600 mt-1">Gérez les salles de cours et leurs disponibilités</p>
+          <h1 className="text-3xl font-bold text-primary">Gestion des Salles</h1>
+          <p className="text-secondary mt-1">Gérez les salles de cours et leurs disponibilités</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-green-700 hover:bg-green-700-dark">
+        <Button onClick={() => setShowAddModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Ajouter une salle
         </Button>
-      </div>
+      </motion.div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-green-100 rounded-full">
-              <MapPin className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total des salles</p>
-              <h3 className="text-2xl font-bold">30</h3>
-            </div>
-          </div>
-        </Card>
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-4 gap-6"
+        variants={itemVariants}
+      >
+        <StatCard
+          title="Total des salles"
+          value={stats?.total_rooms?.toString() || rooms.length.toString()}
+          change={`${buildings.length - 1} bâtiments`}
+          trend="up"
+          icon={<MapPin className="h-6 w-6" />}
+        />
         
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-green-100 rounded-full">
-              <MapPin className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Disponibles</p>
-              <h3 className="text-2xl font-bold">24</h3>
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Disponibles"
+          value={rooms.filter(r => r.status === 'available').length.toString()}
+          change={`${Math.round((rooms.filter(r => r.status === 'available').length / rooms.length) * 100)}% du total`}
+          trend="up"
+          icon={<MapPin className="h-6 w-6" />}
+        />
         
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-red-100 rounded-full">
-              <Users className="h-6 w-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Occupées</p>
-              <h3 className="text-2xl font-bold">4</h3>
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Occupées"
+          value={rooms.filter(r => r.status === 'occupied').length.toString()}
+          change="Actuellement en cours"
+          trend="neutral"
+          icon={<Users className="h-6 w-6" />}
+        />
 
-        <Card className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-yellow-100 rounded-full">
-              <Monitor className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Maintenance</p>
-              <h3 className="text-2xl font-bold">2</h3>
-            </div>
-          </div>
-        </Card>
-      </div>
+        <StatCard
+          title="Maintenance"
+          value={rooms.filter(r => r.status === 'maintenance').length.toString()}
+          change="Hors service"
+          trend="down"
+          icon={<AlertTriangle className="h-6 w-6" />}
+        />
+      </motion.div>
 
       {/* Statistiques d'occupation */}
       <Card className="p-4">

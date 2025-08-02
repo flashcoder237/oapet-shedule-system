@@ -1,15 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, Download, Eye, Grid, List, Clock, MapPin, User, Edit } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, Download, Eye, Grid, List, Clock, MapPin, User, Edit, BookOpen } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageLoading, LoadingSpinner } from '@/components/ui/loading';
+import { useToast } from '@/components/ui/use-toast';
+import { scheduleService } from '@/lib/api/services/schedules';
+import type { Schedule } from '@/types/api';
 
 export default function SchedulePage() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedRoom, setSelectedRoom] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [classes, setClasses] = useState<string[]>(['all']);
+  const [rooms, setRooms] = useState<string[]>(['all']);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { toast } = useToast();
 
   // Jours de la semaine
   const weekDays = [
@@ -28,107 +40,43 @@ export default function SchedulePage() {
     '16:00', '17:00', '18:00'
   ];
 
-  // Données exemple des sessions programmées
-  const scheduleSessions = [
-    {
-      id: '1',
-      courseName: 'Anatomie Générale',
-      courseCode: 'ANAT101',
-      professor: 'Dr. Kamga',
-      class: 'L1 Médecine',
-      room: 'A101',
-      day: 'Lundi',
-      startTime: '08:00',
-      endTime: '10:00',
-      duration: 2,
-      studentsCount: 45,
-      color: 'bg-blue-100 border-blue-300 text-blue-800',
-      status: 'confirmed'
-    },
-    {
-      id: '2',
-      courseName: 'Biochimie Métabolique',
-      courseCode: 'BIOC201',
-      professor: 'Dr. Mbarga',
-      class: 'L2 Médecine',
-      room: 'B201',
-      day: 'Lundi',
-      startTime: '14:00',
-      endTime: '16:00',
-      duration: 2,
-      studentsCount: 38,
-      color: 'bg-green-100 border-green-300 text-green-800',
-      status: 'confirmed'
-    },
-    {
-      id: '3',
-      courseName: 'Physiologie Humaine',
-      courseCode: 'PHYS301',
-      professor: 'Dr. Nkeng',
-      class: 'L3 Médecine',
-      room: 'Amphi A',
-      day: 'Mardi',
-      startTime: '10:00',
-      endTime: '12:00',
-      duration: 2,
-      studentsCount: 85,
-      color: 'bg-purple-100 border-purple-300 text-purple-800',
-      status: 'confirmed'
-    },
-    {
-      id: '4',
-      courseName: 'Microbiologie Clinique',
-      courseCode: 'MICR401',
-      professor: 'Dr. Talla',
-      class: 'L4 Médecine',
-      room: 'Labo Bio',
-      day: 'Mercredi',
-      startTime: '08:00',
-      endTime: '11:00',
-      duration: 3,
-      studentsCount: 25,
-      color: 'bg-yellow-100 border-yellow-300 text-yellow-800',
-      status: 'pending'
-    },
-    {
-      id: '5',
-      courseName: 'Pharmacologie Générale',
-      courseCode: 'PHAR501',
-      professor: 'Dr. Ebongue',
-      class: 'M1 Pharmacie',
-      room: 'C301',
-      day: 'Jeudi',
-      startTime: '16:00',
-      endTime: '18:00',
-      duration: 2,
-      studentsCount: 35,
-      color: 'bg-indigo-100 border-indigo-300 text-indigo-800',
-      status: 'confirmed'
-    },
-    {
-      id: '6',
-      courseName: 'Immunologie',
-      courseCode: 'IMMU301',
-      professor: 'Dr. Edimo',
-      class: 'L3 Médecine',
-      room: 'A102',
-      day: 'Vendredi',
-      startTime: '14:00',
-      endTime: '16:00',
-      duration: 2,
-      studentsCount: 42,
-      color: 'bg-red-100 border-red-300 text-red-800',
-      status: 'conflict'
-    }
-  ];
+  // Chargement des données
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const schedulesData = await scheduleService.getSchedules();
+        setSchedules(schedulesData);
+        
+        // Extraire les classes et salles uniques
+        const uniqueClasses = ['all', ...new Set(schedulesData.map(s => s.class_level || 'Non défini'))];
+        const uniqueRooms = ['all', ...new Set(schedulesData.map(s => s.room_name || 'Non défini'))];
+        
+        setClasses(uniqueClasses);
+        setRooms(uniqueRooms);
+        
+      } catch (error) {
+        console.error('Erreur lors du chargement des emplois du temps:', error);
+        setError('Erreur lors du chargement des données');
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les emplois du temps. Vérifiez votre connexion.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const classes = ['all', 'L1 Médecine', 'L2 Médecine', 'L3 Médecine', 'L4 Médecine', 'M1 Pharmacie'];
-  const rooms = ['all', 'A101', 'A102', 'B201', 'C301', 'Amphi A', 'Labo Bio'];
+    loadData();
+  }, [toast]);
 
   // Filtrer les sessions
-  const filteredSessions = scheduleSessions.filter(session => {
-    const matchesClass = selectedClass === 'all' || session.class === selectedClass;
-    const matchesRoom = selectedRoom === 'all' || session.room === selectedRoom;
+  const filteredSessions = schedules.filter(schedule => {
+    const matchesClass = selectedClass === 'all' || (schedule.class_level || 'Non défini') === selectedClass;
+    const matchesRoom = selectedRoom === 'all' || (schedule.room_name || 'Non défini') === selectedRoom;
     return matchesClass && matchesRoom;
   });
 
@@ -172,25 +120,57 @@ export default function SchedulePage() {
     return `${startOfWeek.getDate()}/${startOfWeek.getMonth() + 1} - ${endOfWeek.getDate()}/${endOfWeek.getMonth() + 1}`;
   };
 
+  if (isLoading) {
+    return (
+      <PageLoading 
+        message="Chargement des emplois du temps..." 
+        variant="detailed"
+      />
+    );
+  }
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* En-tête */}
-      <div className="flex items-center justify-between">
+      <motion.div 
+        className="flex items-center justify-between"
+        variants={itemVariants}
+      >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Emploi du Temps</h1>
-          <p className="text-gray-600 mt-1">Planification et gestion des cours</p>
+          <h1 className="text-3xl font-bold text-primary">Emploi du Temps</h1>
+          <p className="text-secondary mt-1">Planification et gestion des cours avec IA</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Exporter
           </Button>
-          <Button className="bg-green-700 hover:bg-green-700-dark">
+          <Button>
             <Plus className="mr-2 h-4 w-4" />
             Nouvelle session
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Contrôles et filtres */}
       <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">

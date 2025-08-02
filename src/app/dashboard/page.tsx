@@ -15,7 +15,8 @@ import {
   Activity,
   BarChart3,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Brain
 } from 'lucide-react';
 
 import { Card, CardHeader, CardTitle, CardContent, StatCard } from '@/components/ui/card';
@@ -25,18 +26,32 @@ import ScheduleCalendar from '@/components/dashboard/ScheduleCalendar';
 import RecentActivities from '@/components/dashboard/RecentActivities';
 import RoomOccupancyChart from '@/components/dashboard/RoomOccupancyChart';
 import ScheduleConflicts from '@/components/dashboard/ScheduleConflicts';
+import { useAuth } from '@/lib/auth/context';
+import { courseService } from '@/lib/api/services/courses';
+import type { DashboardStats } from '@/types/api';
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('today');
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const { user } = useAuth();
 
-  // Simulation du chargement initial
+  // Chargement des données du tableau de bord
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    const loadDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        const dashboardStats = await courseService.getCoursesStats();
+        setStats(dashboardStats);
+      } catch (error) {
+        console.error('Erreur lors du chargement des données:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDashboardData();
   }, []);
 
   const handleRefresh = async () => {
@@ -91,7 +106,9 @@ export default function Dashboard() {
       >
         <div>
           <h2 className="text-3xl font-bold text-primary">Tableau de bord</h2>
-          <p className="text-secondary mt-1">Aperçu général de votre système de gestion</p>
+          <p className="text-secondary mt-1">
+            Bienvenue {user?.full_name || 'Utilisateur'} - Aperçu général de votre système
+          </p>
         </div>
         <div className="flex space-x-2">
           <Button 
@@ -126,7 +143,7 @@ export default function Dashboard() {
       >
         <StatCard
           title="Cours programmés"
-          value="152"
+          value={stats?.total_courses.toString() || "0"}
           change="+12% vs semaine dernière"
           trend="up"
           icon={<BookOpen className="h-6 w-6" />}
@@ -134,15 +151,15 @@ export default function Dashboard() {
         
         <StatCard
           title="Salles disponibles"
-          value="24/30"
-          change="80% d'occupation"
+          value={`${stats?.total_rooms || 0} salles`}
+          change={`${stats?.system_utilization || 0}% d'occupation`}
           trend="neutral"
           icon={<MapPin className="h-6 w-6" />}
         />
         
         <StatCard
-          title="Professeurs actifs"
-          value="45"
+          title="Enseignants actifs"
+          value={stats?.total_teachers.toString() || "0"}
           change="+3 ce mois"
           trend="up"
           icon={<Users className="h-6 w-6" />}
@@ -150,7 +167,7 @@ export default function Dashboard() {
         
         <StatCard
           title="Conflits d'horaires"
-          value="3"
+          value={stats?.unresolved_conflicts.toString() || "0"}
           change="-5 depuis hier"
           trend="down"
           icon={<AlertTriangle className="h-6 w-6" />}

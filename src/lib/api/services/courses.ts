@@ -1,0 +1,103 @@
+// src/lib/api/services/courses.ts
+import { apiClient } from '../client';
+import { API_ENDPOINTS } from '../config';
+import type { 
+  Department, 
+  Teacher, 
+  Course, 
+  PaginatedResponse,
+  DashboardStats 
+} from '@/types/api';
+
+export const courseService = {
+  // Départements
+  async getDepartments(params?: { search?: string }): Promise<PaginatedResponse<Department>> {
+    return apiClient.get<PaginatedResponse<Department>>(API_ENDPOINTS.DEPARTMENTS, params);
+  },
+
+  async getDepartment(id: number): Promise<Department> {
+    return apiClient.get<Department>(`${API_ENDPOINTS.DEPARTMENTS}${id}/`);
+  },
+
+  async createDepartment(data: Partial<Department>): Promise<Department> {
+    return apiClient.post<Department>(API_ENDPOINTS.DEPARTMENTS, data);
+  },
+
+  async updateDepartment(id: number, data: Partial<Department>): Promise<Department> {
+    return apiClient.patch<Department>(`${API_ENDPOINTS.DEPARTMENTS}${id}/`, data);
+  },
+
+  async deleteDepartment(id: number): Promise<void> {
+    return apiClient.delete(`${API_ENDPOINTS.DEPARTMENTS}${id}/`);
+  },
+
+  async getDepartmentStats(id: number): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.DEPARTMENTS}${id}/stats/`);
+  },
+
+  // Enseignants
+  async getTeachers(params?: { 
+    department?: number;
+    search?: string;
+  }): Promise<PaginatedResponse<Teacher>> {
+    return apiClient.get<PaginatedResponse<Teacher>>(API_ENDPOINTS.TEACHERS, params);
+  },
+
+  async getTeacher(id: number): Promise<Teacher> {
+    return apiClient.get<Teacher>(`${API_ENDPOINTS.TEACHERS}${id}/`);
+  },
+
+  async createTeacher(data: Partial<Teacher>): Promise<Teacher> {
+    return apiClient.post<Teacher>(API_ENDPOINTS.TEACHERS, data);
+  },
+
+  async updateTeacher(id: number, data: Partial<Teacher>): Promise<Teacher> {
+    return apiClient.patch<Teacher>(`${API_ENDPOINTS.TEACHERS}${id}/`, data);
+  },
+
+  async deleteTeacher(id: number): Promise<void> {
+    return apiClient.delete(`${API_ENDPOINTS.TEACHERS}${id}/`);
+  },
+
+  // Cours
+  async getCourses(params?: {
+    department?: number;
+    level?: string;
+    type?: string;
+    search?: string;
+  }): Promise<PaginatedResponse<Course>> {
+    return apiClient.get<PaginatedResponse<Course>>(API_ENDPOINTS.COURSES, params);
+  },
+
+  async getCourse(id: number): Promise<Course> {
+    return apiClient.get<Course>(`${API_ENDPOINTS.COURSES}${id}/`);
+  },
+
+  async createCourse(data: Partial<Course>): Promise<Course> {
+    return apiClient.post<Course>(API_ENDPOINTS.COURSES, data);
+  },
+
+  async updateCourse(id: number, data: Partial<Course>): Promise<Course> {
+    return apiClient.patch<Course>(`${API_ENDPOINTS.COURSES}${id}/`, data);
+  },
+
+  async deleteCourse(id: number): Promise<void> {
+    return apiClient.delete(`${API_ENDPOINTS.COURSES}${id}/`);
+  },
+
+  // Statistiques générales
+  async getCoursesStats(): Promise<DashboardStats> {
+    // Pour l'instant, on retourne des données simulées
+    // TODO: Implémenter l'endpoint de statistiques côté backend
+    return {
+      total_courses: 245,
+      total_teachers: 68,
+      total_students: 1250,
+      total_rooms: 42,
+      active_schedules: 12,
+      unresolved_conflicts: 3,
+      recent_predictions: 156,
+      system_utilization: 78.5,
+    };
+  },
+};

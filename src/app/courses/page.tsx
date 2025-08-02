@@ -6,6 +6,9 @@ import { Plus, Search, Filter, Edit, Trash2, BookOpen, User, Clock, Users, Calen
 import { Card, CardContent, StatCard } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PageLoading, CardSkeleton, LoadingSpinner } from '@/components/ui/loading';
+import { useToast } from '@/components/ui/use-toast';
+import { courseService } from '@/lib/api/services/courses';
+import type { Course, CourseStats } from '@/types/api';
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,59 +17,51 @@ export default function CoursesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
-
-  // Example course data
-  const courses = [
-    {
-      id: '1',
-      name: 'Anatomie Generale',
-      code: 'ANAT101',
-      professor: 'Dr. Kamga',
-      professorId: 'prof1',
-      department: 'Medecine',
-      departmentId: 'med',
-      classes: ['L1 Medecine', 'L2 Medecine'],
-      classIds: ['l1med', 'l2med'],
-      durationHours: 60,
-      studentsCount: 120,
-      requiredFeatures: ['Projecteur', 'Tableau interactif'],
-      preferredRooms: ['A101', 'Amphi A'],
-      sessionsPerWeek: 2,
-      status: 'active',
-      nextSession: 'Lundi 08:00 - Salle A101'
-    },
-    {
-      id: '2',
-      name: 'Biochimie Metabolique',
-      code: 'BIOC201',
-      professor: 'Dr. Mbarga',
-      professorId: 'prof2',
-      department: 'Medecine',
-      departmentId: 'med',
-      classes: ['L2 Medecine'],
-      classIds: ['l2med'],
-      durationHours: 45,
-      studentsCount: 80,
-      requiredFeatures: ['Projecteur', 'Ordinateurs'],
-      preferredRooms: ['B201', 'Labo Bio'],
-      sessionsPerWeek: 3,
-      status: 'active',
-      nextSession: 'Mardi 10:00 - Salle B201'
-    }
-  ];
-
-  const departments = ['all', 'Medecine', 'Pharmacie', 'Dentaire'];
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [stats, setStats] = useState<CourseStats | null>(null);
+  const [departments, setDepartments] = useState<string[]>(['all']);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { toast } = useToast();
   const levels = ['all', 'L1', 'L2', 'L3', 'L4', 'M1', 'M2'];
 
-  // Simulation du chargement initial
+  // Chargement des données
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Charger les cours et statistiques en parallèle
+        const [coursesData, statsData] = await Promise.all([
+          courseService.getCourses(),
+          courseService.getCoursesStats()
+        ]);
+        
+        setCourses(coursesData);
+        setStats(statsData);
+        
+        // Extraire les départements uniques
+        const uniqueDepartments = ['all', ...new Set(coursesData.map(course => course.department))];
+        setDepartments(uniqueDepartments);
+        
+      } catch (error) {
+        console.error('Erreur lors du chargement des cours:', error);
+        setError('Erreur lors du chargement des données');
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les cours. Vérifiez votre connexion.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Simulation de recherche avec délai
+    loadData();
+  }, [toast]);
+
+  // Recherche avec délai
   useEffect(() => {
     if (searchTerm) {
       setIsSearching(true);
@@ -80,9 +75,9 @@ export default function CoursesPage() {
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.professor.toLowerCase().includes(searchTerm.toLowerCase());
+                         course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === 'all' || course.department === selectedDepartment;
-    const matchesLevel = selectedLevel === 'all' || course.classes.some(cls => cls.includes(selectedLevel));
+    const matchesLevel = selectedLevel === 'all' || course.level?.includes(selectedLevel);
     return matchesSearch && matchesDepartment && matchesLevel;
   });
 
@@ -155,34 +150,34 @@ export default function CoursesPage() {
       >
         <StatCard
           title="Total des cours"
-          value="152"
-          change="+8 ce mois"
+          value={stats?.total_courses?.toString() || "0"}
+          change={`+${courses.length} chargés`}
           trend="up"
           icon={<BookOpen className="h-6 w-6" />}
         />
         
         <StatCard
           title="Cours actifs"
-          value="138"
-          change="91% du total"
+          value={courses.filter(c => c.status === 'active').length.toString()}
+          change={`${Math.round((courses.filter(c => c.status === 'active').length / courses.length) * 100)}% du total`}
           trend="neutral"
           icon={<Calendar className="h-6 w-6" />}
         />
         
         <StatCard
-          title="Professeurs"
-          value="45"
-          change="+2 ce mois"
+          title="Enseignants"
+          value={stats?.total_teachers?.toString() || new Set(courses.map(c => c.teacher)).size.toString()}
+          change={`${departments.length - 1} départements`}
           trend="up"
           icon={<User className="h-6 w-6" />}
         />
 
         <StatCard
-          title="Heures/semaine"
-          value="1,240h"
-          change="Planning complet"
+          title="Étudiants"
+          value={courses.reduce((sum, course) => sum + (course.student_count || 0), 0).toString()}
+          change="Total inscrit"
           trend="neutral"
-          icon={<Clock className="h-6 w-6" />}
+          icon={<Users className="h-6 w-6" />}
         />
       </motion.div>
 
@@ -262,7 +257,7 @@ export default function CoursesPage() {
                         </div>
                         <div className="flex items-center text-secondary mb-2">
                           <User className="h-4 w-4 mr-1" />
-                          <span className="text-sm">{course.professor}</span>
+                          <span className="text-sm">{course.teacher}</span>
                         </div>
                         <div className="flex items-center text-secondary">
                           <Building className="h-4 w-4 mr-1" />
@@ -287,15 +282,15 @@ export default function CoursesPage() {
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 text-secondary mr-2" />
                         <div>
-                          <p className="text-xs text-tertiary">Durée totale</p>
-                          <p className="text-sm font-medium text-primary">{course.durationHours}h</p>
+                          <p className="text-xs text-tertiary">Crédits</p>
+                          <p className="text-sm font-medium text-primary">{course.credits || 0}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <Users className="h-4 w-4 text-secondary mr-2" />
                         <div>
                           <p className="text-xs text-tertiary">Étudiants</p>
-                          <p className="text-sm font-medium text-primary">{course.studentsCount}</p>
+                          <p className="text-sm font-medium text-primary">{course.student_count || 0}</p>
                         </div>
                       </div>
                     </div>
