@@ -124,7 +124,7 @@ interface DragDropSchedulerProps {
 
 export default function DragDropScheduler({
   items = [],
-  timeSlots = [],
+  timeSlots: propTimeSlots = [],
   onItemChange,
   onItemAdd,
   onItemDelete,
@@ -238,12 +238,14 @@ export default function DragDropScheduler({
     }
   ];
 
-  const timeSlots = Array.from({ length: 14 }, (_, i) => ({
+  const defaultTimeSlots = Array.from({ length: 14 }, (_, i) => ({
     hour: 7 + i,
     minute: 0,
     available: true,
     conflicts: []
   }));
+
+  const timeSlots = propTimeSlots.length > 0 ? propTimeSlots : defaultTimeSlots;
 
   const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 

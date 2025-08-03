@@ -17,6 +17,9 @@ export interface PaginatedResponse<T = any> {
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
+  private requestCache = new Map<string, { data: any; timestamp: number }>();
+  private pendingRequests = new Map<string, Promise<any>>();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
@@ -42,6 +45,26 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
     }
+    // Vider le cache lors de la déconnexion
+    this.clearCache();
+  }
+
+  public clearCache() {
+    this.requestCache.clear();
+    this.pendingRequests.clear();
+  }
+
+  public invalidateCache(pattern?: string) {
+    if (!pattern) {
+      this.clearCache();
+      return;
+    }
+    
+    for (const key of this.requestCache.keys()) {
+      if (key.includes(pattern)) {
+        this.requestCache.delete(key);
+      }
+    }
   }
 
   private getHeaders(): Record<string, string> {
@@ -54,6 +77,27 @@ class ApiClient {
     }
 
     return headers;
+  }
+
+  private getCacheKey(method: string, url: string, data?: any): string {
+    return `${method}:${url}:${data ? JSON.stringify(data) : ''}`;
+  }
+
+  private isCacheValid(timestamp: number): boolean {
+    return Date.now() - timestamp < this.CACHE_TTL;
+  }
+
+  private getFromCache<T>(key: string): T | null {
+    const cached = this.requestCache.get(key);
+    if (cached && this.isCacheValid(cached.timestamp)) {
+      return cached.data;
+    }
+    this.requestCache.delete(key);
+    return null;
+  }
+
+  private setCache<T>(key: string, data: T): void {
+    this.requestCache.set(key, { data, timestamp: Date.now() });
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
@@ -81,7 +125,7 @@ class ApiClient {
     }
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  async get<T>(endpoint: string, params?: Record<string, any>, useCache = true): Promise<T> {
     const url = new URL(getApiUrl(endpoint));
     
     if (params) {
@@ -92,12 +136,46 @@ class ApiClient {
       });
     }
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
+    const urlString = url.toString();
+    const cacheKey = this.getCacheKey('GET', urlString);
 
-    return this.handleResponse<T>(response);
+    // Vérifier le cache
+    if (useCache) {
+      const cached = this.getFromCache<T>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      // Vérifier les requêtes en cours
+      const pending = this.pendingRequests.get(cacheKey);
+      if (pending) {
+        return pending;
+      }
+    }
+
+    // Créer une nouvelle requête
+    const requestPromise = (async () => {
+      try {
+        const response = await fetch(urlString, {
+          method: 'GET',
+          headers: this.getHeaders(),
+        });
+
+        const data = await this.handleResponse<T>(response);
+        
+        // Mettre en cache si c'est un succès
+        if (useCache) {
+          this.setCache(cacheKey, data);
+        }
+        
+        return data;
+      } finally {
+        this.pendingRequests.delete(cacheKey);
+      }
+    })();
+
+    this.pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   }
 
   async post<T>(endpoint: string, data?: any): Promise<T> {

@@ -16,7 +16,7 @@ import {
   NotificationBadge,
   MagneticButton 
 } from '@/components/ui/interactive-elements';
-import type { Course, CourseStats } from '@/types/api';
+import type { Course } from '@/types/api';
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,11 +28,11 @@ export default function CoursesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [stats, setStats] = useState<CourseStats | null>(null);
+  const [stats, setStats] = useState<any | null>(null);
   const [departments, setDepartments] = useState<string[]>(['all']);
   const [error, setError] = useState<string | null>(null);
   
-  const { toast } = useToast();
+  const { addToast } = useToast();
   const levels = ['all', 'L1', 'L2', 'L3', 'L4', 'M1', 'M2'];
 
   // Chargement des données
@@ -48,17 +48,17 @@ export default function CoursesPage() {
           courseService.getCoursesStats()
         ]);
         
-        setCourses(coursesData);
+        setCourses(coursesData.results || []);
         setStats(statsData);
         
         // Extraire les départements uniques
-        const uniqueDepartments = ['all', ...new Set(coursesData.map(course => course.department))];
+        const uniqueDepartments = ['all', ...new Set((coursesData.results || []).map(course => String(course.department)))];
         setDepartments(uniqueDepartments);
         
       } catch (error) {
         console.error('Erreur lors du chargement des cours:', error);
         setError('Erreur lors du chargement des données');
-        toast({
+        addToast({
           title: "Erreur",
           description: "Impossible de charger les cours. Vérifiez votre connexion.",
           variant: "destructive",
@@ -69,7 +69,7 @@ export default function CoursesPage() {
     };
 
     loadData();
-  }, [toast]);
+  }, [addToast]);
 
   // Recherche avec délai
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function CoursesPage() {
         setCourses(prev => prev.map(course => 
           course.id === selectedCourse.id ? { ...course, ...courseData } : course
         ));
-        toast({
+        addToast({
           title: "Succès",
           description: "Cours mis à jour avec succès",
         });
@@ -109,14 +109,14 @@ export default function CoursesPage() {
         // Nouveau cours
         const newCourse = await courseService.createCourse(courseData);
         setCourses(prev => [...prev, newCourse]);
-        toast({
+        addToast({
           title: "Succès",
           description: "Cours créé avec succès",
         });
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      toast({
+      addToast({
         title: "Erreur",
         description: "Impossible de sauvegarder le cours",
         variant: "destructive",
@@ -129,15 +129,15 @@ export default function CoursesPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) return;
     
     try {
-      await courseService.deleteCourse(courseId);
-      setCourses(prev => prev.filter(course => course.id !== courseId));
-      toast({
+      await courseService.deleteCourse(Number(courseId));
+      setCourses(prev => prev.filter(course => course.id !== Number(courseId)));
+      addToast({
         title: "Succès",
         description: "Cours supprimé avec succès",
       });
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
-      toast({
+      addToast({
         title: "Erreur",
         description: "Impossible de supprimer le cours",
         variant: "destructive",
@@ -148,8 +148,8 @@ export default function CoursesPage() {
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = selectedDepartment === 'all' || course.department === selectedDepartment;
+                         (course.teacher_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment = selectedDepartment === 'all' || String(course.department) === selectedDepartment;
     const matchesLevel = selectedLevel === 'all' || course.level?.includes(selectedLevel);
     return matchesSearch && matchesDepartment && matchesLevel;
   });
@@ -239,8 +239,8 @@ export default function CoursesPage() {
         
         <StatCard
           title="Cours actifs"
-          value={courses.filter(c => c.status === 'active').length.toString()}
-          change={`${Math.round((courses.filter(c => c.status === 'active').length / courses.length) * 100)}% du total`}
+          value={courses.filter(c => c.is_active).length.toString()}
+          change={`${Math.round((courses.filter(c => c.is_active).length / courses.length) * 100)}% du total`}
           trend="neutral"
           icon={<Calendar className="h-6 w-6" />}
         />
@@ -255,7 +255,7 @@ export default function CoursesPage() {
 
         <StatCard
           title="Étudiants"
-          value={courses.reduce((sum, course) => sum + (course.student_count || 0), 0).toString()}
+          value={courses.reduce((sum, course) => sum + (course.enrollments_count || 0), 0).toString()}
           change="Total inscrit"
           trend="neutral"
           icon={<Users className="h-6 w-6" />}
@@ -358,15 +358,15 @@ export default function CoursesPage() {
                           variant="ghost" 
                           size="sm" 
                           className="text-red-600 hover:bg-red-50"
-                          onClick={() => handleDeleteCourse(course.id!)}
+                          onClick={() => handleDeleteCourse(String(course.id))}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
 
-                    <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border mb-4 ${getStatusColor(course.status)}`}>
-                      {getStatusText(course.status)}
+                    <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border mb-4 ${getStatusColor(course.is_active ? 'active' : 'inactive')}`}>
+                      {getStatusText(course.is_active ? 'active' : 'inactive')}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
@@ -381,7 +381,7 @@ export default function CoursesPage() {
                         <Users className="h-4 w-4 text-secondary mr-2" />
                         <div>
                           <p className="text-xs text-tertiary">Étudiants</p>
-                          <p className="text-sm font-medium text-primary">{course.student_count || 0}</p>
+                          <p className="text-sm font-medium text-primary">{course.enrollments_count || 0}</p>
                         </div>
                       </div>
                     </div>
@@ -391,7 +391,7 @@ export default function CoursesPage() {
                         <Calendar className="mr-1 h-3 w-3" />
                         Planning
                       </Button>
-                      <NotificationBadge count={course.student_count || 0} max={999}>
+                      <NotificationBadge count={course.enrollments_count || 0} max={999}>
                         <Button variant="outline" size="sm" className="flex-1">
                           <Users className="mr-1 h-3 w-3" />
                           Étudiants
@@ -421,7 +421,7 @@ export default function CoursesPage() {
       </motion.div>
 
       {/* Modales */}
-      <CourseModal
+      {/* <CourseModal
         isOpen={showCourseModal}
         onClose={() => {
           setShowCourseModal(false);
@@ -429,7 +429,7 @@ export default function CoursesPage() {
         }}
         course={selectedCourse}
         onSave={handleSaveCourse}
-      />
+      /> */}
 
       <ExportModal
         isOpen={showExportModal}

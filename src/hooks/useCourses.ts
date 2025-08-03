@@ -1,30 +1,28 @@
 // src/hooks/useCourses.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { courseService } from '@/lib/api/services/courses';
 import type { Department, Teacher, Course, PaginatedResponse } from '@/types/api';
 import { useApi } from './useApi';
+import { useQuery } from './useQuery';
 
-export function useDepartments() {
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const { loading, error, execute } = useApi<PaginatedResponse<Department>>();
-
-  const fetchDepartments = async (params?: { search?: string }) => {
-    const response = await execute(() => courseService.getDepartments(params));
-    if (response) {
-      setDepartments(response.results);
+export function useDepartments(search?: string) {
+  const queryKey = useMemo(() => ['departments', { search }], [search]);
+  
+  const { data, loading, error, refetch } = useQuery<PaginatedResponse<Department>>(
+    queryKey,
+    () => courseService.getDepartments({ search }),
+    {
+      staleTime: 10 * 60 * 1000, // 10 minutes pour les départements (changent rarement)
+      refetchOnWindowFocus: false,
     }
-  };
-
-  useEffect(() => {
-    fetchDepartments();
-  }, []);
+  );
 
   return {
-    departments,
+    departments: data?.results || [],
+    count: data?.count || 0,
     loading,
     error,
-    fetchDepartments,
-    refetch: fetchDepartments,
+    refetch,
   };
 }
 
