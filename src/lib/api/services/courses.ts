@@ -85,19 +85,33 @@ export const courseService = {
     return apiClient.delete(`${API_ENDPOINTS.COURSES}${id}/`);
   },
 
-  // Statistiques générales
-  async getCoursesStats(): Promise<DashboardStats> {
-    // Pour l'instant, on retourne des données simulées
-    // TODO: Implémenter l'endpoint de statistiques côté backend
-    return {
-      total_courses: 245,
-      total_teachers: 68,
-      total_students: 1250,
-      total_rooms: 42,
-      active_schedules: 12,
-      unresolved_conflicts: 3,
-      recent_predictions: 156,
-      system_utilization: 78.5,
-    };
+  // Statistiques des cours
+  async getCoursesStats(): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.COURSES}stats/`);
+  },
+
+  // Statistiques des enseignants  
+  async getTeachersStats(): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.TEACHERS}stats/`);
+  },
+
+  // Inscriptions d'un cours
+  async getCourseEnrollments(id: number): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.COURSES}${id}/enrollments/`);
+  },
+
+  // Planning d'un enseignant
+  async getTeacherSchedule(id: number): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.TEACHERS}${id}/schedule/`);
+  },
+
+  // Statistiques générales du dashboard
+  async getDashboardStats(): Promise<DashboardStats> {
+    return apiClient.get('/dashboard/stats/');
+  },
+
+  // Santé du système
+  async getSystemHealth(): Promise<any> {
+    return apiClient.get('/dashboard/health/');
   },
 };

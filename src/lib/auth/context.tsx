@@ -2,9 +2,8 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { AuthState, AuthContextType, AuthCredentials, User } from './types';
-import { apiClient } from '../api/client';
-import { API_ENDPOINTS } from '../api/config';
+import { AuthState, AuthContextType, AuthCredentials, User, RegisterData } from './types';
+import { authService } from '../api/services/auth';
 
 // État initial
 const initialState: AuthState = {
@@ -106,17 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       dispatch({ type: 'LOGIN_START' });
       
-      const response = await apiClient.post<{ token: string }>(
-        API_ENDPOINTS.AUTH_TOKEN,
-        credentials
-      );
-
-      const { token } = response;
-      apiClient.setToken(token);
-      
-      dispatch({ type: 'LOGIN_SUCCESS', payload: { token } });
-      
-      // TODO: Récupérer les informations utilisateur après login
+      const response = await authService.login(credentials);
+      dispatch({ type: 'LOGIN_SUCCESS', payload: response });
       
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erreur de connexion';
@@ -125,25 +115,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    apiClient.clearToken();
-    dispatch({ type: 'LOGOUT' });
+  const register = async (userData: RegisterData) => {
+    try {
+      dispatch({ type: 'LOGIN_START' });
+      
+      const response = await authService.register(userData);
+      dispatch({ type: 'LOGIN_SUCCESS', payload: response });
+      
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur d\'inscription';
+      dispatch({ type: 'LOGIN_FAILURE', payload: message });
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      dispatch({ type: 'LOGOUT' });
+    }
   };
 
   const refreshUser = async () => {
     try {
-      // TODO: Implémenter la récupération des infos utilisateur
-      console.log('Refresh user not implemented yet');
+      if (!state.token) return;
+      
+      const user = await authService.getCurrentUser();
+      dispatch({ type: 'SET_USER', payload: user });
     } catch (error) {
       console.error('Failed to refresh user:', error);
+      logout();
     }
+  };
+
+  const hasRole = (role: string): boolean => {
+    return state.user?.profile?.role === role || state.user?.is_superuser === true;
+  };
+
+  const hasAnyRole = (roles: string[]): boolean => {
+    if (state.user?.is_superuser) return true;
+    return roles.includes(state.user?.profile?.role || '');
   };
 
   const value: AuthContextType = {
     ...state,
     login,
     logout,
+    register,
     refreshUser,
+    hasRole,
+    hasAnyRole,
   };
 
   return (

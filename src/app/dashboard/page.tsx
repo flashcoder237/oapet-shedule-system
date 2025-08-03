@@ -16,7 +16,41 @@ import {
   BarChart3,
   TrendingUp,
   TrendingDown,
-  Brain
+  Brain,
+  Search,
+  Grid3X3,
+  Layout,
+  Settings,
+  Plus,
+  Filter,
+  Download,
+  Target,
+  Star,
+  Building,
+  User,
+  ChevronRight,
+  Eye,
+  Zap,
+  Layers,
+  Sparkles,
+  Compass,
+  Monitor,
+  Tablet,
+  Smartphone,
+  RefreshCw,
+  Maximize2,
+  Minimize2,
+  Edit,
+  Share2,
+  MoreVertical,
+  Bell,
+  Globe,
+  Shield,
+  Hash,
+  Tag,
+  Database,
+  FileText,
+  Navigation
 } from 'lucide-react';
 
 import { Card, CardHeader, CardTitle, CardContent, StatCard } from '@/components/ui/card';
@@ -26,16 +60,167 @@ import ScheduleCalendar from '@/components/dashboard/ScheduleCalendar';
 import RecentActivities from '@/components/dashboard/RecentActivities';
 import RoomOccupancyChart from '@/components/dashboard/RoomOccupancyChart';
 import ScheduleConflicts from '@/components/dashboard/ScheduleConflicts';
+import AdvancedStats from '@/components/dashboard/AdvancedStats';
+import WeeklyChart from '@/components/dashboard/WeeklyChart';
+import InteractiveCalendar from '@/components/calendar/InteractiveCalendar';
+import SmartSearch from '@/components/search/SmartSearch';
+import CustomizableDashboard from '@/components/dashboard/CustomizableDashboard';
+import DragDropScheduler from '@/components/scheduling/DragDropScheduler';
 import { useAuth } from '@/lib/auth/context';
 import { courseService } from '@/lib/api/services/courses';
 import type { DashboardStats } from '@/types/api';
+
+interface DashboardModule {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  component: React.ComponentType<any>;
+  category: string;
+  isActive: boolean;
+  size: 'small' | 'medium' | 'large';
+}
+
+interface QuickStats {
+  totalStudents: number;
+  totalCourses: number;
+  totalTeachers: number;
+  totalRooms: number;
+  activeSchedules: number;
+  weeklyEvents: number;
+}
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('today');
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activeModule, setActiveModule] = useState<string>('overview');
+  const [showModuleSelector, setShowModuleSelector] = useState(false);
+  const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [quickStats, setQuickStats] = useState<QuickStats>({
+    totalStudents: 1250,
+    totalCourses: 48,
+    totalTeachers: 25,
+    totalRooms: 15,
+    activeSchedules: 12,
+    weeklyEvents: 156
+  });
   const { user } = useAuth();
+
+  const dashboardModules: DashboardModule[] = [
+    {
+      id: 'overview',
+      title: 'Vue d\'ensemble',
+      description: 'Tableau de bord principal avec widgets personnalisables',
+      icon: <Layout className="w-5 h-5" />,
+      component: CustomizableDashboard,
+      category: 'Principal',
+      isActive: true,
+      size: 'large'
+    },
+    {
+      id: 'calendar',
+      title: 'Calendrier Interactif',
+      description: 'Calendrier avancé avec gestion d\'événements',
+      icon: <Calendar className="w-5 h-5" />,
+      component: InteractiveCalendar,
+      category: 'Planning',
+      isActive: true,
+      size: 'large'
+    },
+    {
+      id: 'search',
+      title: 'Recherche Intelligente',
+      description: 'Système de recherche avancé avec suggestions',
+      icon: <Search className="w-5 h-5" />,
+      component: SmartSearch,
+      category: 'Outils',
+      isActive: true,
+      size: 'medium'
+    },
+    {
+      id: 'scheduler',
+      title: 'Planificateur Drag & Drop',
+      description: 'Interface de planification avec glisser-déposer',
+      icon: <Grid3X3 className="w-5 h-5" />,
+      component: DragDropScheduler,
+      category: 'Planning',
+      isActive: true,
+      size: 'large'
+    }
+  ];
+
+  const quickActions = [
+    {
+      id: 'add-course',
+      title: 'Nouveau Cours',
+      description: 'Créer un nouveau cours',
+      icon: <BookOpen className="w-5 h-5" />,
+      color: 'bg-blue-500',
+      action: () => console.log('Add course')
+    },
+    {
+      id: 'add-schedule',
+      title: 'Planning',
+      description: 'Créer un emploi du temps',
+      icon: <Calendar className="w-5 h-5" />,
+      color: 'bg-green-500',
+      action: () => console.log('Add schedule')
+    },
+    {
+      id: 'add-teacher',
+      title: 'Enseignant',
+      description: 'Ajouter un enseignant',
+      icon: <User className="w-5 h-5" />,
+      color: 'bg-purple-500',
+      action: () => console.log('Add teacher')
+    },
+    {
+      id: 'add-room',
+      title: 'Salle',
+      description: 'Enregistrer une salle',
+      icon: <Building className="w-5 h-5" />,
+      color: 'bg-orange-500',
+      action: () => console.log('Add room')
+    }
+  ];
+
+  const recentActivities = [
+    {
+      id: '1',
+      user: 'Dr. Kamga',
+      action: 'a créé le cours "Anatomie Générale"',
+      time: '2 min',
+      type: 'course',
+      icon: <BookOpen className="w-4 h-4" />
+    },
+    {
+      id: '2',
+      user: 'Admin',
+      action: 'a mis à jour le planning L1 Médecine',
+      time: '5 min',
+      type: 'schedule',
+      icon: <Calendar className="w-4 h-4" />
+    },
+    {
+      id: '3',
+      user: 'Dr. Mbarga',
+      action: 'a réservé l\'Amphi A pour demain',
+      time: '10 min',
+      type: 'room',
+      icon: <MapPin className="w-4 h-4" />
+    },
+    {
+      id: '4',
+      user: 'Système',
+      action: 'a détecté un conflit d\'horaire',
+      time: '15 min',
+      type: 'alert',
+      icon: <Bell className="w-4 h-4" />
+    }
+  ];
 
   // Chargement des données du tableau de bord
   useEffect(() => {
@@ -69,6 +254,221 @@ export default function Dashboard() {
     setIsLoading(false);
   };
 
+  const getModuleSizeClass = (size: DashboardModule['size']) => {
+    switch (size) {
+      case 'small': return 'col-span-12 lg:col-span-6';
+      case 'medium': return 'col-span-12 lg:col-span-8';
+      case 'large': return 'col-span-12';
+      default: return 'col-span-12';
+    }
+  };
+
+  const getViewModeClasses = () => {
+    switch (viewMode) {
+      case 'mobile': return 'max-w-md mx-auto';
+      case 'tablet': return 'max-w-4xl mx-auto';
+      case 'desktop': return 'w-full';
+      default: return 'w-full';
+    }
+  };
+
+  const renderActiveModule = () => {
+    const module = dashboardModules.find(m => m.id === activeModule);
+    if (!module) return null;
+
+    const ModuleComponent = module.component;
+    
+    return (
+      <motion.div
+        key={activeModule}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        className={`h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}
+      >
+        {activeModule === 'overview' && (
+          <div className="space-y-6">
+            {/* Statistiques rapides */}
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm">Étudiants</p>
+                    <p className="text-2xl font-bold">{quickStats.totalStudents.toLocaleString()}</p>
+                  </div>
+                  <Users className="w-8 h-8 text-blue-200" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 rounded-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-100 text-sm">Cours</p>
+                    <p className="text-2xl font-bold">{quickStats.totalCourses}</p>
+                  </div>
+                  <BookOpen className="w-8 h-8 text-green-200" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-sm">Enseignants</p>
+                    <p className="text-2xl font-bold">{quickStats.totalTeachers}</p>
+                  </div>
+                  <User className="w-8 h-8 text-purple-200" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 rounded-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-orange-100 text-sm">Salles</p>
+                    <p className="text-2xl font-bold">{quickStats.totalRooms}</p>
+                  </div>
+                  <Building className="w-8 h-8 text-orange-200" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="bg-gradient-to-br from-red-500 to-red-600 text-white p-4 rounded-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-red-100 text-sm">Plannings</p>
+                    <p className="text-2xl font-bold">{quickStats.activeSchedules}</p>
+                  </div>
+                  <Calendar className="w-8 h-8 text-red-200" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-4 rounded-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-100 text-sm">Événements</p>
+                    <p className="text-2xl font-bold">{quickStats.weeklyEvents}</p>
+                  </div>
+                  <Activity className="w-8 h-8 text-indigo-200" />
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Actions rapides et activités récentes */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Actions rapides */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="w-5 h-5" />
+                    Actions Rapides
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {quickActions.map(action => (
+                      <motion.div
+                        key={action.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="p-4 rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-all"
+                        onClick={action.action}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${action.color} text-white`}>
+                            {action.icon}
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{action.title}</h4>
+                            <p className="text-sm text-gray-600">{action.description}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Activités récentes */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Activités Récentes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentActivities.map(activity => (
+                      <div key={activity.id} className="flex items-start gap-3">
+                        <div className="p-2 bg-gray-100 rounded-lg">
+                          {activity.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm">
+                            <span className="font-medium">{activity.user}</span> {activity.action}
+                          </p>
+                          <p className="text-xs text-gray-500">{activity.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Widget dashboard personnalisable */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layout className="w-5 h-5" />
+                  Tableau de Bord Personnalisable
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="h-96">
+                  <ModuleComponent />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeModule === 'calendar' && <ModuleComponent />}
+        {activeModule === 'search' && (
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="w-5 h-5" />
+                Recherche Intelligente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ModuleComponent />
+            </CardContent>
+          </Card>
+        )}
+        {activeModule === 'scheduler' && <ModuleComponent />}
+      </motion.div>
+    );
+  };
+
   if (isLoading) {
     return (
       <PageLoading 
@@ -94,6 +494,150 @@ export default function Dashboard() {
   };
 
   return (
+    <div className={`min-h-screen bg-gray-50 ${getViewModeClasses()}`}>
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Tableau de Bord Avancé
+              </h1>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Sparkles className="w-4 h-4" />
+                <span>Interface moderne avec composants interactifs</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Sélecteur de vue */}
+              <div className="flex border rounded-lg overflow-hidden">
+                <Button
+                  variant={viewMode === 'desktop' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('desktop')}
+                  className="rounded-none"
+                >
+                  <Monitor className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'tablet' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('tablet')}
+                  className="rounded-none"
+                >
+                  <Tablet className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'mobile' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('mobile')}
+                  className="rounded-none"
+                >
+                  <Smartphone className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Plein écran */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="w-4 h-4" />
+                ) : (
+                  <Maximize2 className="w-4 h-4" />
+                )}
+              </Button>
+
+              {/* Sélecteur de module */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowModuleSelector(!showModuleSelector)}
+              >
+                <Layers className="w-4 h-4 mr-1" />
+                Modules
+              </Button>
+
+              <Button variant="outline" size="sm">
+                <Settings className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Navigation modules */}
+          <div className="flex items-center gap-2 mt-4">
+            {dashboardModules.map(module => (
+              <Button
+                key={module.id}
+                variant={activeModule === module.id ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveModule(module.id)}
+                className="flex items-center gap-2"
+              >
+                {module.icon}
+                {module.title}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sélecteur de modules étendu */}
+        {showModuleSelector && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-t border-gray-200 bg-gray-50"
+          >
+            <div className="px-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {dashboardModules.map(module => (
+                  <motion.div
+                    key={module.id}
+                    whileHover={{ scale: 1.02 }}
+                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                      activeModule === module.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                    onClick={() => {
+                      setActiveModule(module.id);
+                      setShowModuleSelector(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`p-2 rounded-lg ${
+                        activeModule === module.id ? 'bg-blue-500 text-white' : 'bg-gray-100'
+                      }`}>
+                        {module.icon}
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{module.title}</h4>
+                        <p className="text-xs text-gray-500">{module.category}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600">{module.description}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Contenu principal */}
+      <div className="p-6">
+        {renderActiveModule()}
+      </div>
+    </div>
+  );
+}
+
+{/* Section commentée - Ancien contenu du dashboard pour référence */}
+{/*
     <motion.div 
       className="space-y-6"
       variants={containerVariants}
@@ -136,175 +680,6 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Stats Cards */}
-      <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-        variants={itemVariants}
-      >
-        <StatCard
-          title="Cours programmés"
-          value={stats?.total_courses.toString() || "0"}
-          change="+12% vs semaine dernière"
-          trend="up"
-          icon={<BookOpen className="h-6 w-6" />}
-        />
-        
-        <StatCard
-          title="Salles disponibles"
-          value={`${stats?.total_rooms || 0} salles`}
-          change={`${stats?.system_utilization || 0}% d'occupation`}
-          trend="neutral"
-          icon={<MapPin className="h-6 w-6" />}
-        />
-        
-        <StatCard
-          title="Enseignants actifs"
-          value={stats?.total_teachers.toString() || "0"}
-          change="+3 ce mois"
-          trend="up"
-          icon={<Users className="h-6 w-6" />}
-        />
-        
-        <StatCard
-          title="Conflits d'horaires"
-          value={stats?.unresolved_conflicts.toString() || "0"}
-          change="-5 depuis hier"
-          trend="down"
-          icon={<AlertTriangle className="h-6 w-6" />}
-        />
-      </motion.div>
-
-      {/* Main Content */}
-      <motion.div 
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-        variants={itemVariants}
-      >
-        {/* Calendar */}
-        <Card className="col-span-2" hover>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Emploi du temps</CardTitle>
-              <Link href="/schedule" className="text-sm text-accent hover:text-accent-hover font-medium flex items-center transition-colors">
-                Voir tout
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <CardSkeleton rows={5} showHeader={false} />
-            ) : (
-              <ScheduleCalendar />
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* Recent Activities */}
-        <Card hover>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Activités récentes</CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                loading={isRefreshing}
-              >
-                <Activity className="mr-1 h-4 w-4" />
-                Actualiser
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isRefreshing ? (
-              <div className="flex items-center justify-center py-8">
-                <LoadingSpinner size="md" />
-              </div>
-            ) : (
-              <RecentActivities />
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Charts and Conflicts */}
-      <motion.div 
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-        variants={itemVariants}
-      >
-        {/* Room Occupancy Chart */}
-        <Card hover>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Occupation des salles</CardTitle>
-              <Button variant="outline" size="sm">
-                <BarChart3 className="mr-1 h-4 w-4" />
-                Filtrer
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <CardSkeleton rows={6} showHeader={false} />
-            ) : (
-              <RoomOccupancyChart />
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* Schedule Conflicts */}
-        <Card hover>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Conflits d'horaires</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-red-600 border-red-200 hover:bg-red-50"
-              >
-                <AlertTriangle className="mr-1 h-4 w-4" />
-                Résoudre
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <CardSkeleton rows={4} showHeader={false} />
-            ) : (
-              <ScheduleConflicts />
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Quick Actions */}
-      <motion.div variants={itemVariants}>
-        <Card className="bg-gradient-to-r from-primary-subtle to-accent-subtle border-primary/20" hover>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">Actions rapides</h3>
-                <p className="text-secondary text-sm">Accès rapide aux fonctionnalités les plus utilisées</p>
-              </div>
-              <div className="flex gap-3">
-                <Button size="sm" variant="outline">
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Nouveau cours
-                </Button>
-                <Button size="sm" variant="outline">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Réserver salle
-                </Button>
-                <Button size="sm">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Planifier
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </motion.div>
+*/}
   );
 }

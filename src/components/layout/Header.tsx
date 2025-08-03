@@ -6,12 +6,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { NotificationCenter } from '@/components/ui/notifications';
+import { useAuth } from '@/lib/auth/context';
 
 export default function Header() {
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   
   // Fonction pour obtenir le titre de la page en fonction du pathname
   const getPageTitle = () => {
@@ -95,64 +97,7 @@ export default function Header() {
       
       <div className="flex items-center gap-2">
         {/* Notifications */}
-        <div className="relative">
-          <motion.button 
-            className="relative p-3 rounded-xl hover:bg-primary-muted transition-colors"
-            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label="Notifications"
-          >
-            <Bell size={18} className="text-secondary" />
-            <motion.span 
-              variants={notificationBadgeVariants}
-              initial="initial"
-              animate={["animate", "pulse"]}
-              className="absolute -top-1 -right-1 bg-accent text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium"
-            >
-              3
-            </motion.span>
-          </motion.button>
-          
-          <AnimatePresence>
-            {isNotificationsOpen && (
-              <motion.div 
-                variants={dropdownVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                className="absolute right-0 mt-2 w-80 surface-elevated rounded-xl shadow-xl border border-subtle z-50"
-              >
-                <div className="p-4 border-b border-subtle">
-                  <h3 className="font-semibold text-primary">Notifications</h3>
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {[
-                    { title: "Modification de salle", desc: "Le cours de Anatomie a changé de salle", time: "Il y a 10 minutes" },
-                    { title: "Conflit d'horaire détecté", desc: "Veuillez vérifier l'emploi du temps", time: "Il y a 1 heure" },
-                    { title: "Nouveau cours ajouté", desc: "Cours de Biochimie ajouté à votre emploi du temps", time: "Hier" }
-                  ].map((notif, index) => (
-                    <motion.a 
-                      key={index}
-                      href="#" 
-                      className="block p-4 hover:bg-primary-subtle/50 transition-colors border-b border-subtle last:border-b-0"
-                      whileHover={{ x: 4 }}
-                    >
-                      <p className="text-sm font-medium text-primary">{notif.title}</p>
-                      <p className="text-xs text-secondary mt-1">{notif.desc}</p>
-                      <p className="text-xs text-tertiary mt-1">{notif.time}</p>
-                    </motion.a>
-                  ))}
-                </div>
-                <div className="p-4 border-t border-subtle">
-                  <Link href="#" className="text-sm text-accent hover:text-accent-hover font-medium">
-                    Voir toutes les notifications
-                  </Link>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <NotificationCenter />
         
         {/* User Menu */}
         <div className="relative">
@@ -167,8 +112,8 @@ export default function Header() {
               <User size={18} className="text-white" />
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-sm font-medium text-primary">Dr. Kamga</p>
-              <p className="text-xs text-secondary">Administrateur</p>
+              <p className="text-sm font-medium text-primary">{user?.full_name || user?.username || 'Utilisateur'}</p>
+              <p className="text-xs text-secondary">{user?.role || 'Utilisateur'}</p>
             </div>
             <motion.div
               animate={{ rotate: isUserMenuOpen ? 180 : 0 }}
@@ -209,17 +154,16 @@ export default function Header() {
                 </div>
                 <div className="border-t border-subtle m-2"></div>
                 <div className="p-2">
-                  <Link href="/auth/logout">
-                    <motion.div 
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                      whileHover={{ x: 4 }}
-                    >
-                      <div className="w-4 h-4 rounded bg-red-100 flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded"></div>
-                      </div>
-                      <span className="text-sm font-medium">Déconnexion</span>
-                    </motion.div>
-                  </Link>
+                  <motion.button 
+                    onClick={logout}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                    whileHover={{ x: 4 }}
+                  >
+                    <div className="w-4 h-4 rounded bg-red-100 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-red-500 rounded"></div>
+                    </div>
+                    <span className="text-sm font-medium">Déconnexion</span>
+                  </motion.button>
                 </div>
               </motion.div>
             )}

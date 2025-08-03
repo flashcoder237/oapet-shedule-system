@@ -106,4 +106,30 @@ export const scheduleService = {
       resolution_notes: resolutionNotes,
     });
   },
+
+  // Statistiques des emplois du temps
+  async getSchedulesStats(): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.SCHEDULES}stats/`);
+  },
+
+  // Templates d'emploi du temps
+  async getScheduleTemplates(params?: {
+    curriculum?: number;
+    level?: string;
+  }): Promise<any> {
+    return apiClient.get('/schedule_templates/', params);
+  },
+
+  // Optimisation
+  async getOptimizations(params?: { schedule?: number }): Promise<any> {
+    return apiClient.get('/schedule_optimizations/', params);
+  },
+
+  // Export
+  async exportSchedule(id: number, format: string, params?: any): Promise<any> {
+    return apiClient.post(`${API_ENDPOINTS.SCHEDULES}${id}/export/`, {
+      format,
+      ...params
+    });
+  },
 };

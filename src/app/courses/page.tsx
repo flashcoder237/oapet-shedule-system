@@ -8,13 +8,23 @@ import { Button } from '@/components/ui/button';
 import { PageLoading, CardSkeleton, LoadingSpinner } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
 import { courseService } from '@/lib/api/services/courses';
+import CourseModal from '@/components/modals/CourseModal';
+import ExportModal from '@/components/export/ExportModal';
+import { 
+  ParallaxCard, 
+  AnimatedProgress, 
+  NotificationBadge,
+  MagneticButton 
+} from '@/components/ui/interactive-elements';
 import type { Course, CourseStats } from '@/types/api';
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedLevel, setSelectedLevel] = useState('all');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showCourseModal, setShowCourseModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -71,6 +81,69 @@ export default function CoursesPage() {
       return () => clearTimeout(searchTimer);
     }
   }, [searchTerm]);
+
+  // Fonctions pour gérer les modales
+  const handleAddCourse = () => {
+    setSelectedCourse(null);
+    setShowCourseModal(true);
+  };
+
+  const handleEditCourse = (course: Course) => {
+    setSelectedCourse(course);
+    setShowCourseModal(true);
+  };
+
+  const handleSaveCourse = async (courseData: Course) => {
+    try {
+      if (selectedCourse) {
+        // Mise à jour existante
+        await courseService.updateCourse(selectedCourse.id!, courseData);
+        setCourses(prev => prev.map(course => 
+          course.id === selectedCourse.id ? { ...course, ...courseData } : course
+        ));
+        toast({
+          title: "Succès",
+          description: "Cours mis à jour avec succès",
+        });
+      } else {
+        // Nouveau cours
+        const newCourse = await courseService.createCourse(courseData);
+        setCourses(prev => [...prev, newCourse]);
+        toast({
+          title: "Succès",
+          description: "Cours créé avec succès",
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder le cours",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) return;
+    
+    try {
+      await courseService.deleteCourse(courseId);
+      setCourses(prev => prev.filter(course => course.id !== courseId));
+      toast({
+        title: "Succès",
+        description: "Cours supprimé avec succès",
+      });
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le cours",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -138,10 +211,18 @@ export default function CoursesPage() {
           <h1 className="text-3xl font-bold text-primary">Gestion des Cours</h1>
           <p className="text-secondary mt-1">Gérez les cours, professeurs et planifications</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Ajouter un cours
-        </Button>
+        <div className="flex gap-2">
+          <MagneticButton
+            onClick={() => setShowExportModal(true)}
+            className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/80 transition-colors"
+          >
+            Exporter
+          </MagneticButton>
+          <Button onClick={handleAddCourse}>
+            <Plus className="mr-2 h-4 w-4" />
+            Ajouter un cours
+          </Button>
+        </div>
       </motion.div>
 
       <motion.div 
@@ -245,7 +326,8 @@ export default function CoursesPage() {
                 transition={{ delay: index * 0.1 }}
                 layout
               >
-                <Card hover interactive className="group">
+                <ParallaxCard className="group h-full">
+                  <Card hover interactive className="h-full">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -265,10 +347,19 @@ export default function CoursesPage() {
                         </div>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditCourse(course)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={() => handleDeleteCourse(course.id!)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -300,62 +391,52 @@ export default function CoursesPage() {
                         <Calendar className="mr-1 h-3 w-3" />
                         Planning
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Users className="mr-1 h-3 w-3" />
-                        Étudiants
-                      </Button>
+                      <NotificationBadge count={course.student_count || 0} max={999}>
+                        <Button variant="outline" size="sm" className="flex-1">
+                          <Users className="mr-1 h-3 w-3" />
+                          Étudiants
+                        </Button>
+                      </NotificationBadge>
+                    </div>
+
+                    {/* Barre de progression pour la complétion du cours */}
+                    <div className="mt-4">
+                      <div className="flex justify-between text-xs text-secondary mb-1">
+                        <span>Progression</span>
+                        <span>75%</span>
+                      </div>
+                      <AnimatedProgress 
+                        value={75} 
+                        className="h-1"
+                        color="bg-gradient-to-r from-primary to-accent"
+                      />
                     </div>
                   </CardContent>
-                </Card>
+                  </Card>
+                </ParallaxCard>
               </motion.div>
             ))
           )}
         </AnimatePresence>
       </motion.div>
 
-      <AnimatePresence>
-        {showAddModal && (
-          <motion.div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div 
-              className="surface-elevated rounded-xl p-6 w-full max-w-md border border-subtle"
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-primary">Ajouter un nouveau cours</h2>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowAddModal(false)}
-                  className="rounded-full"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-secondary mb-6">Formulaire d'ajout de cours à implémenter</p>
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1"
-                >
-                  Annuler
-                </Button>
-                <Button className="flex-1">
-                  Ajouter
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Modales */}
+      <CourseModal
+        isOpen={showCourseModal}
+        onClose={() => {
+          setShowCourseModal(false);
+          setSelectedCourse(null);
+        }}
+        course={selectedCourse}
+        onSave={handleSaveCourse}
+      />
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        data={filteredCourses}
+        type="courses"
+      />
     </motion.div>
   );
 }

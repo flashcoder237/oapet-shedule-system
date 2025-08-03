@@ -73,4 +73,32 @@ export const roomService = {
   async approveBooking(id: number): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>(`${API_ENDPOINTS.ROOM_BOOKINGS}${id}/approve/`);
   },
+
+  // Statistiques des salles
+  async getRoomsStats(): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.ROOMS}stats/`);
+  },
+
+  // Taux d'occupation d'une salle
+  async getRoomOccupancy(id: number): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.ROOMS}${id}/occupancy/`);
+  },
+
+  // Équipements des salles
+  async getRoomEquipment(params?: { room?: number }): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.ROOM_EQUIPMENT}`, params);
+  },
+
+  // Maintenance
+  async getMaintenanceRecords(params?: {
+    room?: number;
+    type?: string;
+    completed_only?: boolean;
+  }): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.MAINTENANCE_RECORDS}`, params);
+  },
+
+  async markMaintenanceCompleted(id: number, notes?: string): Promise<any> {
+    return apiClient.post(`${API_ENDPOINTS.MAINTENANCE_RECORDS}${id}/mark_completed/`, { notes });
+  },
 };

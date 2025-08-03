@@ -1,0 +1,973 @@
+// src/components/scheduling/DragDropScheduler.tsx
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { 
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Users,
+  BookOpen,
+  Plus,
+  Edit,
+  Trash2,
+  Copy,
+  Save,
+  Undo,
+  Redo,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Star,
+  Filter,
+  Search,
+  Grid3X3,
+  List,
+  Eye,
+  Settings,
+  RefreshCw,
+  Download,
+  Upload,
+  Share2,
+  Bell,
+  Target,
+  Zap,
+  Activity,
+  BarChart3,
+  TrendingUp,
+  ArrowRight,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  X,
+  Move,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Hash,
+  Tag,
+  Building,
+  Layers,
+  Shield,
+  Lock,
+  Unlock,
+  Archive,
+  FileText,
+  Database,
+  Compass,
+  Navigation,
+  Home,
+  Globe,
+  Phone,
+  Mail,
+  MessageCircle,
+  Video,
+  Wifi,
+  Monitor,
+  Smartphone,
+  Tablet
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
+interface ScheduleItem {
+  id: string;
+  title: string;
+  description?: string;
+  type: 'course' | 'exam' | 'meeting' | 'break' | 'event';
+  startTime: string;
+  endTime: string;
+  date: Date;
+  professor?: string;
+  room?: string;
+  participants?: number;
+  color: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'confirmed' | 'pending' | 'cancelled' | 'conflict';
+  constraints: {
+    canMove: boolean;
+    canResize: boolean;
+    canDelete: boolean;
+    minDuration: number; // en minutes
+    maxDuration: number;
+  };
+  dependencies?: string[]; // IDs d'autres items
+  resources: {
+    professorId?: string;
+    roomId?: string;
+    equipmentIds?: string[];
+  };
+}
+
+interface TimeSlot {
+  hour: number;
+  minute: number;
+  available: boolean;
+  conflicts: string[];
+}
+
+interface DragDropSchedulerProps {
+  items?: ScheduleItem[];
+  timeSlots?: TimeSlot[];
+  onItemChange?: (item: ScheduleItem) => void;
+  onItemAdd?: (item: Partial<ScheduleItem>) => void;
+  onItemDelete?: (itemId: string) => void;
+  onConflictDetected?: (conflicts: string[]) => void;
+  readOnly?: boolean;
+  showConflicts?: boolean;
+  enableAutoScheduling?: boolean;
+  view?: 'day' | 'week' | 'month';
+}
+
+export default function DragDropScheduler({
+  items = [],
+  timeSlots = [],
+  onItemChange,
+  onItemAdd,
+  onItemDelete,
+  onConflictDetected,
+  readOnly = false,
+  showConflicts = true,
+  enableAutoScheduling = true,
+  view = 'week'
+}: DragDropSchedulerProps) {
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(items);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [draggedItem, setDraggedItem] = useState<ScheduleItem | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ day: number; hour: number } | null>(null);
+  const [conflicts, setConflicts] = useState<string[]>([]);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [showItemLibrary, setShowItemLibrary] = useState(false);
+  const [isAutoScheduling, setIsAutoScheduling] = useState(false);
+  const [history, setHistory] = useState<ScheduleItem[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [showConflictPanel, setShowConflictPanel] = useState(false);
+  const [filters, setFilters] = useState({
+    type: 'all',
+    professor: 'all',
+    room: 'all',
+    status: 'all'
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const schedulerRef = useRef<HTMLDivElement>(null);
+  const dragControls = useDragControls();
+
+  // Données d'exemple
+  const sampleItems: ScheduleItem[] = [
+    {
+      id: '1',
+      title: 'Anatomie Générale',
+      description: 'Cours magistral sur le système cardiovasculaire',
+      type: 'course',
+      startTime: '08:00',
+      endTime: '10:00',
+      date: new Date(2024, 11, 15),
+      professor: 'Dr. Kamga',
+      room: 'Amphi A',
+      participants: 120,
+      color: '#3B82F6',
+      priority: 'high',
+      status: 'confirmed',
+      constraints: {
+        canMove: true,
+        canResize: true,
+        canDelete: false,
+        minDuration: 60,
+        maxDuration: 180
+      },
+      resources: {
+        professorId: 'prof1',
+        roomId: 'room1'
+      }
+    },
+    {
+      id: '2',
+      title: 'Examen Biochimie',
+      description: 'Examen final de biochimie métabolique',
+      type: 'exam',
+      startTime: '14:00',
+      endTime: '16:00',
+      date: new Date(2024, 11, 15),
+      professor: 'Dr. Mbarga',
+      room: 'Salle B201',
+      participants: 80,
+      color: '#EF4444',
+      priority: 'high',
+      status: 'confirmed',
+      constraints: {
+        canMove: false,
+        canResize: false,
+        canDelete: false,
+        minDuration: 120,
+        maxDuration: 180
+      },
+      resources: {
+        professorId: 'prof2',
+        roomId: 'room2'
+      }
+    },
+    {
+      id: '3',
+      title: 'Réunion Département',
+      description: 'Réunion mensuelle du département',
+      type: 'meeting',
+      startTime: '15:00',
+      endTime: '16:00',
+      date: new Date(2024, 11, 16),
+      professor: 'Dr. Nkeng',
+      room: 'Salle de réunion',
+      participants: 15,
+      color: '#10B981',
+      priority: 'medium',
+      status: 'pending',
+      constraints: {
+        canMove: true,
+        canResize: true,
+        canDelete: true,
+        minDuration: 30,
+        maxDuration: 120
+      },
+      resources: {
+        professorId: 'prof3',
+        roomId: 'room3'
+      }
+    }
+  ];
+
+  const timeSlots = Array.from({ length: 14 }, (_, i) => ({
+    hour: 7 + i,
+    minute: 0,
+    available: true,
+    conflicts: []
+  }));
+
+  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+  // Initialisation avec données d'exemple
+  useEffect(() => {
+    if (items.length === 0) {
+      setScheduleItems(sampleItems);
+      addToHistory(sampleItems);
+    }
+  }, []);
+
+  // Détection de conflits
+  useEffect(() => {
+    const detectedConflicts = detectConflicts(scheduleItems);
+    setConflicts(detectedConflicts);
+    if (detectedConflicts.length > 0) {
+      onConflictDetected?.(detectedConflicts);
+    }
+  }, [scheduleItems]);
+
+  const addToHistory = (items: ScheduleItem[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push([...items]);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setScheduleItems([...history[historyIndex - 1]]);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setScheduleItems([...history[historyIndex + 1]]);
+    }
+  };
+
+  const detectConflicts = (items: ScheduleItem[]): string[] => {
+    const conflicts: string[] = [];
+    
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        const item1 = items[i];
+        const item2 = items[j];
+        
+        // Vérifier les conflits de salle
+        if (item1.room === item2.room && 
+            item1.date.toDateString() === item2.date.toDateString()) {
+          if (timesOverlap(item1.startTime, item1.endTime, item2.startTime, item2.endTime)) {
+            if (!conflicts.includes(item1.id)) conflicts.push(item1.id);
+            if (!conflicts.includes(item2.id)) conflicts.push(item2.id);
+          }
+        }
+        
+        // Vérifier les conflits de professeur
+        if (item1.professor === item2.professor && 
+            item1.date.toDateString() === item2.date.toDateString()) {
+          if (timesOverlap(item1.startTime, item1.endTime, item2.startTime, item2.endTime)) {
+            if (!conflicts.includes(item1.id)) conflicts.push(item1.id);
+            if (!conflicts.includes(item2.id)) conflicts.push(item2.id);
+          }
+        }
+      }
+    }
+    
+    return conflicts;
+  };
+
+  const timesOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+    const parseTime = (time: string) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    
+    const s1 = parseTime(start1);
+    const e1 = parseTime(end1);
+    const s2 = parseTime(start2);
+    const e2 = parseTime(end2);
+    
+    return s1 < e2 && s2 < e1;
+  };
+
+  const handleDragStart = (item: ScheduleItem) => {
+    if (readOnly || !item.constraints.canMove) return;
+    setDraggedItem(item);
+  };
+
+  const handleDragEnd = () => {
+    if (!draggedItem || !dropTarget) {
+      setDraggedItem(null);
+      setDropTarget(null);
+      return;
+    }
+
+    const updatedItems = scheduleItems.map(item => {
+      if (item.id === draggedItem.id) {
+        const newDate = new Date(currentWeek);
+        newDate.setDate(newDate.getDate() - newDate.getDay() + 1 + dropTarget.day);
+        
+        return {
+          ...item,
+          date: newDate,
+          startTime: `${dropTarget.hour.toString().padStart(2, '0')}:00`,
+          endTime: calculateEndTime(item.startTime, item.endTime, `${dropTarget.hour.toString().padStart(2, '0')}:00`)
+        };
+      }
+      return item;
+    });
+
+    setScheduleItems(updatedItems);
+    addToHistory(updatedItems);
+    onItemChange?.(updatedItems.find(item => item.id === draggedItem.id)!);
+    
+    setDraggedItem(null);
+    setDropTarget(null);
+  };
+
+  const calculateEndTime = (originalStart: string, originalEnd: string, newStart: string): string => {
+    const parseTime = (time: string) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const formatTime = (minutes: number) => {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    };
+
+    const originalDuration = parseTime(originalEnd) - parseTime(originalStart);
+    const newStartMinutes = parseTime(newStart);
+    
+    return formatTime(newStartMinutes + originalDuration);
+  };
+
+  const handleItemResize = (itemId: string, newDuration: number) => {
+    const item = scheduleItems.find(i => i.id === itemId);
+    if (!item || !item.constraints.canResize) return;
+
+    const clampedDuration = Math.max(
+      item.constraints.minDuration,
+      Math.min(item.constraints.maxDuration, newDuration)
+    );
+
+    const parseTime = (time: string) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const formatTime = (minutes: number) => {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    };
+
+    const startMinutes = parseTime(item.startTime);
+    const newEndTime = formatTime(startMinutes + clampedDuration);
+
+    const updatedItems = scheduleItems.map(i => 
+      i.id === itemId ? { ...i, endTime: newEndTime } : i
+    );
+
+    setScheduleItems(updatedItems);
+    addToHistory(updatedItems);
+    onItemChange?.(updatedItems.find(i => i.id === itemId)!);
+  };
+
+  const duplicateItem = (item: ScheduleItem) => {
+    const newItem: ScheduleItem = {
+      ...item,
+      id: `${item.id}-copy-${Date.now()}`,
+      title: `${item.title} (Copie)`,
+      status: 'pending',
+      date: new Date(item.date.getTime() + 24 * 60 * 60 * 1000) // Jour suivant
+    };
+
+    const updatedItems = [...scheduleItems, newItem];
+    setScheduleItems(updatedItems);
+    addToHistory(updatedItems);
+    onItemAdd?.(newItem);
+  };
+
+  const deleteItem = (itemId: string) => {
+    const item = scheduleItems.find(i => i.id === itemId);
+    if (!item || !item.constraints.canDelete) return;
+
+    const updatedItems = scheduleItems.filter(i => i.id !== itemId);
+    setScheduleItems(updatedItems);
+    addToHistory(updatedItems);
+    onItemDelete?.(itemId);
+  };
+
+  const autoSchedule = async () => {
+    setIsAutoScheduling(true);
+    
+    // Simulation d'algorithme d'optimisation
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Logique simple de réorganisation pour éviter les conflits
+    const optimizedItems = [...scheduleItems];
+    const conflictingItems = optimizedItems.filter(item => conflicts.includes(item.id));
+    
+    for (const item of conflictingItems) {
+      if (item.constraints.canMove) {
+        // Trouver le prochain slot disponible
+        const newSlot = findNextAvailableSlot(item, optimizedItems);
+        if (newSlot) {
+          const index = optimizedItems.findIndex(i => i.id === item.id);
+          optimizedItems[index] = {
+            ...item,
+            date: newSlot.date,
+            startTime: newSlot.startTime,
+            endTime: newSlot.endTime
+          };
+        }
+      }
+    }
+    
+    setScheduleItems(optimizedItems);
+    addToHistory(optimizedItems);
+    setIsAutoScheduling(false);
+  };
+
+  const findNextAvailableSlot = (item: ScheduleItem, existingItems: ScheduleItem[]) => {
+    // Logique simplifiée pour trouver un slot libre
+    const startDate = new Date(item.date);
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const testDate = new Date(startDate);
+      testDate.setDate(startDate.getDate() + dayOffset);
+      
+      for (let hour = 8; hour <= 18; hour++) {
+        const testStartTime = `${hour.toString().padStart(2, '0')}:00`;
+        const testEndTime = calculateEndTime(item.startTime, item.endTime, testStartTime);
+        
+        const hasConflict = existingItems.some(existing => {
+          if (existing.id === item.id) return false;
+          if (existing.date.toDateString() !== testDate.toDateString()) return false;
+          
+          return (existing.room === item.room || existing.professor === item.professor) &&
+                 timesOverlap(existing.startTime, existing.endTime, testStartTime, testEndTime);
+        });
+        
+        if (!hasConflict) {
+          return {
+            date: testDate,
+            startTime: testStartTime,
+            endTime: testEndTime
+          };
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  const getItemStyle = (item: ScheduleItem) => {
+    const hasConflict = conflicts.includes(item.id);
+    const isSelected = selectedItem === item.id;
+    
+    return {
+      backgroundColor: hasConflict ? '#FEE2E2' : item.color + '20',
+      borderColor: hasConflict ? '#EF4444' : item.color,
+      borderWidth: isSelected ? '2px' : '1px',
+      color: hasConflict ? '#991B1B' : '#1F2937'
+    };
+  };
+
+  const getStatusIcon = (status: ScheduleItem['status']) => {
+    switch (status) {
+      case 'confirmed': return <CheckCircle className="w-3 h-3 text-green-500" />;
+      case 'pending': return <Clock className="w-3 h-3 text-yellow-500" />;
+      case 'cancelled': return <X className="w-3 h-3 text-red-500" />;
+      case 'conflict': return <AlertTriangle className="w-3 h-3 text-red-500" />;
+      default: return <Info className="w-3 h-3 text-gray-500" />;
+    }
+  };
+
+  const getTypeIcon = (type: ScheduleItem['type']) => {
+    switch (type) {
+      case 'course': return <BookOpen className="w-4 h-4" />;
+      case 'exam': return <Target className="w-4 h-4" />;
+      case 'meeting': return <Users className="w-4 h-4" />;
+      case 'break': return <Clock className="w-4 h-4" />;
+      case 'event': return <Star className="w-4 h-4" />;
+      default: return <Calendar className="w-4 h-4" />;
+    }
+  };
+
+  const renderWeekView = () => {
+    const startOfWeek = new Date(currentWeek);
+    startOfWeek.setDate(currentWeek.getDate() - currentWeek.getDay() + 1);
+    
+    const weekDates = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      return date;
+    });
+
+    return (
+      <div className="grid grid-cols-7 gap-1 h-full">
+        {/* En-tête vide pour la colonne des heures */}
+        <div className="p-2 border-b border-gray-200 bg-gray-50">
+          <div className="text-sm font-medium text-gray-600">Horaire</div>
+        </div>
+        
+        {/* En-têtes des jours */}
+        {weekDates.map((date, dayIndex) => (
+          <div key={dayIndex} className="p-2 border-b border-gray-200 bg-gray-50 text-center">
+            <div className="text-sm font-medium text-gray-900">{weekDays[dayIndex]}</div>
+            <div className="text-xs text-gray-500">{date.getDate()}</div>
+          </div>
+        ))}
+        
+        {/* Grille horaire */}
+        {timeSlots.map((slot, slotIndex) => (
+          <React.Fragment key={slotIndex}>
+            {/* Colonne des heures */}
+            <div className="p-2 text-xs text-gray-500 border-r border-gray-200 bg-gray-50 text-right">
+              {slot.hour.toString().padStart(2, '0')}:00
+            </div>
+            
+            {/* Colonnes des jours */}
+            {weekDates.map((date, dayIndex) => {
+              const dayItems = scheduleItems.filter(item => {
+                const itemDate = new Date(item.date);
+                return itemDate.toDateString() === date.toDateString() &&
+                       parseInt(item.startTime.split(':')[0]) === slot.hour;
+              });
+
+              return (
+                <div
+                  key={`${dayIndex}-${slotIndex}`}
+                  className={`
+                    min-h-[60px] border border-gray-100 p-1 relative
+                    ${dropTarget?.day === dayIndex && dropTarget?.hour === slot.hour ? 
+                      'bg-primary/20 border-primary' : 'hover:bg-gray-50'}
+                    transition-colors cursor-pointer
+                  `}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDropTarget({ day: dayIndex, hour: slot.hour });
+                  }}
+                  onDragLeave={() => setDropTarget(null)}
+                  onDrop={handleDragEnd}
+                  onClick={() => {
+                    if (!readOnly) {
+                      // Ouvrir modal pour créer un nouvel item
+                      onItemAdd?.({
+                        date,
+                        startTime: `${slot.hour.toString().padStart(2, '0')}:00`,
+                        endTime: `${(slot.hour + 1).toString().padStart(2, '0')}:00`
+                      });
+                    }
+                  }}
+                >
+                  {dayItems.map(item => (
+                    <motion.div
+                      key={item.id}
+                      className={`
+                        absolute inset-x-1 p-2 rounded border cursor-move
+                        ${selectedItem === item.id ? 'ring-2 ring-primary' : ''}
+                        ${!item.constraints.canMove ? 'cursor-not-allowed opacity-75' : ''}
+                      `}
+                      style={getItemStyle(item)}
+                      draggable={item.constraints.canMove && !readOnly}
+                      onDragStart={() => handleDragStart(item)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedItem(item.id);
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      layout
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1">
+                          {getTypeIcon(item.type)}
+                          <span className="text-xs font-medium truncate">
+                            {item.title}
+                          </span>
+                        </div>
+                        {getStatusIcon(item.status)}
+                      </div>
+                      
+                      <div className="text-xs space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-2 h-2" />
+                          <span>{item.startTime} - {item.endTime}</span>
+                        </div>
+                        
+                        {item.room && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-2 h-2" />
+                            <span className="truncate">{item.room}</span>
+                          </div>
+                        )}
+                        
+                        {item.professor && (
+                          <div className="flex items-center gap-1">
+                            <User className="w-2 h-2" />
+                            <span className="truncate">{item.professor}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Poignée de redimensionnement */}
+                      {item.constraints.canResize && !readOnly && (
+                        <div 
+                          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-primary/20 opacity-0 hover:opacity-100 transition-opacity"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            // Logique de redimensionnement
+                          }}
+                        />
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              );
+            })}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Barre d'outils */}
+      <div className="flex items-center justify-between p-4 border-b bg-white">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold text-primary">Planification Interactive</h2>
+          
+          {/* Navigation semaine */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newWeek = new Date(currentWeek);
+                newWeek.setDate(currentWeek.getDate() - 7);
+                setCurrentWeek(newWeek);
+              }}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            
+            <span className="text-sm font-medium min-w-[150px] text-center">
+              Semaine du {currentWeek.toLocaleDateString('fr-FR')}
+            </span>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newWeek = new Date(currentWeek);
+                newWeek.setDate(currentWeek.getDate() + 7);
+                setCurrentWeek(newWeek);
+              }}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentWeek(new Date())}
+            >
+              Aujourd'hui
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Recherche */}
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 pr-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 w-48"
+            />
+          </div>
+
+          {/* Actions */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={undo}
+            disabled={historyIndex <= 0}
+          >
+            <Undo className="w-4 h-4" />
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={redo}
+            disabled={historyIndex >= history.length - 1}
+          >
+            <Redo className="w-4 h-4" />
+          </Button>
+
+          {enableAutoScheduling && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={autoSchedule}
+              disabled={isAutoScheduling || readOnly}
+            >
+              {isAutoScheduling ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4" />
+              )}
+              {isAutoScheduling ? 'Optimisation...' : 'Auto-planifier'}
+            </Button>
+          )}
+
+          {conflicts.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowConflictPanel(true)}
+              className="text-red-600 border-red-300"
+            >
+              <AlertTriangle className="w-4 h-4 mr-1" />
+              {conflicts.length} Conflit{conflicts.length > 1 ? 's' : ''}
+            </Button>
+          )}
+
+          <Button variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-1" />
+            Exporter
+          </Button>
+
+          <Button size="sm">
+            <Plus className="w-4 h-4 mr-1" />
+            Ajouter
+          </Button>
+        </div>
+      </div>
+
+      {/* Zone principale de planification */}
+      <div className="flex-1 overflow-auto" ref={schedulerRef}>
+        {view === 'week' && renderWeekView()}
+      </div>
+
+      {/* Panel des détails de l'item sélectionné */}
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div
+            initial={{ x: 300 }}
+            animate={{ x: 0 }}
+            exit={{ x: 300 }}
+            className="fixed right-0 top-0 bottom-0 w-80 bg-white border-l border-gray-200 shadow-lg z-50 overflow-auto"
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Détails de l'événement</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedItem(null)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {(() => {
+                const item = scheduleItems.find(i => i.id === selectedItem);
+                if (!item) return null;
+
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Titre</label>
+                      <input
+                        type="text"
+                        value={item.title}
+                        onChange={(e) => {
+                          const updatedItems = scheduleItems.map(i =>
+                            i.id === selectedItem ? { ...i, title: e.target.value } : i
+                          );
+                          setScheduleItems(updatedItems);
+                        }}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        disabled={readOnly}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Description</label>
+                      <textarea
+                        value={item.description || ''}
+                        onChange={(e) => {
+                          const updatedItems = scheduleItems.map(i =>
+                            i.id === selectedItem ? { ...i, description: e.target.value } : i
+                          );
+                          setScheduleItems(updatedItems);
+                        }}
+                        rows={3}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        disabled={readOnly}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Début</label>
+                        <input
+                          type="time"
+                          value={item.startTime}
+                          onChange={(e) => {
+                            const updatedItems = scheduleItems.map(i =>
+                              i.id === selectedItem ? { ...i, startTime: e.target.value } : i
+                            );
+                            setScheduleItems(updatedItems);
+                          }}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          disabled={readOnly || !item.constraints.canMove}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Fin</label>
+                        <input
+                          type="time"
+                          value={item.endTime}
+                          onChange={(e) => {
+                            const updatedItems = scheduleItems.map(i =>
+                              i.id === selectedItem ? { ...i, endTime: e.target.value } : i
+                            );
+                            setScheduleItems(updatedItems);
+                          }}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          disabled={readOnly || !item.constraints.canResize}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Professeur</label>
+                      <input
+                        type="text"
+                        value={item.professor || ''}
+                        onChange={(e) => {
+                          const updatedItems = scheduleItems.map(i =>
+                            i.id === selectedItem ? { ...i, professor: e.target.value } : i
+                          );
+                          setScheduleItems(updatedItems);
+                        }}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        disabled={readOnly}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Salle</label>
+                      <input
+                        type="text"
+                        value={item.room || ''}
+                        onChange={(e) => {
+                          const updatedItems = scheduleItems.map(i =>
+                            i.id === selectedItem ? { ...i, room: e.target.value } : i
+                          );
+                          setScheduleItems(updatedItems);
+                        }}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        disabled={readOnly}
+                      />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => duplicateItem(item)}
+                        disabled={readOnly}
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        Dupliquer
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteItem(item.id)}
+                        disabled={readOnly || !item.constraints.canDelete}
+                        className="text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Supprimer
+                      </Button>
+                    </div>
+
+                    {/* Informations de conflit */}
+                    {conflicts.includes(item.id) && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                          <span className="text-sm font-medium text-red-800">
+                            Conflit détecté
+                          </span>
+                        </div>
+                        <p className="text-sm text-red-700">
+                          Cet événement entre en conflit avec d'autres éléments du planning.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
