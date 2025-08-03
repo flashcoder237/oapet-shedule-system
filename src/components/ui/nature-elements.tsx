@@ -178,7 +178,7 @@ export const SeasonalBackground = ({
         transition={{ 
           duration: config.animation.duration * 2,
           repeat: Infinity,
-          ease: config.animation.ease
+          ease: "easeInOut"
         }}
       />
       
@@ -202,7 +202,7 @@ export const SeasonalBackground = ({
               duration: config.animation.duration + i,
               repeat: Infinity,
               delay: i * 0.5,
-              ease: config.animation.ease
+              ease: "easeInOut"
             }}
           >
             <Icon className="w-8 h-8 text-primary" />

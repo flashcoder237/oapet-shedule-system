@@ -94,4 +94,22 @@ export const mlService = {
   }> {
     return apiClient.get('/ml/prediction-history/accuracy_stats/');
   },
+
+  // Optimisation d'emploi du temps
+  async optimizeSchedule(params: {
+    constraints: {
+      avoid_conflicts: boolean;
+      balance_workload: boolean;
+      prefer_morning_sessions: boolean;
+    };
+    period_id?: number;
+    department_id?: number;
+  }): Promise<{
+    optimized_schedule: any;
+    conflicts_resolved: number;
+    optimization_score: number;
+    suggestions: string[];
+  }> {
+    return apiClient.post('/ml/optimize-schedule/', params);
+  },
 };

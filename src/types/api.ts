@@ -283,3 +283,24 @@ export interface DashboardStats {
   recent_predictions: number;
   system_utilization: number;
 }
+
+export interface RoomStats {
+  total_rooms: number;
+  available_rooms: number;
+  occupied_rooms: number;
+  maintenance_rooms: number;
+  occupancy_rate: number;
+  peak_hours: string[];
+  popular_rooms: Room[];
+}
+
+export interface CourseStats {
+  total_courses: number;
+  active_courses: number;
+  inactive_courses: number;
+  total_students: number;
+  total_teachers: number;
+  total_hours: number;
+  courses_by_level: Record<string, number>;
+  courses_by_department: Record<string, number>;
+}

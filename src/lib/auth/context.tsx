@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { AuthState, AuthContextType, AuthCredentials, User, RegisterData } from './types';
 import { authService } from '../api/services/auth';
+import { apiClient } from '../api/client';
 
 // État initial
 const initialState: AuthState = {

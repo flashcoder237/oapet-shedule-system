@@ -1,7 +1,7 @@
 // src/components/scheduling/DragDropScheduler.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { 
   Calendar,

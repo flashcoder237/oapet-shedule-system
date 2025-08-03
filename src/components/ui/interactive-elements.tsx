@@ -1,7 +1,7 @@
 // src/components/ui/interactive-elements.tsx
 'use client';
 
-import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
+import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { Heart, Star, ThumbsUp, Share2, Bookmark, Eye } from 'lucide-react';
 
@@ -442,7 +442,7 @@ export function HoverCard({
   delay = 200 
 }: HoverCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = () => {
     timeoutRef.current = setTimeout(() => {

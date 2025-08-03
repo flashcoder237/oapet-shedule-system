@@ -20,6 +20,8 @@ export const API_ENDPOINTS = {
   ROOM_AVAILABILITY: '/rooms/availability/',
   ROOM_BOOKINGS: '/rooms/bookings/',
   ROOM_SEARCH: '/rooms/rooms/search_available/',
+  ROOM_EQUIPMENT: '/rooms/equipment/',
+  MAINTENANCE_RECORDS: '/rooms/maintenance/',
   
   // Schedules
   ACADEMIC_PERIODS: '/schedules/academic-periods/',

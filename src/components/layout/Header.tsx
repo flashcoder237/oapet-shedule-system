@@ -32,14 +32,12 @@ export default function Header() {
     hidden: { 
       opacity: 0, 
       y: -10,
-      scale: 0.95,
-      transition: { duration: 0.2 }
+      scale: 0.95
     },
     visible: { 
       opacity: 1, 
       y: 0,
-      scale: 1,
-      transition: { duration: 0.2, ease: "easeOut" }
+      scale: 1
     }
   };
 
@@ -47,8 +45,7 @@ export default function Header() {
     initial: { scale: 0 },
     animate: { scale: 1 },
     pulse: { 
-      scale: [1, 1.2, 1],
-      transition: { duration: 0.6, repeat: Infinity, repeatType: "reverse" }
+      scale: [1, 1.2, 1]
     }
   };
 
@@ -113,7 +110,7 @@ export default function Header() {
             </div>
             <div className="hidden md:block text-left">
               <p className="text-sm font-medium text-primary">{user?.full_name || user?.username || 'Utilisateur'}</p>
-              <p className="text-xs text-secondary">{user?.role || 'Utilisateur'}</p>
+              <p className="text-xs text-secondary">{user?.profile?.role || 'Utilisateur'}</p>
             </div>
             <motion.div
               animate={{ rotate: isUserMenuOpen ? 180 : 0 }}
@@ -130,6 +127,7 @@ export default function Header() {
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
+                transition={{ duration: 0.2, ease: "easeOut" }}
                 className="absolute right-0 mt-2 w-56 surface-elevated rounded-xl shadow-xl border border-subtle z-50"
               >
                 <div className="p-2">

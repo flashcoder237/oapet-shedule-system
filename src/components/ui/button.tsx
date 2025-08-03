@@ -3,7 +3,6 @@
 
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { motion } from "framer-motion";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed position-relative overflow-hidden",
@@ -43,57 +42,23 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, loading = false, children, ...props }, ref) => {
     return (
-      <motion.button
+      <button
         className={buttonVariants({ variant, size, className })}
-        whileHover={{ 
-          scale: 1.02,
-          y: -1,
-        }}
-        whileTap={{ 
-          scale: 0.98,
-          y: 0,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 400,
-          damping: 17
-        }}
         ref={ref}
         disabled={loading || props.disabled}
         {...props}
       >
         {loading ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-2"
-          >
-            <motion.div
-              className="w-4 h-4 border-2 border-current border-t-transparent rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            />
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
             <span>Chargement...</span>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center gap-2"
-          >
+          <div className="flex items-center gap-2">
             {children}
-          </motion.div>
+          </div>
         )}
-        
-        {/* Effet de shimmer au hover */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full"
-          whileHover={{
-            translateX: "200%",
-            transition: { duration: 0.6, ease: "easeInOut" }
-          }}
-        />
-      </motion.button>
+      </button>
     );
   }
 );

@@ -16,7 +16,7 @@ import {
   NotificationBadge,
   MagneticButton 
 } from '@/components/ui/interactive-elements';
-import type { Course } from '@/types/api';
+import type { Course, CourseStats } from '@/types/api';
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,7 +28,7 @@ export default function CoursesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [stats, setStats] = useState<any | null>(null);
+  const [stats, setStats] = useState<CourseStats | null>(null);
   const [departments, setDepartments] = useState<string[]>(['all']);
   const [error, setError] = useState<string | null>(null);
   
@@ -421,15 +421,10 @@ export default function CoursesPage() {
       </motion.div>
 
       {/* Modales */}
-      {/* <CourseModal
-        isOpen={showCourseModal}
-        onClose={() => {
-          setShowCourseModal(false);
-          setSelectedCourse(null);
-        }}
-        course={selectedCourse}
-        onSave={handleSaveCourse}
-      /> */}
+      {/* CourseModal temporairement désactivé pour éviter les erreurs de types */}
+      {false && (
+        <div>Course Modal</div>
+      )}
 
       <ExportModal
         isOpen={showExportModal}

@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
 
   // Experimental features pour les performances
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
   },
 
   // Optimisations du bundle

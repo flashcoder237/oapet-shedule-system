@@ -6,7 +6,7 @@ import { useApi } from './useApi';
 import { useQuery } from './useQuery';
 
 export function useDepartments(search?: string) {
-  const queryKey = useMemo(() => ['departments', { search }], [search]);
+  const queryKey = useMemo(() => ['departments', search || ''], [search]);
   
   const { data, loading, error, refetch } = useQuery<PaginatedResponse<Department>>(
     queryKey,

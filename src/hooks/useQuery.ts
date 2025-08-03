@@ -43,8 +43,8 @@ export function useQuery<T = any>(
   });
 
   const cacheRef = useRef<Map<string, { data: any; timestamp: number }>>(new Map());
-  const intervalRef = useRef<NodeJS.Timeout>();
-  const abortControllerRef = useRef<AbortController>();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const key = Array.isArray(queryKey) ? queryKey.join(':') : queryKey;
 

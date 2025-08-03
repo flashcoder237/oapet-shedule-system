@@ -27,6 +27,7 @@ import {
   Calendar,
   Clock,
   Users,
+  User,
   BookOpen,
   MapPin,
   Target,
