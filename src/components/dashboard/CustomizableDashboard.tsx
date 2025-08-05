@@ -242,63 +242,43 @@ export default function CustomizableDashboard({
   };
 
   const generateSampleData = (type: string) => {
+    // Retourner une structure vide - les données viendront de l'API
     switch (type) {
       case 'stats':
         return {
-          value: 1250,
-          label: 'Total Étudiants',
-          change: '+12%',
-          trend: 'up'
+          value: 0,
+          label: 'Chargement...',
+          change: '',
+          trend: 'neutral'
         };
       case 'chart':
         return {
           type: 'bar',
-          data: [
-            { name: 'Lun', value: 24 },
-            { name: 'Mar', value: 28 },
-            { name: 'Mer', value: 22 },
-            { name: 'Jeu', value: 26 },
-            { name: 'Ven', value: 30 }
-          ]
+          data: []
         };
       case 'calendar':
         return {
-          events: [
-            { date: new Date(), title: 'Cours Anatomie', time: '08:00' },
-            { date: new Date(), title: 'Examen Biochimie', time: '14:00' }
-          ]
+          events: []
         };
       case 'activity':
         return {
-          activities: [
-            { user: 'Dr. Kamga', action: 'a ajouté un cours', time: '2 min' },
-            { user: 'Admin', action: 'a modifié la salle A101', time: '5 min' },
-            { user: 'Dr. Mbarga', action: 'a validé le planning', time: '10 min' }
-          ]
+          activities: []
         };
       case 'progress':
         return {
-          tasks: [
-            { name: 'Planification S1', progress: 85 },
-            { name: 'Validation Profs', progress: 60 },
-            { name: 'Attribution Salles', progress: 92 }
-          ]
+          tasks: []
         };
       case 'table':
         return {
-          headers: ['Cours', 'Professeur', 'Salle', 'Horaire'],
-          rows: [
-            ['Anatomie', 'Dr. Kamga', 'A101', '08:00-10:00'],
-            ['Biochimie', 'Dr. Mbarga', 'B201', '14:00-16:00'],
-            ['Physiologie', 'Dr. Nkeng', 'Amphi A', '10:00-12:00']
-          ]
+          headers: [],
+          rows: []
         };
       case 'metric':
         return {
-          value: 94,
+          value: 0,
           unit: '%',
-          label: 'Taux de satisfaction',
-          color: 'green'
+          label: 'Chargement...',
+          color: 'gray'
         };
       default:
         return {};

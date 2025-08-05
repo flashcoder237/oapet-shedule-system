@@ -2,8 +2,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { courseService } from '@/lib/api/services/courses';
 import type { Department, Teacher, Course, PaginatedResponse } from '@/types/api';
-import { useApi } from './useApi';
-import { useQuery } from './useQuery';
+import { useApi } from './useApiStable';
+import { useQuery } from './useQueryStable';
 
 export function useDepartments(search?: string) {
   const queryKey = useMemo(() => ['departments', search || ''], [search]);

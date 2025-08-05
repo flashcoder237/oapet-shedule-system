@@ -29,7 +29,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Afficher le formulaire de login si non authentifié
   if (!isAuthenticated) {
     return <LoginForm />;
-  }
+   }
 
   // Afficher l'interface principale si authentifié
   return (

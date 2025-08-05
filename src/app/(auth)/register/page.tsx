@@ -1,10 +1,11 @@
 // src/app/auth/register/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail, User, Building, Check, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/lib/auth/context';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({

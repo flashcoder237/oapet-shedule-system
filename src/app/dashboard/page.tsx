@@ -65,7 +65,7 @@ import WeeklyChart from '@/components/dashboard/WeeklyChart';
 import InteractiveCalendar from '@/components/calendar/InteractiveCalendar';
 import SmartSearch from '@/components/search/SmartSearch';
 import CustomizableDashboard from '@/components/dashboard/CustomizableDashboard';
-import DragDropScheduler from '@/components/scheduling/DragDropScheduler';
+import UltraStableDragDropScheduler from '@/components/scheduling/UltraStableDragDropScheduler';
 import { useAuth } from '@/lib/auth/context';
 import { courseService } from '@/lib/api/services/courses';
 import type { DashboardStats } from '@/types/api';
@@ -145,7 +145,7 @@ export default function Dashboard() {
       title: 'Planificateur Drag & Drop',
       description: 'Interface de planification avec glisser-déposer',
       icon: <Grid3X3 className="w-5 h-5" />,
-      component: DragDropScheduler,
+      component: UltraStableDragDropScheduler,
       category: 'Planning',
       isActive: true,
       size: 'large'
@@ -187,40 +187,8 @@ export default function Dashboard() {
     }
   ];
 
-  const recentActivities = [
-    {
-      id: '1',
-      user: 'Dr. Kamga',
-      action: 'a créé le cours "Anatomie Générale"',
-      time: '2 min',
-      type: 'course',
-      icon: <BookOpen className="w-4 h-4" />
-    },
-    {
-      id: '2',
-      user: 'Admin',
-      action: 'a mis à jour le planning L1 Médecine',
-      time: '5 min',
-      type: 'schedule',
-      icon: <Calendar className="w-4 h-4" />
-    },
-    {
-      id: '3',
-      user: 'Dr. Mbarga',
-      action: 'a réservé l\'Amphi A pour demain',
-      time: '10 min',
-      type: 'room',
-      icon: <MapPin className="w-4 h-4" />
-    },
-    {
-      id: '4',
-      user: 'Système',
-      action: 'a détecté un conflit d\'horaire',
-      time: '15 min',
-      type: 'alert',
-      icon: <Bell className="w-4 h-4" />
-    }
-  ];
+  // Les activités récentes viendront de l'API
+  const recentActivities: any[] = [];
 
   // Chargement des données du tableau de bord
   useEffect(() => {

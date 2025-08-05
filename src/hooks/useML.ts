@@ -7,7 +7,7 @@ import type {
   MLPredictionResponse,
   PaginatedResponse 
 } from '@/types/api';
-import { useApi } from './useApi';
+import { useApi } from './useApiStable';
 
 export function useMLModels() {
   const [models, setModels] = useState<MLModel[]>([]);

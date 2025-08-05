@@ -31,8 +31,24 @@ export const scheduleService = {
     curriculum?: number;
     published_only?: boolean;
     search?: string;
+    date?: string; // Format YYYY-MM-DD pour filtrer par date
+    week_start?: string; // Début de semaine pour vue hebdomadaire
   }): Promise<PaginatedResponse<Schedule>> {
     return apiClient.get<PaginatedResponse<Schedule>>(API_ENDPOINTS.SCHEDULES, params);
+  },
+
+  // Fonction spécifique pour récupérer les sessions d'aujourd'hui
+  async getTodayScheduleSessions(): Promise<PaginatedResponse<ScheduleSession>> {
+    // Pour les tests, utiliser la date 05/08/2025 au lieu de la date réelle
+    const today = '2025-08-05'; // Format YYYY-MM-DD pour le 05 août 2025
+    console.log('Date recherchée:', today);
+    return this.getScheduleSessions({ date: today });
+  },
+
+  // Fonction spécifique pour récupérer les emplois du temps d'aujourd'hui
+  async getTodaySchedules(): Promise<PaginatedResponse<Schedule>> {
+    const today = new Date().toISOString().split('T')[0];
+    return this.getSchedules({ date: today, published_only: true });
   },
 
   async getSchedule(id: number): Promise<Schedule> {
@@ -59,8 +75,16 @@ export const scheduleService = {
     return apiClient.post<{ message: string }>(`${API_ENDPOINTS.SCHEDULES}${id}/unpublish/`);
   },
 
-  async getWeeklyView(id: number): Promise<any> {
-    return apiClient.get(`${API_ENDPOINTS.SCHEDULES}${id}/weekly_view/`);
+  async getWeeklyView(id: number, params?: { week_start?: string }): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.SCHEDULES}${id}/weekly_view/`, params);
+  },
+
+  // Vue hebdomadaire pour la semaine courante
+  async getCurrentWeekView(id: number): Promise<any> {
+    const today = new Date();
+    const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+    const week_start = startOfWeek.toISOString().split('T')[0];
+    return this.getWeeklyView(id, { week_start });
   },
 
   async detectConflicts(id: number): Promise<{

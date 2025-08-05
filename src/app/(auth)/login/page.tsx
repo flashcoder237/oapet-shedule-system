@@ -1,35 +1,36 @@
 // src/app/(auth)/login/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
+import { useAuth } from '@/lib/auth/context';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const router = useRouter();
+  const { login, isLoading, error, isAuthenticated } = useAuth();
+
+  // Rediriger si déjà authentifié
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    // Simulation d'une authentification - à remplacer par une véritable API
-    setTimeout(() => {
-      // Dans un vrai scénario, ceci serait remplacé par un appel API
-      if (email === 'admin@fmedudouala.cm' && password === 'password') {
-        // Simuler la réussite du login
-        router.push('/dashboard');
-      } else {
-        setError('Email ou mot de passe incorrect');
-        setIsLoading(false);
-      }
-    }, 1000);
+    
+    try {
+      await login({ username, password });
+      router.push('/');
+    } catch (error) {
+      // L'erreur est déjà gérée par le contexte d'authentification
+      console.error('Login failed:', error);
+    }
   };
 
   return (
@@ -56,23 +57,23 @@ export default function LoginPage() {
           
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="email-address" className="sr-only">
-                Adresse email
+              <label htmlFor="username" className="sr-only">
+                Nom d'utilisateur
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="email-address"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="appearance-none rounded-t-md relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                  placeholder="Adresse email"
+                  placeholder="Nom d'utilisateur"
                 />
               </div>
             </div>

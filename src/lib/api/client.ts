@@ -102,6 +102,16 @@ class ApiClient {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
+      // Gestion spéciale pour les erreurs d'authentification
+      if (response.status === 401) {
+        // Token expiré ou invalide, nettoyer l'authentification
+        this.clearToken();
+        // Recharger la page pour déclencher la redirection vers login
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
+      }
+      
       const errorText = await response.text();
       let errorMessage: string;
       

@@ -1,7 +1,7 @@
 // src/components/scheduling/DragDropScheduler.tsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { 
   Calendar,
@@ -134,7 +134,7 @@ export default function DragDropScheduler({
   enableAutoScheduling = true,
   view = 'week'
 }: DragDropSchedulerProps) {
-  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>(items);
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<ScheduleItem | null>(null);
   const [dropTarget, setDropTarget] = useState<{ day: number; hour: number } | null>(null);
@@ -155,88 +155,13 @@ export default function DragDropScheduler({
 
   const schedulerRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
+  const onConflictDetectedRef = useRef(onConflictDetected);
+  const prevConflictsRef = useRef<string[]>([]);
 
-  // Données d'exemple
-  const sampleItems: ScheduleItem[] = [
-    {
-      id: '1',
-      title: 'Anatomie Générale',
-      description: 'Cours magistral sur le système cardiovasculaire',
-      type: 'course',
-      startTime: '08:00',
-      endTime: '10:00',
-      date: new Date(2024, 11, 15),
-      professor: 'Dr. Kamga',
-      room: 'Amphi A',
-      participants: 120,
-      color: '#3B82F6',
-      priority: 'high',
-      status: 'confirmed',
-      constraints: {
-        canMove: true,
-        canResize: true,
-        canDelete: false,
-        minDuration: 60,
-        maxDuration: 180
-      },
-      resources: {
-        professorId: 'prof1',
-        roomId: 'room1'
-      }
-    },
-    {
-      id: '2',
-      title: 'Examen Biochimie',
-      description: 'Examen final de biochimie métabolique',
-      type: 'exam',
-      startTime: '14:00',
-      endTime: '16:00',
-      date: new Date(2024, 11, 15),
-      professor: 'Dr. Mbarga',
-      room: 'Salle B201',
-      participants: 80,
-      color: '#EF4444',
-      priority: 'high',
-      status: 'confirmed',
-      constraints: {
-        canMove: false,
-        canResize: false,
-        canDelete: false,
-        minDuration: 120,
-        maxDuration: 180
-      },
-      resources: {
-        professorId: 'prof2',
-        roomId: 'room2'
-      }
-    },
-    {
-      id: '3',
-      title: 'Réunion Département',
-      description: 'Réunion mensuelle du département',
-      type: 'meeting',
-      startTime: '15:00',
-      endTime: '16:00',
-      date: new Date(2024, 11, 16),
-      professor: 'Dr. Nkeng',
-      room: 'Salle de réunion',
-      participants: 15,
-      color: '#10B981',
-      priority: 'medium',
-      status: 'pending',
-      constraints: {
-        canMove: true,
-        canResize: true,
-        canDelete: true,
-        minDuration: 30,
-        maxDuration: 120
-      },
-      resources: {
-        professorId: 'prof3',
-        roomId: 'room3'
-      }
-    }
-  ];
+  // Mettre à jour la référence sans useEffect pour éviter les re-rendus
+  onConflictDetectedRef.current = onConflictDetected;
+
+  // Les données viendront des props ou de l'API
 
   const defaultTimeSlots = Array.from({ length: 14 }, (_, i) => ({
     hour: 7 + i,
@@ -249,22 +174,17 @@ export default function DragDropScheduler({
 
   const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-  // Initialisation avec données d'exemple
-  useEffect(() => {
-    if (items.length === 0) {
-      setScheduleItems(sampleItems);
-      addToHistory(sampleItems);
-    }
-  }, []);
+  // Plus de useEffect du tout - utilisation directe des props ou état interne
 
-  // Détection de conflits
-  useEffect(() => {
+  // Détection de conflits manuelle (appelée seulement quand nécessaire)
+  const checkForConflicts = useCallback(() => {
     const detectedConflicts = detectConflicts(scheduleItems);
     setConflicts(detectedConflicts);
-    if (detectedConflicts.length > 0) {
-      onConflictDetected?.(detectedConflicts);
-    }
+    onConflictDetectedRef.current?.(detectedConflicts);
   }, [scheduleItems]);
+
+  // Appeler la détection de conflits seulement lors du drag & drop
+  // Plus de useEffect automatique pour éviter les boucles
 
   const addToHistory = (items: ScheduleItem[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -362,6 +282,9 @@ export default function DragDropScheduler({
     setScheduleItems(updatedItems);
     addToHistory(updatedItems);
     onItemChange?.(updatedItems.find(item => item.id === draggedItem.id)!);
+    
+    // Vérifier les conflits après le drag & drop
+    setTimeout(() => checkForConflicts(), 100);
     
     setDraggedItem(null);
     setDropTarget(null);

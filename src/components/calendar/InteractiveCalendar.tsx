@@ -89,58 +89,8 @@ export default function InteractiveCalendar({
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
-  // Données d'exemple pour démonstration
-  const sampleEvents: CalendarEvent[] = [
-    {
-      id: '1',
-      title: 'Anatomie Générale',
-      description: 'Cours magistral sur le système cardiovasculaire',
-      date: new Date(2024, 11, 15),
-      startTime: '08:00',
-      endTime: '10:00',
-      type: 'course',
-      professor: 'Dr. Kamga',
-      room: 'Amphi A',
-      participants: 120,
-      color: 'bg-blue-500',
-      priority: 'high',
-      status: 'confirmed'
-    },
-    {
-      id: '2',
-      title: 'Examen Biochimie',
-      description: 'Examen final de biochimie métabolique',
-      date: new Date(2024, 11, 18),
-      startTime: '14:00',
-      endTime: '16:00',
-      type: 'exam',
-      professor: 'Dr. Mbarga',
-      room: 'Salle B201',
-      participants: 80,
-      color: 'bg-red-500',
-      priority: 'high',
-      status: 'confirmed'
-    },
-    {
-      id: '3',
-      title: 'Réunion Département',
-      description: 'Réunion mensuelle du département de médecine',
-      date: new Date(2024, 11, 20),
-      startTime: '10:00',
-      endTime: '12:00',
-      type: 'meeting',
-      professor: 'Dr. Nkeng',
-      room: 'Salle de réunion',
-      participants: 15,
-      color: 'bg-green-500',
-      priority: 'medium',
-      status: 'pending'
-    }
-  ];
-
   useEffect(() => {
-    // Utiliser les événements d'exemple si aucun événement n'est fourni
-    const eventsToUse = events.length > 0 ? events : sampleEvents;
+    const eventsToUse = events;
     
     let filtered = eventsToUse.filter(event => {
       const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

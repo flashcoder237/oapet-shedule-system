@@ -9,7 +9,7 @@ import type {
   TimeSlot,
   PaginatedResponse 
 } from '@/types/api';
-import { useApi } from './useApi';
+import { useApi } from './useApiStable';
 
 export function useAcademicPeriods() {
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
@@ -61,6 +61,7 @@ export function useSchedules(filters?: {
   academic_period?: number;
   curriculum?: number;
   published_only?: boolean;
+  date?: string; // Ajout du filtre par date
 }) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const { loading, error, execute } = useApi<PaginatedResponse<Schedule>>();
@@ -70,6 +71,7 @@ export function useSchedules(filters?: {
     curriculum?: number;
     published_only?: boolean;
     search?: string;
+    date?: string;
   }) => {
     const response = await execute(() => scheduleService.getSchedules({ ...filters, ...params }));
     if (response) {
@@ -77,15 +79,22 @@ export function useSchedules(filters?: {
     }
   };
 
+  // Fonction spécifique pour récupérer les emplois du temps d'aujourd'hui
+  const fetchTodaySchedules = async () => {
+    const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+    return fetchSchedules({ date: today });
+  };
+
   useEffect(() => {
     fetchSchedules();
-  }, [filters?.academic_period, filters?.curriculum, filters?.published_only]);
+  }, [filters?.academic_period, filters?.curriculum, filters?.published_only, filters?.date]);
 
   return {
     schedules,
     loading,
     error,
     fetchSchedules,
+    fetchTodaySchedules,
     refetch: fetchSchedules,
   };
 }
@@ -172,28 +181,42 @@ export function useConflicts(scheduleId?: number) {
   };
 }
 
-export function useWeeklySchedule(scheduleId: number | null) {
+export function useWeeklySchedule(scheduleId: number | null, weekDate?: Date) {
   const [weeklyData, setWeeklyData] = useState<any>(null);
   const { loading, error, execute } = useApi<any>();
 
-  const fetchWeeklyView = async () => {
+  const fetchWeeklyView = async (customDate?: Date) => {
     if (!scheduleId) return;
-    const response = await execute(() => scheduleService.getWeeklyView(scheduleId));
+    const params: any = {};
+    
+    if (customDate || weekDate) {
+      const targetDate = customDate || weekDate;
+      params.week_start = targetDate.toISOString().split('T')[0];
+    }
+    
+    const response = await execute(() => scheduleService.getWeeklyView(scheduleId, params));
     if (response) {
       setWeeklyData(response);
     }
+  };
+
+  // Fonction pour récupérer la semaine d'aujourd'hui
+  const fetchCurrentWeek = async () => {
+    return fetchWeeklyView(new Date());
   };
 
   useEffect(() => {
     if (scheduleId) {
       fetchWeeklyView();
     }
-  }, [scheduleId]);
+  }, [scheduleId, weekDate]);
 
   return {
     weeklyData,
     loading,
     error,
+    fetchWeeklyView,
+    fetchCurrentWeek,
     refetch: fetchWeeklyView,
   };
 }

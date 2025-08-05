@@ -4,6 +4,7 @@ import { AuthProvider } from '@/lib/auth/context';
 import AppLayout from '@/components/layout/AppLayout';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastProvider } from '@/components/ui/use-toast';
+import { NotificationProvider } from '@/components/ui/notifications';
 
 export const metadata = {
   title: 'OAPET Schedule System - Système de gestion des emplois du temps avec IA',
@@ -19,11 +20,13 @@ export default function RootLayout({
     <html lang="fr">
       <body>
         <ToastProvider>
-          <AuthProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </AuthProvider>
+          <NotificationProvider>
+            <AuthProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </AuthProvider>
+          </NotificationProvider>
           <Toaster />
         </ToastProvider>
       </body>

@@ -13,15 +13,31 @@ interface ChartData {
   efficiency: number;
 }
 
-export default function WeeklyChart() {
-  const weekData: ChartData[] = [
-    { day: 'Lun', courses: 24, students: 487, efficiency: 85 },
-    { day: 'Mar', courses: 28, students: 523, efficiency: 92 },
-    { day: 'Mer', courses: 22, students: 445, efficiency: 78 },
-    { day: 'Jeu', courses: 26, students: 501, efficiency: 89 },
-    { day: 'Ven', courses: 30, students: 578, efficiency: 95 },
-    { day: 'Sam', courses: 18, students: 342, efficiency: 67 }
-  ];
+interface WeeklyChartProps {
+  weekData?: ChartData[];
+}
+
+export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
+  // Les données viennent maintenant des props
+
+  if (weekData.length === 0) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Analyse Hebdomadaire
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">Aucune donnée hebdomadaire disponible</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const maxCourses = Math.max(...weekData.map(d => d.courses));
   const maxStudents = Math.max(...weekData.map(d => d.students));

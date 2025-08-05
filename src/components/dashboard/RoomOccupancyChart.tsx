@@ -4,23 +4,17 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-export default function RoomOccupancyChart() {
+interface RoomOccupancyChartProps {
+  data?: Array<{ room: string; occupancyRate: number }>;
+}
+
+export default function RoomOccupancyChart({ data = [] }: RoomOccupancyChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   
-  // Données d'exemple pour l'occupation des salles
-  const data = [
-    { room: 'A101', occupancyRate: 85 },
-    { room: 'A102', occupancyRate: 65 },
-    { room: 'B201', occupancyRate: 90 },
-    { room: 'B202', occupancyRate: 70 },
-    { room: 'C301', occupancyRate: 40 },
-    { room: 'C302', occupancyRate: 55 },
-    { room: 'Amphi A', occupancyRate: 95 },
-    { room: 'Amphi B', occupancyRate: 80 }
-  ];
+  // Les données viennent maintenant des props
   
   useEffect(() => {
-    if (chartRef.current) {
+    if (chartRef.current && data.length > 0) {
       // Supprimer tout graphique précédent
       d3.select(chartRef.current).selectAll('*').remove();
       
@@ -99,6 +93,17 @@ export default function RoomOccupancyChart() {
     }
   }, []);
   
+  if (data.length === 0) {
+    return (
+      <div className="h-[300px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-500">Aucune donnée d'occupation disponible</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[300px]" ref={chartRef}></div>
   );

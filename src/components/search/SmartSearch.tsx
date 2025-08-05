@@ -110,93 +110,19 @@ export default function SmartSearch({
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Données d'exemple pour démonstration
-  const sampleData: SearchResult[] = [
-    {
-      id: '1',
-      title: 'Anatomie Générale',
-      description: 'Cours d\'anatomie pour L1 Médecine avec Dr. Kamga',
-      type: 'course',
-      category: 'Médecine',
-      relevance: 0.95,
-      metadata: {
-        professor: 'Dr. Kamga',
-        level: 'L1',
-        department: 'Médecine',
-        credits: 6,
-        students: 120
-      },
-      lastAccessed: new Date('2024-01-15'),
-      isFavorite: true
-    },
-    {
-      id: '2',
-      title: 'Dr. Kamga Pierre',
-      description: 'Professeur d\'anatomie, spécialiste en anatomie humaine',
-      type: 'teacher',
-      category: 'Professeurs',
-      relevance: 0.88,
-      metadata: {
-        department: 'Médecine',
-        speciality: 'Anatomie',
-        courses: ['Anatomie Générale', 'Anatomie Spécialisée'],
-        experience: '15 ans'
-      },
-      lastAccessed: new Date('2024-01-10'),
-      isFavorite: false
-    },
-    {
-      id: '3',
-      title: 'Amphithéâtre A',
-      description: 'Grande salle de cours équipée pour 200 étudiants',
-      type: 'room',
-      category: 'Salles',
-      relevance: 0.75,
-      metadata: {
-        capacity: 200,
-        equipment: ['Projecteur', 'Microphone', 'Climatisation'],
-        building: 'Bâtiment A',
-        floor: 'Rez-de-chaussée'
-      },
-      lastAccessed: new Date('2024-01-12'),
-      isFavorite: false
-    },
-    {
-      id: '4',
-      title: 'Planning L1 Médecine',
-      description: 'Emploi du temps complet pour la première année de médecine',
-      type: 'schedule',
-      category: 'Plannings',
-      relevance: 0.82,
-      metadata: {
-        level: 'L1',
-        department: 'Médecine',
-        semester: 'S1',
-        totalHours: 480
-      },
-      lastAccessed: new Date('2024-01-08'),
-      isFavorite: true
-    }
-  ];
+  // Les données viennent maintenant des props uniquement
 
-  const sampleSuggestions: SearchSuggestion[] = [
-    { id: '1', text: 'anatomie', type: 'popular', count: 245, category: 'Cours' },
-    { id: '2', text: 'Dr. Kamga', type: 'recent', category: 'Professeurs' },
-    { id: '3', text: 'L1 médecine', type: 'suggestion', count: 120, category: 'Niveaux' },
-    { id: '4', text: 'amphi A', type: 'recent', category: 'Salles' },
-    { id: '5', text: 'biochimie', type: 'popular', count: 180, category: 'Cours' },
-    { id: '6', text: 'planning semaine', type: 'suggestion', category: 'Plannings' }
-  ];
+  // Les suggestions devraient venir de l'API ou être générées dynamiquement
+  const suggestions_data: SearchSuggestion[] = [];
 
   // Simulation de recherche
   useEffect(() => {
     if (query.length > 0) {
       setIsLoading(true);
       
-      // Simulation d'API call avec délai
+      // Recherche dans les données fournies uniquement
       const searchTimeout = setTimeout(() => {
-        const dataToUse = data.length > 0 ? data : sampleData;
-        const filtered = dataToUse.filter(item => 
+        const filtered = data.filter(item => 
           item.title.toLowerCase().includes(query.toLowerCase()) ||
           item.description.toLowerCase().includes(query.toLowerCase()) ||
           Object.values(item.metadata).some(value => 
@@ -237,12 +163,12 @@ export default function SmartSearch({
     }
   }, [query, filters, sortBy, data]);
 
-  // Gestion des suggestions
+  // Gestion des suggestions - maintenant vides par défaut
   useEffect(() => {
     if (query.length === 0 && showSuggestions) {
-      setSuggestions(sampleSuggestions);
+      setSuggestions(suggestions_data);
     } else if (query.length > 0) {
-      const filtered = sampleSuggestions.filter(s => 
+      const filtered = suggestions_data.filter(s => 
         s.text.toLowerCase().includes(query.toLowerCase())
       );
       setSuggestions(filtered);

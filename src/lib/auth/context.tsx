@@ -92,14 +92,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Vérifier le token au démarrage
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      apiClient.setToken(token);
-      // TODO: Vérifier la validité du token et récupérer l'utilisateur
-      dispatch({ type: 'LOGIN_SUCCESS', payload: { token } });
-    } else {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        apiClient.setToken(token);
+        try {
+          // Vérifier la validité du token et récupérer l'utilisateur
+          const user = await authService.getCurrentUser();
+          dispatch({ type: 'LOGIN_SUCCESS', payload: { token, user } });
+        } catch (error) {
+          // Token invalide, nettoyer
+          localStorage.removeItem('auth_token');
+          apiClient.clearToken();
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
+      } else {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (credentials: AuthCredentials) => {

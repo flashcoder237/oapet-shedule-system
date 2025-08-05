@@ -1,122 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Building, Users, BookOpen, User, Mail, Phone, MoreVertical } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useDepartments } from '@/hooks/useCourses';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 export default function DepartmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  
+  const { departments, loading, error, refetch } = useDepartments(searchTerm);
 
-  // Données exemple des départements
-  const departments = [
-    {
-      id: 'med',
-      name: 'Médecine',
-      fullName: 'Département de Médecine',
-      headOfDepartment: 'Prof. Jean-Claude Mbanya',
-      headId: 'prof1',
-      headEmail: 'jc.mbanya@fmedudouala.cm',
-      headPhone: '+237 6XX XX XX XX',
-      professorsCount: 35,
-      studentsCount: 450,
-      coursesCount: 125,
-      classesCount: 8,
-      description: 'Formation médicale générale et spécialisée, recherche biomédicale',
-      establishedYear: 1993,
-      building: 'Bâtiment Principal A-C',
-      budget: '2,500,000,000 FCFA',
-      isActive: true
-    },
-    {
-      id: 'phar',
-      name: 'Pharmacie',
-      fullName: 'Département de Pharmacie',
-      headOfDepartment: 'Dr. Marie-Claire Okalla',
-      headId: 'prof2',
-      headEmail: 'mc.okalla@fmedudouala.cm',
-      headPhone: '+237 6XX XX XX XX',
-      professorsCount: 18,
-      studentsCount: 200,
-      coursesCount: 68,
-      classesCount: 4,
-      description: 'Formation pharmaceutique, recherche en sciences pharmaceutiques',
-      establishedYear: 1998,
-      building: 'Bâtiment D',
-      budget: '1,200,000,000 FCFA',
-      isActive: true
-    },
-    {
-      id: 'dent',
-      name: 'Dentaire',
-      fullName: 'Département de Chirurgie Dentaire',
-      headOfDepartment: 'Dr. Paul Ndom',
-      headId: 'prof3',
-      headEmail: 'p.ndom@fmedudouala.cm',
-      headPhone: '+237 6XX XX XX XX',
-      professorsCount: 12,
-      studentsCount: 120,
-      coursesCount: 45,
-      classesCount: 3,
-      description: 'Formation en chirurgie dentaire et soins bucco-dentaires',
-      establishedYear: 2005,
-      building: 'Bâtiment E',
-      budget: '800,000,000 FCFA',
-      isActive: true
-    },
-    {
-      id: 'nur',
-      name: 'Sciences Infirmières',
-      fullName: 'Département des Sciences Infirmières',
-      headOfDepartment: 'Dr. Françoise Mballa',
-      headId: 'prof4',
-      headEmail: 'f.mballa@fmedudouala.cm',
-      headPhone: '+237 6XX XX XX XX',
-      professorsCount: 15,
-      studentsCount: 180,
-      coursesCount: 52,
-      classesCount: 4,
-      description: 'Formation en sciences infirmières et soins de santé',
-      establishedYear: 2010,
-      building: 'Bâtiment F',
-      budget: '600,000,000 FCFA',
-      isActive: true
-    },
-    {
-      id: 'bio',
-      name: 'Sciences Biomédicales',
-      fullName: 'Département des Sciences Biomédicales',
-      headOfDepartment: 'Prof. André Essomba',
-      headId: 'prof5',
-      headEmail: 'a.essomba@fmedudouala.cm',
-      headPhone: '+237 6XX XX XX XX',
-      professorsCount: 22,
-      studentsCount: 95,
-      coursesCount: 38,
-      classesCount: 2,
-      description: 'Recherche biomédicale et formation en sciences fondamentales',
-      establishedYear: 2015,
-      building: 'Laboratoires de Recherche',
-      budget: '1,500,000,000 FCFA',
-      isActive: true
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
-  // Filtrer les départements
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Erreur lors du chargement des départements</p>
+          <Button onClick={refetch}>Réessayer</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Toutes les données viennent maintenant du backend
   const filteredDepartments = departments.filter(dept => 
-    dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dept.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dept.headOfDepartment.toLowerCase().includes(searchTerm.toLowerCase())
+    dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    dept.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatBudget = (budget: string) => {
-    return budget.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  };
-
-  const calculateAge = (establishedYear: number) => {
-    return new Date().getFullYear() - establishedYear;
-  };
 
   return (
     <div className="space-y-6">
@@ -154,7 +75,7 @@ export default function DepartmentsPage() {
             <div>
               <p className="text-sm font-medium text-gray-500">Total Professeurs</p>
               <h3 className="text-2xl font-bold">
-                {departments.reduce((sum, dept) => sum + dept.professorsCount, 0)}
+                {departments.reduce((sum, dept) => sum + (dept.teachers_count || 0), 0)}
               </h3>
             </div>
           </div>
@@ -166,9 +87,9 @@ export default function DepartmentsPage() {
               <Users className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Étudiants</p>
+              <p className="text-sm font-medium text-gray-500">Total Cours</p>
               <h3 className="text-2xl font-bold">
-                {departments.reduce((sum, dept) => sum + dept.studentsCount, 0)}
+                {departments.reduce((sum, dept) => sum + (dept.courses_count || 0), 0)}
               </h3>
             </div>
           </div>
@@ -182,7 +103,7 @@ export default function DepartmentsPage() {
             <div>
               <p className="text-sm font-medium text-gray-500">Total Cours</p>
               <h3 className="text-2xl font-bold">
-                {departments.reduce((sum, dept) => sum + dept.coursesCount, 0)}
+                {departments.reduce((sum, dept) => sum + (dept.courses_count || 0), 0)}
               </h3>
             </div>
           </div>
@@ -215,9 +136,9 @@ export default function DepartmentsPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">{dept.name}</h3>
-                  <p className="text-sm text-gray-600">{dept.fullName}</p>
+                  <p className="text-sm text-gray-600">{dept.description || 'Aucune description'}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Créé en {dept.establishedYear} • {calculateAge(dept.establishedYear)} ans
+                    Code: {dept.code}
                   </p>
                 </div>
               </div>
@@ -237,15 +158,15 @@ export default function DepartmentsPage() {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <User className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm">{dept.headOfDepartment}</span>
+                  <span className="text-sm">{dept.head_of_department_name || 'Non assigné'}</span>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm text-blue-600">{dept.headEmail}</span>
+                  <span className="text-sm text-blue-600">N/A</span>
                 </div>
                 <div className="flex items-center">
                   <Phone className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm">{dept.headPhone}</span>
+                  <span className="text-sm">N/A</span>
                 </div>
               </div>
             </div>
@@ -253,20 +174,20 @@ export default function DepartmentsPage() {
             {/* Statistiques du département */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{dept.professorsCount}</div>
+                <div className="text-2xl font-bold text-blue-600">{dept.teachers_count || 0}</div>
                 <div className="text-xs text-blue-600">Professeurs</div>
               </div>
-              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{dept.studentsCount}</div>
-                <div className="text-xs text-purple-600">Étudiants</div>
-              </div>
               <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">{dept.coursesCount}</div>
+                <div className="text-2xl font-bold text-yellow-600">{dept.courses_count || 0}</div>
                 <div className="text-xs text-yellow-600">Cours</div>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{dept.classesCount}</div>
-                <div className="text-xs text-green-600">Classes</div>
+                <div className="text-2xl font-bold text-green-600">{dept.is_active ? 'Actif' : 'Inactif'}</div>
+                <div className="text-xs text-green-600">Statut</div>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{dept.head_of_department_name || 'N/A'}</div>
+                <div className="text-xs text-purple-600">Chef</div>
               </div>
             </div>
 
@@ -279,12 +200,14 @@ export default function DepartmentsPage() {
             {/* Informations supplémentaires */}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Localisation:</span>
-                <span className="font-medium">{dept.building}</span>
+                <span className="text-gray-500">Code:</span>
+                <span className="font-medium">{dept.code}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Budget annuel:</span>
-                <span className="font-medium text-green-600">{formatBudget(dept.budget)}</span>
+                <span className="text-gray-500">Statut:</span>
+                <span className={`font-medium ${dept.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                  {dept.is_active ? 'Actif' : 'Inactif'}
+                </span>
               </div>
             </div>
 
