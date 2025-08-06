@@ -40,7 +40,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-subtle via-accent-subtle to-tertiary-muted/20 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-accent-50 to-secondary/20 relative overflow-hidden" suppressHydrationWarning>
       {/* Éléments décoratifs nature */}
       <div className="absolute inset-0 overflow-hidden">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -199,7 +199,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-6 p-4 bg-primary-subtle/30 rounded-xl"
+            className="mt-6 p-4 bg-primary-50/30 rounded-xl"
           >
             <p className="text-sm text-secondary mb-2">Comptes de test :</p>
             <div className="text-xs space-y-1">

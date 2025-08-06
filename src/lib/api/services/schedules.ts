@@ -39,8 +39,7 @@ export const scheduleService = {
 
   // Fonction spécifique pour récupérer les sessions d'aujourd'hui
   async getTodayScheduleSessions(): Promise<PaginatedResponse<ScheduleSession>> {
-    // Pour les tests, utiliser la date 05/08/2025 au lieu de la date réelle
-    const today = '2025-08-05'; // Format YYYY-MM-DD pour le 05 août 2025
+    const today = new Date().toISOString().split('T')[0];
     console.log('Date recherchée:', today);
     return this.getScheduleSessions({ date: today });
   },
@@ -100,6 +99,7 @@ export const scheduleService = {
     course?: number;
     teacher?: number;
     room?: number;
+    date?: string;
   }): Promise<PaginatedResponse<ScheduleSession>> {
     return apiClient.get<PaginatedResponse<ScheduleSession>>(API_ENDPOINTS.SCHEDULE_SESSIONS, params);
   },
@@ -155,5 +155,57 @@ export const scheduleService = {
       format,
       ...params
     });
+  },
+
+  // Nouvelles méthodes pour récupérer les emplois du temps par période
+  async getWeeklySessions(params: {
+    week_start: string; // Format YYYY-MM-DD
+    curriculum?: string;
+    teacher?: number;
+    room?: number;
+  }): Promise<{
+    week_start: string;
+    week_end: string;
+    sessions_by_day: {
+      monday: ScheduleSession[];
+      tuesday: ScheduleSession[];
+      wednesday: ScheduleSession[];
+      thursday: ScheduleSession[];
+      friday: ScheduleSession[];
+      saturday: ScheduleSession[];
+      sunday: ScheduleSession[];
+    };
+    total_sessions: number;
+  }> {
+    return apiClient.get(`${API_ENDPOINTS.SCHEDULES}weekly_sessions/`, params);
+  },
+
+  async getDailySessions(params: {
+    date: string; // Format YYYY-MM-DD
+    curriculum?: string;
+    teacher?: number;
+    room?: number;
+  }): Promise<{
+    date: string;
+    day_of_week: string;
+    day_of_week_fr: string;
+    sessions: ScheduleSession[];
+    total_sessions: number;
+  }> {
+    return apiClient.get(`${API_ENDPOINTS.SCHEDULES}daily_sessions/`, params);
+  },
+
+  // Fonction utilitaire pour obtenir le début de semaine
+  getWeekStart(date: Date): string {
+    const startOfWeek = new Date(date);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Lundi = début de semaine
+    startOfWeek.setDate(diff);
+    return startOfWeek.toISOString().split('T')[0];
+  },
+
+  // Fonction utilitaire pour formater une date
+  formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
   },
 };

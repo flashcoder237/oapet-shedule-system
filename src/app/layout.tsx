@@ -1,7 +1,7 @@
 // src/app/layout.tsx
 import './globals.css';
 import { AuthProvider } from '@/lib/auth/context';
-import AppLayout from '@/components/layout/AppLayout';
+import AppLayoutWrapper from '@/components/layout/AppLayoutWrapper';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastProvider } from '@/components/ui/use-toast';
 import { NotificationProvider } from '@/components/ui/notifications';
@@ -22,9 +22,9 @@ export default function RootLayout({
         <ToastProvider>
           <NotificationProvider>
             <AuthProvider>
-              <AppLayout>
+              <AppLayoutWrapper>
                 {children}
-              </AppLayout>
+              </AppLayoutWrapper>
             </AuthProvider>
           </NotificationProvider>
           <Toaster />

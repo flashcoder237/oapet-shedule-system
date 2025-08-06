@@ -1,13 +1,13 @@
-// src/components/layout/Header.tsx
 'use client';
 
-import { Bell, Settings, User, Menu, Search, ChevronDown } from 'lucide-react';
+import { Bell, Settings, User, Menu, Search, ChevronDown, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NotificationCenter } from '@/components/ui/notifications';
 import { useAuth } from '@/lib/auth/context';
+import { cn } from '@/lib/utils';
 
 export default function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -15,7 +15,6 @@ export default function Header() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   
-  // Fonction pour obtenir le titre de la page en fonction du pathname
   const getPageTitle = () => {
     if (pathname === '/') return 'Accueil';
     if (pathname === '/dashboard') return 'Tableau de bord';
@@ -26,6 +25,14 @@ export default function Header() {
     if (pathname.startsWith('/departments')) return 'Départements';
     if (pathname.startsWith('/settings')) return 'Paramètres';
     return 'Système de gestion des emplois du temps';
+  };
+
+  const getBreadcrumb = () => {
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments.length === 0) return 'Accueil';
+    return segments.map(segment => 
+      segment.charAt(0).toUpperCase() + segment.slice(1)
+    ).join(' > ');
   };
 
   const dropdownVariants = {
@@ -41,136 +48,181 @@ export default function Header() {
     }
   };
 
-  const notificationBadgeVariants = {
-    initial: { scale: 0 },
-    animate: { scale: 1 },
-    pulse: { 
-      scale: [1, 1.2, 1]
-    }
-  };
-
   return (
     <motion.header 
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="bg-white sticky top-0 z-50 px-4 py-3 flex items-center justify-between"
-      style={{ borderBottom: '1px solid var(--border)' }}
+      transition={{ duration: 0.3 }}
+      className={cn(
+        "sticky top-0 z-50 backdrop-blur-lg",
+        "bg-card/80 border-b border-border",
+        "px-6 py-4"
+      )}
     >
-      <div className="flex items-center gap-3">
-        <motion.button 
-          className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors" 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label="Toggle menu"
-        >
-          <Menu size={18} style={{ color: 'var(--text-secondary)' }} />
-        </motion.button>
-        
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{getPageTitle()}</h1>
-        </motion.div>
-      </div>
-
-      {/* Barre de recherche moderne */}
-      <motion.div 
-        className="hidden md:flex items-center bg-gray-50 rounded-lg px-3 py-2 min-w-48 max-w-md flex-1 mx-4"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.15 }}
-        style={{ backgroundColor: 'var(--surface-elevated)' }}
-      >
-        <Search size={16} style={{ color: 'var(--text-tertiary)' }} className="mr-2" />
-        <input 
-          type="text" 
-          placeholder="Rechercher..." 
-          className="bg-transparent flex-1 outline-none text-sm"
-          style={{ color: 'var(--text-primary)' }}
-        />
-      </motion.div>
-      
-      <div className="flex items-center gap-3">
-        {/* Notifications */}
-        <NotificationCenter />
-        
-        {/* User Menu */}
-        <div className="relative">
+      <div className="flex items-center justify-between">
+        {/* Left section */}
+        <div className="flex items-center gap-4">
           <motion.button 
-            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            aria-label="Menu utilisateur"
+            className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Toggle menu"
           >
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-              <User size={16} className="text-white" />
-            </div>
-            <div className="hidden md:block text-left">
-              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{user?.full_name || user?.username || 'Utilisateur'}</p>
-            </div>
-            <motion.div
-              animate={{ rotate: isUserMenuOpen ? 180 : 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <ChevronDown size={14} style={{ color: 'var(--text-secondary)' }} />
-            </motion.div>
+            <Menu size={18} className="text-muted-foreground" />
           </motion.button>
           
-          <AnimatePresence>
-            {isUserMenuOpen && (
-              <motion.div 
-                variants={dropdownVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50"
-                style={{ 
-                  border: '1px solid var(--border)',
-                  boxShadow: 'var(--shadow-lg)'
-                }}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="space-y-1"
+          >
+            <h1 className="text-xl font-semibold text-foreground leading-none">
+              {getPageTitle()}
+            </h1>
+            <p className="text-sm text-muted-foreground leading-none">
+              {getBreadcrumb()}
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Center - Search */}
+        <motion.div 
+          className="hidden md:flex items-center bg-muted/50 rounded-full px-4 py-2.5 min-w-80 max-w-md border border-border/50"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.15 }}
+          whileFocus={{ 
+            scale: 1.02,
+            borderColor: 'var(--primary)'
+          }}
+        >
+          <Search size={16} className="text-muted-foreground mr-3" />
+          <input 
+            type="text" 
+            placeholder="Rechercher dans OAPET..." 
+            className="bg-transparent flex-1 outline-none text-sm text-foreground placeholder:text-muted-foreground"
+          />
+          <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </motion.div>
+        
+        {/* Right section */}
+        <div className="flex items-center gap-2">
+          {/* Notifications */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <NotificationCenter />
+          </motion.div>
+          
+          {/* User Menu */}
+          <div className="relative">
+            <motion.button 
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-full",
+                "hover:bg-muted transition-colors",
+                "border border-transparent hover:border-border"
+              )}
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              aria-label="Menu utilisateur"
+            >
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center ring-2 ring-background shadow-sm">
+                <User size={16} className="text-primary-foreground" />
+              </div>
+              <div className="hidden md:block text-left">
+                <p className="text-sm font-medium text-foreground leading-none">
+                  {user?.full_name || user?.username || 'Utilisateur'}
+                </p>
+                <p className="text-xs text-muted-foreground leading-none mt-0.5">
+                  {user?.profile?.role || 'Membre'}
+                </p>
+              </div>
+              <motion.div
+                animate={{ rotate: isUserMenuOpen ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <div className="py-2">
-                  <Link href="/profile">
-                    <motion.div 
-                      className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors"
-                      whileHover={{ x: 2 }}
-                    >
-                      <User size={16} style={{ color: 'var(--text-secondary)' }} />
-                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Profil</span>
-                    </motion.div>
-                  </Link>
-                  <Link href="/settings">
-                    <motion.div 
-                      className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors"
-                      whileHover={{ x: 2 }}
-                    >
-                      <Settings size={16} style={{ color: 'var(--text-secondary)' }} />
-                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Paramètres</span>
-                    </motion.div>
-                  </Link>
-                </div>
-                <div style={{ borderTop: '1px solid var(--border)' }}></div>
-                <div className="py-2">
-                  <motion.button 
-                    onClick={logout}
-                    className="w-full flex items-center gap-3 px-3 py-2 hover:bg-red-50 text-red-600 transition-colors"
-                    whileHover={{ x: 2 }}
-                  >
-                    <div className="w-4 h-4 rounded bg-red-100 flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 bg-red-500 rounded"></div>
-                    </div>
-                    <span className="text-sm font-medium">Déconnexion</span>
-                  </motion.button>
-                </div>
+                <ChevronDown size={14} className="text-muted-foreground" />
               </motion.div>
-            )}
-          </AnimatePresence>
+            </motion.button>
+            
+            <AnimatePresence>
+              {isUserMenuOpen && (
+                <motion.div 
+                  variants={dropdownVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className={cn(
+                    "absolute right-0 mt-2 w-56",
+                    "bg-card border border-border rounded-xl shadow-xl",
+                    "backdrop-blur-lg z-50"
+                  )}
+                >
+                  {/* User info header */}
+                  <div className="p-4 border-b border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
+                        <User size={18} className="text-primary-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground text-sm leading-none">
+                          {user?.full_name || user?.username || 'Utilisateur'}
+                        </p>
+                        <p className="text-xs text-muted-foreground leading-none mt-1">
+                          {user?.email || 'email@example.com'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Menu items */}
+                  <div className="py-2">
+                    <Link href="/profile" onClick={() => setIsUserMenuOpen(false)}>
+                      <motion.div 
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors"
+                        whileHover={{ x: 2 }}
+                      >
+                        <User size={16} className="text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground">Mon profil</span>
+                      </motion.div>
+                    </Link>
+                    <Link href="/settings" onClick={() => setIsUserMenuOpen(false)}>
+                      <motion.div 
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors"
+                        whileHover={{ x: 2 }}
+                      >
+                        <Settings size={16} className="text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground">Paramètres</span>
+                      </motion.div>
+                    </Link>
+                  </div>
+
+                  {/* Logout */}
+                  <div className="border-t border-border">
+                    <motion.button 
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-destructive/10 text-destructive transition-colors rounded-b-xl"
+                      whileHover={{ x: 2 }}
+                    >
+                      <LogOut size={16} />
+                      <span className="text-sm font-medium">Déconnexion</span>
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </motion.header>

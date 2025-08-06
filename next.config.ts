@@ -19,26 +19,38 @@ const nextConfig: NextConfig = {
     optimizeCss: false,
   },
 
-  // Optimisations du bundle
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Tree-shaking optimisé pour les bibliotèques
-    config.optimization = {
-      ...config.optimization,
-      usedExports: true,
-      sideEffects: false,
-    };
-
-    // Analyse du bundle en développement
-    if (!dev && !isServer) {
-      config.plugins.push(
-        new webpack.DefinePlugin({
-          'process.env.BUNDLE_ANALYZE': JSON.stringify(process.env.BUNDLE_ANALYZE),
-        })
-      );
-    }
-
-    return config;
+  // Configuration Turbopack (maintenant stable)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
   },
+
+  // Configuration Webpack conditionnelle (seulement pour le build de production)
+  ...(process.env.NODE_ENV === 'production' && {
+    webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+      // Tree-shaking optimisé pour les bibliotèques
+      config.optimization = {
+        ...config.optimization,
+        usedExports: true,
+        sideEffects: false,
+      };
+
+      // Analyse du bundle en développement
+      if (!dev && !isServer) {
+        config.plugins.push(
+          new webpack.DefinePlugin({
+            'process.env.BUNDLE_ANALYZE': JSON.stringify(process.env.BUNDLE_ANALYZE),
+          })
+        );
+      }
+
+      return config;
+    },
+  }),
 
   // Headers de sécurité et performance
   async headers() {

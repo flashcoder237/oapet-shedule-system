@@ -1,11 +1,13 @@
-// src/components/layout/AppLayout.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/auth/context';
 import LoginForm from '@/components/auth/LoginForm';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -14,31 +16,38 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Afficher le spinner de chargement pendant la vérification de l'authentification
+  // Show loading state if auth is still loading
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-subtle via-accent-subtle to-tertiary-muted/20">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-secondary">Vérification de l'authentification...</p>
+          <p className="mt-4 text-gray-600">
+            Vérification de l'authentification...
+          </p>
         </div>
       </div>
     );
   }
 
-  // Afficher le formulaire de login si non authentifié
+  // Login form if not authenticated
   if (!isAuthenticated) {
     return <LoginForm />;
-   }
+  }
 
-  // Afficher l'interface principale si authentifié
+  // Main application layout
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
+      
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-auto p-6">
-          {children}
+        
+        <main className="flex-1 overflow-auto bg-gray-50 relative">
+          {/* Content */}
+          <div className="relative z-10 p-6 h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import AnimatedBackground from '@/components/ui/animated-background';
 import { MicroButton, MicroCard } from '@/components/ui/micro-interactions';
+import { scheduleService } from '@/lib/api/services/schedules';
 import { 
   Calendar, 
   Clock, 
@@ -29,7 +30,9 @@ import {
   ChevronRight,
   BarChart3,
   Target,
-  Zap
+  Zap,
+  CalendarDays,
+  CalendarRange
 } from 'lucide-react';
 
 // Types
@@ -75,6 +78,26 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/a
 
 type FilterType = 'all' | 'CM' | 'TD' | 'TP' | 'EXAM';
 
+// Define formatWeekRange outside component to ensure it's always accessible
+const formatWeekRange = (currentWeek: Date) => {
+  const startOfWeek = new Date(currentWeek);
+  const day = startOfWeek.getDay();
+  const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
+  startOfWeek.setDate(diff);
+  
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  
+  const options: Intl.DateTimeFormatOptions = { 
+    day: 'numeric', 
+    month: 'short' 
+  };
+  
+  return `${startOfWeek.toLocaleDateString('fr-FR', options)} - ${endOfWeek.toLocaleDateString('fr-FR', options)}`;
+};
+
+type ViewMode = 'week' | 'day';
+
 export default function SchedulePage() {
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>('');
@@ -84,26 +107,45 @@ export default function SchedulePage() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
-  const [selectedDate, setSelectedDate] = useState('2025-08-05');
-  const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [weekSessions, setWeekSessions] = useState<{[key: string]: ScheduleSession[]}>({});
+  
+  // Nouveau système de vues
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [selectedDate, setSelectedDate] = useState(new Date('2025-08-05'));
+  const [currentWeek, setCurrentWeek] = useState(new Date('2025-08-05'));
+  
+  // Données structurées
+  const [weeklyData, setWeeklyData] = useState<any>(null);
+  const [dailyData, setDailyData] = useState<any>(null);
+  
   const { addToast } = useToast();
+
 
   // Charger les curricula au démarrage
   useEffect(() => {
     loadCurricula();
   }, []);
 
-  // Charger les sessions quand un curriculum est sélectionné
+  // Charger les données quand les paramètres changent
   useEffect(() => {
     if (selectedCurriculum) {
-      loadWeekSessions();
+      if (viewMode === 'week') {
+        loadWeeklyData();
+      } else {
+        loadDailyData();
+      }
     }
-  }, [selectedCurriculum, currentWeek]);
+  }, [selectedCurriculum, currentWeek, selectedDate, viewMode]);
 
-  // Filtrer les sessions de la semaine
+  // Filtrer les sessions
   useEffect(() => {
-    const allSessions = Object.values(weekSessions).flat();
+    let allSessions: ScheduleSession[] = [];
+    
+    if (viewMode === 'week' && weeklyData) {
+      allSessions = Object.values(weeklyData.sessions_by_day).flat() as ScheduleSession[];
+    } else if (viewMode === 'day' && dailyData) {
+      allSessions = dailyData.sessions;
+    }
+    
     let filtered = allSessions;
     
     if (filterType !== 'all') {
@@ -112,17 +154,17 @@ export default function SchedulePage() {
     
     if (searchTerm) {
       filtered = filtered.filter(session => 
-        session.course_details.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.course_details.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.teacher_details.user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.teacher_details.user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.room_details.code.toLowerCase().includes(searchTerm.toLowerCase())
+        session.course_details?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        session.course_details?.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        session.teacher_details?.user?.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        session.teacher_details?.user?.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        session.room_details?.code?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
     setSessions(allSessions);
     setFilteredSessions(filtered);
-  }, [weekSessions, searchTerm, filterType]);
+  }, [weeklyData, dailyData, viewMode, searchTerm, filterType]);
 
   const loadCurricula = async () => {
     try {
@@ -130,10 +172,13 @@ export default function SchedulePage() {
       if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
       
       const data = await response.json();
+      console.log('Curricula reçus:', data);
       setCurricula(data.results || data);
       
       if ((data.results || data).length > 0) {
-        setSelectedCurriculum((data.results || data)[0].code);
+        const firstCurriculum = (data.results || data)[0];
+        console.log('Premier curriculum sélectionné:', firstCurriculum);
+        setSelectedCurriculum(firstCurriculum.code);
       }
       
     } catch (error) {
@@ -145,6 +190,68 @@ export default function SchedulePage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWeeklyData = async () => {
+    if (!selectedCurriculum) return;
+    
+    setSessionsLoading(true);
+    try {
+      const weekStart = scheduleService.getWeekStart(currentWeek);
+      const data = await scheduleService.getWeeklySessions({
+        week_start: weekStart,
+        curriculum: selectedCurriculum
+      });
+      
+      setWeeklyData(data);
+      
+      addToast({
+        title: "Sessions hebdomadaires chargées",
+        description: `${data.total_sessions} session(s) trouvée(s) pour la semaine`,
+      });
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des données hebdomadaires:', error);
+      addToast({
+        title: "Erreur",
+        description: "Impossible de charger les données hebdomadaires",
+        variant: "destructive"
+      });
+      setWeeklyData(null);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const loadDailyData = async () => {
+    if (!selectedCurriculum) return;
+    
+    setSessionsLoading(true);
+    try {
+      const dateString = typeof selectedDate === 'string' ? selectedDate : scheduleService.formatDate(selectedDate);
+      const data = await scheduleService.getDailySessions({
+        date: dateString,
+        curriculum: selectedCurriculum
+      });
+      
+      setDailyData(data);
+      
+      addToast({
+        title: "Sessions journalières chargées",
+        description: `${data.total_sessions} session(s) trouvée(s) pour le ${dateString}`,
+      });
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des données journalières:', error);
+      addToast({
+        title: "Erreur",
+        description: "Impossible de charger les données journalières",
+        variant: "destructive"
+      });
+      setDailyData(null);
+    } finally {
+      setSessionsLoading(false);
     }
   };
 
@@ -186,6 +293,7 @@ export default function SchedulePage() {
     if (!timeString) return '';
     return timeString.slice(0, 5); // HH:MM
   };
+
 
   const getSessionTypeColor = (type: string) => {
     switch (type) {
@@ -247,6 +355,105 @@ export default function SchedulePage() {
     return slots;
   };
 
+  const renderWeeklyScheduleTable = () => {
+    if (!weeklyData || !weeklyData.sessions_by_day) {
+      return <div className="text-center py-8 text-gray-500">Aucune donnée hebdomadaire disponible</div>;
+    }
+    
+    const days = [
+      { key: 'monday', label: 'Lundi' },
+      { key: 'tuesday', label: 'Mardi' },
+      { key: 'wednesday', label: 'Mercredi' },
+      { key: 'thursday', label: 'Jeudi' },
+      { key: 'friday', label: 'Vendredi' },
+      { key: 'saturday', label: 'Samedi' },
+      { key: 'sunday', label: 'Dimanche' }
+    ];
+    
+    const timeSlots = getTimeSlots();
+    
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b-2 border-primary/20">
+              <th className="p-4 text-left font-semibold text-gray-700 bg-secondary/10 sticky left-0 z-10">
+                Horaires
+              </th>
+              {days.map(day => (
+                <th key={day.key} className="p-4 text-center font-semibold text-gray-700 bg-secondary/10 min-w-48">
+                  {day.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({length: 11}, (_, i) => i + 8).map(hour => (
+              <tr key={hour} className="border-b border-gray-100 hover:bg-secondary/5 transition-colors">
+                <td className="p-4 font-medium text-gray-600 bg-secondary/5 sticky left-0 z-10 border-r">
+                  <div className="text-lg font-bold text-primary">
+                    {hour.toString().padStart(2, '0')}:00
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {(hour + 1).toString().padStart(2, '0')}:00
+                  </div>
+                </td>
+                {days.map(day => {
+                  const daySessions = weeklyData.sessions_by_day[day.key] || [];
+                  const hourSessions = daySessions.filter((session: ScheduleSession) => {
+                    const startTime = session.specific_start_time || session.time_slot_details?.start_time || '';
+                    return startTime.startsWith(hour.toString().padStart(2, '0'));
+                  });
+                  
+                  return (
+                    <td key={day.key} className="p-2 align-top">
+                      {hourSessions.length > 0 ? (
+                        <div className="space-y-1">
+                          {hourSessions.map((session: ScheduleSession) => {
+                            const startTime = session.specific_start_time || session.time_slot_details?.start_time || '';
+                            const endTime = session.specific_end_time || session.time_slot_details?.end_time || '';
+                            
+                            return (
+                              <motion.div
+                                key={session.id}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className={`p-2 rounded-lg border-l-4 text-sm cursor-pointer transition-all hover:shadow-md ${
+                                  session.session_type === 'CM' ? 'border-l-primary bg-primary/5 hover:bg-primary/10' :
+                                  session.session_type === 'TD' ? 'border-l-accent bg-accent/5 hover:bg-accent/10' :
+                                  session.session_type === 'TP' ? 'border-l-orange-500 bg-orange-50 hover:bg-orange-100' :
+                                  'border-l-red-500 bg-red-50 hover:bg-red-100'
+                                }`}
+                              >
+                                <div className="font-semibold text-gray-900 mb-1 text-xs">
+                                  {session.course_details?.code || 'N/A'}
+                                </div>
+                                <div className="text-xs text-gray-600 mb-1">
+                                  {formatTime(startTime)}-{formatTime(endTime)}
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <MapPin className="w-3 h-3" />
+                                  {session.room_details?.code || 'N/A'}
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="h-12"></div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   const renderScheduleTable = () => {
     const timeSlots = getTimeSlots();
     
@@ -259,7 +466,7 @@ export default function SchedulePage() {
                 Horaires
               </th>
               <th className="p-4 text-center font-semibold text-gray-700 bg-secondary/10 min-w-96">
-                Planning du {formatDate(selectedDate)}
+                Planning du {formatDate(typeof selectedDate === 'string' ? selectedDate : selectedDate.toISOString().split('T')[0])}
               </th>
             </tr>
           </thead>
@@ -305,14 +512,14 @@ export default function SchedulePage() {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     <h4 className="font-semibold text-gray-900 text-lg">
-                                      {session.course_details.name}
+                                      {session.course_details?.name || 'Cours non défini'}
                                     </h4>
                                     <Badge className={getSessionTypeColor(session.session_type)}>
                                       {session.session_type}
                                     </Badge>
                                   </div>
                                   <p className="text-sm font-medium text-gray-600 mb-2">
-                                    {session.course_details.code}
+                                    {session.course_details?.code || 'Code non défini'}
                                   </p>
                                 </div>
                                 <div className="text-right">
@@ -327,13 +534,19 @@ export default function SchedulePage() {
                                 <div className="flex items-center gap-2">
                                   <User className="w-4 h-4 text-gray-400" />
                                   <span className="font-medium">
-                                    {session.teacher_details.user.first_name} {session.teacher_details.user.last_name}
+                                    {session.teacher_details?.user ? 
+                                      `${session.teacher_details.user.first_name} ${session.teacher_details.user.last_name}` : 
+                                      'Enseignant non défini'
+                                    }
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <MapPin className="w-4 h-4 text-gray-400" />
                                   <span className="font-medium">
-                                    {session.room_details.code} - {session.room_details.name}
+                                    {session.room_details ? 
+                                      `${session.room_details.code} - ${session.room_details.name}` : 
+                                      'Salle non définie'
+                                    }
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -394,7 +607,7 @@ export default function SchedulePage() {
                   Emplois du Temps
                 </h1>
                 <p className="text-xl text-white/90">
-                  Gestion centralisée des plannings académiques - Semaine du {formatWeekRange()}
+                  Gestion centralisée des plannings académiques - {viewMode === 'week' ? `Semaine du ${formatWeekRange(currentWeek)}` : `Jour du ${typeof selectedDate === 'string' ? selectedDate : selectedDate.toISOString().split('T')[0]}`}
                 </p>
               </div>
               
@@ -461,7 +674,38 @@ export default function SchedulePage() {
             transition={{ delay: 0.3, duration: 0.5 }}
           >
             <MicroCard className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                {/* Mode de vue */}
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                    Vue
+                  </label>
+                  <div className="flex bg-secondary/10 rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode('week')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                        viewMode === 'week'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      }`}
+                    >
+                      <CalendarRange className="w-4 h-4" />
+                      Semaine
+                    </button>
+                    <button
+                      onClick={() => setViewMode('day')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                        viewMode === 'day'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      }`}
+                    >
+                      <CalendarDays className="w-4 h-4" />
+                      Jour
+                    </button>
+                  </div>
+                </div>
+                
                 {/* Sélection classe */}
                 <div>
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">
@@ -489,14 +733,46 @@ export default function SchedulePage() {
                 {/* Date */}
                 <div>
                   <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                    Date
+                    {viewMode === 'week' ? 'Semaine du' : 'Date'}
                   </label>
-                  <Input 
-                    type="date" 
-                    value={selectedDate} 
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="input"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="date" 
+                      value={viewMode === 'week' ? scheduleService.formatDate(currentWeek) : (typeof selectedDate === 'string' ? selectedDate : scheduleService.formatDate(selectedDate))}
+                      onChange={(e) => {
+                        if (viewMode === 'week') {
+                          setCurrentWeek(new Date(e.target.value));
+                        } else {
+                          setSelectedDate(new Date(e.target.value));
+                        }
+                      }}
+                      className="input"
+                    />
+                    {viewMode === 'week' && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            const prevWeek = new Date(currentWeek);
+                            prevWeek.setDate(prevWeek.getDate() - 7);
+                            setCurrentWeek(prevWeek);
+                          }}
+                          className="p-2 rounded-md hover:bg-secondary/10 text-gray-500 hover:text-gray-700"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const nextWeek = new Date(currentWeek);
+                            nextWeek.setDate(nextWeek.getDate() + 7);
+                            setCurrentWeek(nextWeek);
+                          }}
+                          className="p-2 rounded-md hover:bg-secondary/10 text-gray-500 hover:text-gray-700"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Recherche */}
@@ -581,7 +857,7 @@ export default function SchedulePage() {
                       </h4>
                       <p className="text-body text-gray-500 mb-6">
                         {sessions.length === 0 
-                          ? 'Aucun cours trouvé pour cette date et cette classe'
+                          ? `Aucun cours trouvé pour ${viewMode === 'week' ? 'cette semaine' : 'cette date'} et cette classe`
                           : 'Modifiez vos critères de recherche'
                         }
                       </p>
@@ -595,7 +871,7 @@ export default function SchedulePage() {
                       )}
                     </div>
                   ) : (
-                    renderScheduleTable()
+                    viewMode === 'week' ? renderWeeklyScheduleTable() : renderScheduleTable()
                   )}
                 </div>
               </MicroCard>

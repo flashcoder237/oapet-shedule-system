@@ -1,10 +1,9 @@
-// src/components/layout/Sidebar.tsx
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   Home, 
   LayoutDashboard, 
@@ -16,30 +15,79 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  GraduationCap
+  GraduationCap,
+  Activity,
+  BarChart3
 } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   
   const navigation = [
-    { name: 'Accueil', href: '/', icon: Home },
-    { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Cours', href: '/courses', icon: BookOpen },
-    { name: 'Salles', href: '/rooms', icon: MapPin },
-    { name: 'Emplois du temps', href: '/schedule', icon: Calendar },
-    { name: 'Utilisateurs', href: '/users', icon: Users },
-    { name: 'Départements', href: '/departments', icon: Building },
-    { name: 'Paramètres', href: '/settings', icon: Settings },
+    { 
+      name: 'Accueil', 
+      href: '/', 
+      icon: Home,
+      description: 'Vue d\'ensemble'
+    },
+    { 
+      name: 'Tableau de bord', 
+      href: '/dashboard', 
+      icon: LayoutDashboard,
+      description: 'Statistiques et métriques'
+    },
+    { 
+      name: 'Cours', 
+      href: '/courses', 
+      icon: BookOpen,
+      description: 'Gestion des cours'
+    },
+    { 
+      name: 'Emplois du temps', 
+      href: '/schedule', 
+      icon: Calendar,
+      description: 'Planning et horaires'
+    },
+    { 
+      name: 'Salles', 
+      href: '/rooms', 
+      icon: MapPin,
+      description: 'Gestion des espaces'
+    },
+    { 
+      name: 'Utilisateurs', 
+      href: '/users', 
+      icon: Users,
+      description: 'Comptes et permissions'
+    },
+    { 
+      name: 'Départements', 
+      href: '/departments', 
+      icon: Building,
+      description: 'Structure organisationnelle'
+    },
+    { 
+      name: 'Paramètres', 
+      href: '/settings', 
+      icon: Settings,
+      description: 'Configuration système'
+    },
   ];
 
-  const sidebarVariants = {
-    expanded: { width: 256 },
-    collapsed: { width: 72 }
+  const sidebarVariants: Variants = {
+    expanded: { 
+      width: 280,
+      transition: { duration: 0.3, ease: "easeInOut" }
+    },
+    collapsed: { 
+      width: 72,
+      transition: { duration: 0.3, ease: "easeInOut" }
+    }
   };
 
-  const logoVariants = {
+  const contentVariants: Variants = {
     expanded: { 
       opacity: 1, 
       x: 0,
@@ -52,72 +100,97 @@ export default function Sidebar() {
     }
   };
 
-  const textVariants = {
-    expanded: { 
-      opacity: 1, 
-      x: 0,
-      transition: { duration: 0.3, delay: 0.1 }
-    },
-    collapsed: { 
-      opacity: 0, 
-      x: -10,
-      transition: { duration: 0.2 }
-    }
-  };
-  
   return (
     <motion.aside 
       variants={sidebarVariants}
       animate={collapsed ? "collapsed" : "expanded"}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="bg-primary text-white shadow-xl flex flex-col relative overflow-hidden"
+      className="h-screen bg-gradient-to-b from-primary to-primary-700 text-primary-foreground shadow-2xl flex flex-col relative overflow-hidden border-r border-primary-600/20"
     >
-      {/* Effet de gradient subtil */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 via-transparent to-transparent" />
+        <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-radial from-white/5 to-transparent rounded-full" />
+      </div>
       
       {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b border-white/10 relative z-10">
+      <div className="relative z-10 p-6 border-b border-primary-600/20">
+        <div className="flex items-center justify-between mb-6">
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.div 
+                key="logo-expanded"
+                variants={contentVariants}
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
+                className="flex items-center gap-3"
+              >
+                <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20 shadow-lg">
+                  <GraduationCap size={24} className="text-white" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-xl tracking-tight">OAPET</h1>
+                  <p className="text-xs text-primary-foreground/70">Gestion des emplois du temps</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          <motion.button 
+            onClick={() => setCollapsed(!collapsed)} 
+            className="p-2.5 rounded-xl hover:bg-white/10 transition-colors border border-white/20 shadow-sm backdrop-blur-sm"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label={collapsed ? "Développer la sidebar" : "Réduire la sidebar"}
+          >
+            <motion.div
+              animate={{ rotate: collapsed ? 180 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ChevronLeft size={18} />
+            </motion.div>
+          </motion.button>
+        </div>
+
+        {/* Quick Stats */}
         <AnimatePresence>
           {!collapsed && (
-            <motion.div 
-              variants={logoVariants}
+            <motion.div
+              variants={contentVariants}
               initial="collapsed"
               animate="expanded"
               exit="collapsed"
-              className="flex items-center gap-3"
+              className="grid grid-cols-2 gap-3"
             >
-              <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
-                <GraduationCap size={24} className="text-white" />
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                <div className="flex items-center gap-2">
+                  <Activity size={16} className="text-success" />
+                  <div>
+                    <p className="text-xs text-primary-foreground/70">Système</p>
+                    <p className="text-sm font-semibold">Actif</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="font-bold text-lg tracking-tight">FMSP-UDo</span>
-                <p className="text-xs text-white/70">Management System</p>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                <div className="flex items-center gap-2">
+                  <BarChart3 size={16} className="text-accent" />
+                  <div>
+                    <p className="text-xs text-primary-foreground/70">Cours</p>
+                    <p className="text-sm font-semibold">45</p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-        
-        <motion.button 
-          onClick={() => setCollapsed(!collapsed)} 
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <motion.div
-            animate={{ rotate: collapsed ? 180 : 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <ChevronLeft size={18} />
-          </motion.div>
-        </motion.button>
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 py-6 px-3">
+      <nav className="flex-1 py-6 px-4 relative z-10">
         <ul className="space-y-2">
           {navigation.map((item, index) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || 
+              (item.href !== '/' && pathname.startsWith(`${item.href}/`));
             
             return (
               <motion.li 
@@ -126,50 +199,67 @@ export default function Sidebar() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link href={item.href}>
+                <Link href={item.href} className="block">
                   <motion.div
-                    className={`nav-item flex items-center relative rounded-xl transition-all duration-200 ${
+                    className={cn(
+                      'nav-item flex items-center relative rounded-xl transition-all duration-300 group',
+                      collapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3',
                       isActive 
-                        ? 'bg-white/15 text-white shadow-lg backdrop-blur-sm' 
-                        : 'text-white/80 hover:bg-white/10 hover:text-white'
-                    } ${collapsed ? 'justify-center p-3' : 'px-4 py-3'}`}
+                        ? 'bg-white/15 text-white shadow-lg backdrop-blur-sm border border-white/20' 
+                        : 'text-primary-foreground/80 hover:bg-white/10 hover:text-white hover:shadow-md'
+                    )}
                     whileHover={{ 
                       scale: 1.02,
-                      backgroundColor: isActive ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)'
+                      x: collapsed ? 0 : 4
                     }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    {/* Indicateur actif */}
+                    {/* Active Indicator */}
                     {isActive && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-full"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full shadow-sm"
+                        initial={{ opacity: 0, scaleY: 0 }}
+                        animate={{ opacity: 1, scaleY: 1 }}
                         transition={{ duration: 0.2 }}
                       />
                     )}
                     
                     <motion.div
-                      whileHover={{ scale: 1.1 }}
+                      className="flex-shrink-0"
+                      whileHover={{ scale: 1.1, rotate: isActive ? 0 : 5 }}
                       transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     >
-                      <item.icon size={20} className={collapsed ? '' : 'mr-3'} />
+                      <item.icon size={20} />
                     </motion.div>
                     
                     <AnimatePresence>
                       {!collapsed && (
-                        <motion.span
-                          variants={textVariants}
+                        <motion.div
+                          variants={contentVariants}
                           initial="collapsed"
                           animate="expanded"
                           exit="collapsed"
-                          className="font-medium text-sm"
+                          className="flex-1 min-w-0"
                         >
-                          {item.name}
-                        </motion.span>
+                          <div className="font-medium text-sm leading-tight">
+                            {item.name}
+                          </div>
+                          <div className="text-xs text-primary-foreground/60 leading-tight mt-0.5">
+                            {item.description}
+                          </div>
+                        </motion.div>
                       )}
                     </AnimatePresence>
+
+                    {/* Tooltip for collapsed state */}
+                    {collapsed && (
+                      <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-xs text-gray-300">{item.description}</div>
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45" />
+                      </div>
+                    )}
                   </motion.div>
                 </Link>
               </motion.li>
@@ -180,12 +270,12 @@ export default function Sidebar() {
       
       {/* Footer */}
       <motion.div 
-        className="p-4 border-t border-white/10"
+        className="p-4 border-t border-primary-600/20 relative z-10"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {collapsed ? (
             <motion.div
               key="collapsed-footer"
@@ -194,21 +284,33 @@ export default function Sidebar() {
               exit={{ opacity: 0 }}
               className="text-center"
             >
-              <span className="text-xs text-white/60">v1.0</span>
+              <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center mx-auto border border-white/20">
+                <span className="text-xs font-mono">v1</span>
+              </div>
             </motion.div>
           ) : (
             <motion.div
               key="expanded-footer"
-              variants={textVariants}
+              variants={contentVariants}
               initial="collapsed"
               animate="expanded"
               exit="collapsed"
-              className="space-y-1"
+              className="space-y-3"
             >
-              <p className="text-sm font-medium">Système de gestion</p>
-              <p className="text-xs text-white/60">Version 1.0.0</p>
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <p className="text-xs text-white/50">© 2024 FMSP-UDo</p>
+              <div className="flex items-center gap-3 p-3 bg-white/10 rounded-lg border border-white/20 backdrop-blur-sm">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xs font-bold">O</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">OAPET System</p>
+                  <p className="text-xs text-primary-foreground/60">Version 1.0.0</p>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-xs text-primary-foreground/50">
+                  © 2024 Université de Douala
+                </p>
               </div>
             </motion.div>
           )}

@@ -6,12 +6,12 @@ import { AuthState, AuthContextType, AuthCredentials, User, RegisterData } from 
 import { authService } from '../api/services/auth';
 import { apiClient } from '../api/client';
 
-// État initial
+// État initial - même état côté serveur et client
 const initialState: AuthState = {
   user: null,
   token: null,
   isAuthenticated: false,
-  isLoading: true,
+  isLoading: false, // Commencer par false pour éviter l'hydratation
   error: null,
 };
 
@@ -90,9 +90,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Vérifier le token au démarrage
+  // Vérifier le token au démarrage (côté client seulement)
   useEffect(() => {
     const initializeAuth = async () => {
+      // Démarrer le chargement côté client
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
       const token = localStorage.getItem('auth_token');
       if (token) {
         apiClient.setToken(token);
@@ -111,7 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    initializeAuth();
+    // Seulement côté client
+    if (typeof window !== 'undefined') {
+      initializeAuth();
+    }
   }, []);
 
   const login = async (credentials: AuthCredentials) => {

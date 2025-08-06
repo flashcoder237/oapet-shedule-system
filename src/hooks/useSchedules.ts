@@ -191,7 +191,9 @@ export function useWeeklySchedule(scheduleId: number | null, weekDate?: Date) {
     
     if (customDate || weekDate) {
       const targetDate = customDate || weekDate;
-      params.week_start = targetDate.toISOString().split('T')[0];
+      if (targetDate) {
+        params.week_start = targetDate.toISOString().split('T')[0];
+      }
     }
     
     const response = await execute(() => scheduleService.getWeeklyView(scheduleId, params));
