@@ -31,8 +31,8 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">Aucune donnée hebdomadaire disponible</p>
+            <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">Aucune donnée hebdomadaire disponible</p>
           </div>
         </CardContent>
       </Card>

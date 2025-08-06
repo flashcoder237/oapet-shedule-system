@@ -41,7 +41,7 @@ export const MicroButton: React.FC<MicroButtonProps> = ({
       case 'accent':
         return 'btn-accent';
       case 'ghost':
-        return 'bg-transparent hover:bg-gray-100 text-gray-700 border-transparent';
+        return 'bg-transparent hover:bg-muted text-foreground border-transparent';
       default:
         return 'btn-primary';
     }
@@ -246,9 +246,9 @@ export const FloatingButton: React.FC<FloatingButtonProps> = ({
             exit={{ opacity: 0, x: 10 }}
             className="absolute right-full top-1/2 transform -translate-y-1/2 mr-3"
           >
-            <div className="bg-gray-900 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap">
+            <div className="bg-foreground text-background px-3 py-2 rounded-lg text-sm whitespace-nowrap">
               {tooltip}
-              <div className="absolute left-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent"></div>
+              <div className="absolute left-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-foreground border-y-4 border-y-transparent"></div>
             </div>
           </motion.div>
         )}

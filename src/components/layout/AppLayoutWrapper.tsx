@@ -18,10 +18,10 @@ export default function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
   // Show loading on server and during hydration
   if (!isClient) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600">
+          <p className="mt-4 text-muted-foreground">
             Chargement...
           </p>
         </div>

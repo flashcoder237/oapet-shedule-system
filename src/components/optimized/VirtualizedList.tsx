@@ -103,7 +103,7 @@ export default function VirtualizedList<T>({
           <div className="absolute bottom-0 left-0 right-0 flex justify-center p-4">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm text-gray-600">Chargement...</span>
+              <span className="text-sm text-muted-foreground">Chargement...</span>
             </div>
           </div>
         )}

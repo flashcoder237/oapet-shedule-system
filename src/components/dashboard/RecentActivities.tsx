@@ -24,9 +24,9 @@ export default function RecentActivities({ activities = [] }: RecentActivitiesPr
   if (activities.length === 0) {
     return (
       <div className="text-center py-8">
-        <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune activité récente</h3>
-        <p className="text-gray-500">Les activités récentes apparaîtront ici.</p>
+        <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">Aucune activité récente</h3>
+        <p className="text-muted-foreground">Les activités récentes apparaîtront ici.</p>
       </div>
     );
   }
@@ -40,8 +40,8 @@ export default function RecentActivities({ activities = [] }: RecentActivitiesPr
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium">{activity.action}</p>
-            <p className="text-xs text-gray-600">{activity.details}</p>
-            <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
+            <p className="text-xs text-muted-foreground">{activity.details}</p>
+            <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
           </div>
         </div>
       ))}

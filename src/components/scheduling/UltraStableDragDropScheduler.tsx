@@ -281,8 +281,8 @@ export default function UltraStableDragDropScheduler({
       <div
         key={`${day}-${hour}`}
         className={`
-          min-h-[60px] border border-gray-200 p-1 relative transition-colors
-          ${isDropTarget ? 'bg-blue-100 border-blue-300' : 'hover:bg-gray-50'}
+          min-h-[60px] border border-border p-1 relative transition-colors
+          ${isDropTarget ? 'bg-blue-100 border-blue-300' : 'hover:bg-muted'}
           ${readOnly ? 'cursor-default' : 'cursor-pointer'}
         `}
         onDragOver={(e) => {
@@ -402,15 +402,15 @@ export default function UltraStableDragDropScheduler({
       <div className="flex-1 overflow-auto">
         <div className="grid grid-cols-7 gap-1 h-full">
           {/* En-tête vide */}
-          <div className="p-2 border-b border-gray-200 bg-gray-50">
-            <div className="text-sm font-medium text-gray-600">Horaire</div>
+          <div className="p-2 border-b border-border bg-muted">
+            <div className="text-sm font-medium text-muted-foreground">Horaire</div>
           </div>
           
           {/* En-têtes des jours */}
           {weekDates.map((date, dayIndex) => (
-            <div key={dayIndex} className="p-2 border-b border-gray-200 bg-gray-50 text-center">
-              <div className="text-sm font-medium text-gray-900">{WEEK_DAYS[dayIndex]}</div>
-              <div className="text-xs text-gray-500">{date.getDate()}</div>
+            <div key={dayIndex} className="p-2 border-b border-border bg-muted text-center">
+              <div className="text-sm font-medium text-foreground">{WEEK_DAYS[dayIndex]}</div>
+              <div className="text-xs text-muted-foreground">{date.getDate()}</div>
             </div>
           ))}
           
@@ -418,7 +418,7 @@ export default function UltraStableDragDropScheduler({
           {TIME_SLOTS.map((hour, slotIndex) => (
             <React.Fragment key={slotIndex}>
               {/* Colonne des heures */}
-              <div className="p-2 text-xs text-gray-500 border-r border-gray-200 bg-gray-50 text-right">
+              <div className="p-2 text-xs text-muted-foreground border-r border-border bg-muted text-right">
                 {hour.toString().padStart(2, '0')}:00
               </div>
               

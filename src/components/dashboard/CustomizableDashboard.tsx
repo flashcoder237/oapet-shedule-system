@@ -336,7 +336,7 @@ export default function CustomizableDashboard({
 
     const baseClasses = `
       relative p-4 rounded-lg transition-all duration-200
-      ${config.showBorder ? 'border border-gray-200' : ''}
+      ${config.showBorder ? 'border border-border' : ''}
       ${isEditMode ? 'cursor-move hover:shadow-lg' : ''}
       ${selectedWidget === widget.id ? 'ring-2 ring-primary shadow-lg' : ''}
     `;
@@ -354,7 +354,7 @@ export default function CustomizableDashboard({
               <div className="text-3xl font-bold text-primary mb-2">
                 {data.value?.toLocaleString()}
               </div>
-              <div className="text-sm text-secondary mb-1">{data.label}</div>
+              <div className="text-sm text-muted-foreground mb-1">{data.label}</div>
               <div className={`text-xs flex items-center justify-center gap-1 ${
                 data.trend === 'up' ? 'text-green-600' : 'text-red-600'
               }`}>
@@ -374,7 +374,7 @@ export default function CustomizableDashboard({
                       className="bg-primary rounded-t w-full mb-1"
                       style={{ height: `${(item.value / 30) * 100}%` }}
                     ></div>
-                    <span className="text-xs text-secondary">{item.name}</span>
+                    <span className="text-xs text-muted-foreground">{item.name}</span>
                   </div>
                 ))}
               </div>
@@ -386,14 +386,14 @@ export default function CustomizableDashboard({
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium">Aujourd'hui</h4>
-                <Calendar className="w-4 h-4 text-gray-400" />
+                <Calendar className="w-4 h-4 text-muted-foreground" />
               </div>
               {data.events?.map((event: any, index: number) => (
-                <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                <div key={index} className="flex items-center gap-3 p-2 bg-muted rounded">
                   <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <div className="flex-1">
-                    <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">{event.time}</div>
+                    <div className="font-medium text-sm text-foreground">{event.title}</div>
+                    <div className="text-xs text-muted-foreground">{event.time}</div>
                   </div>
                 </div>
               ))}
@@ -412,7 +412,7 @@ export default function CustomizableDashboard({
                     <p className="text-sm">
                       <span className="font-medium">{activity.user}</span> {activity.action}
                     </p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
+                    <p className="text-xs text-muted-foreground">{activity.time}</p>
                   </div>
                 </div>
               ))}
@@ -428,7 +428,7 @@ export default function CustomizableDashboard({
                     <span>{task.name}</span>
                     <span>{task.progress}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div 
                       className="bg-primary h-2 rounded-full transition-all duration-300"
                       style={{ width: `${task.progress}%` }}
@@ -446,7 +446,7 @@ export default function CustomizableDashboard({
                 <thead>
                   <tr className="border-b">
                     {data.headers?.map((header: string, index: number) => (
-                      <th key={index} className="text-left py-2 px-1 font-medium text-gray-700">
+                      <th key={index} className="text-left py-2 px-1 font-medium text-foreground">
                         {header}
                       </th>
                     ))}
@@ -454,9 +454,9 @@ export default function CustomizableDashboard({
                 </thead>
                 <tbody>
                   {data.rows?.map((row: string[], rowIndex: number) => (
-                    <tr key={rowIndex} className="border-b border-gray-100">
+                    <tr key={rowIndex} className="border-b border-border">
                       {row.map((cell, cellIndex) => (
-                        <td key={cellIndex} className="py-2 px-1 text-gray-600">
+                        <td key={cellIndex} className="py-2 px-1 text-muted-foreground">
                           {cell}
                         </td>
                       ))}
@@ -476,7 +476,7 @@ export default function CustomizableDashboard({
               }`}>
                 {data.value}{data.unit}
               </div>
-              <div className="text-sm text-secondary">{data.label}</div>
+              <div className="text-sm text-muted-foreground">{data.label}</div>
               <div className="mt-2">
                 <div className={`w-full h-2 rounded-full ${
                   data.color === 'green' ? 'bg-green-100' : 
@@ -496,7 +496,7 @@ export default function CustomizableDashboard({
 
         default:
           return (
-            <div className="text-center text-gray-500">
+            <div className="text-center text-muted-foreground">
               <div className="text-4xl mb-2">📊</div>
               <div className="text-sm">Widget {widget.type}</div>
             </div>
@@ -524,7 +524,7 @@ export default function CustomizableDashboard({
                     e.stopPropagation();
                     updateWidget(widget.id, { isVisible: !widget.isVisible });
                   }}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  className="p-1 hover:bg-muted rounded"
                 >
                   {widget.isVisible ? 
                     <Eye className="w-3 h-3" /> : 
@@ -536,7 +536,7 @@ export default function CustomizableDashboard({
                     e.stopPropagation();
                     // Ouvrir menu contextuel
                   }}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  className="p-1 hover:bg-muted rounded"
                 >
                   <MoreVertical className="w-3 h-3" />
                 </button>
@@ -555,7 +555,7 @@ export default function CustomizableDashboard({
         {/* Overlay d'édition */}
         {isEditMode && selectedWidget === widget.id && (
           <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-lg p-3 flex gap-2">
+            <div className="bg-card rounded-lg shadow-lg p-3 flex gap-2">
               <Button size="sm" variant="outline" onClick={() => duplicateWidget(widget.id)}>
                 <Copy className="w-3 h-3" />
               </Button>
@@ -695,7 +695,7 @@ export default function CustomizableDashboard({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-auto"
+              className="bg-card rounded-lg max-w-4xl w-full max-h-[80vh] overflow-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
@@ -714,7 +714,7 @@ export default function CustomizableDashboard({
                   {widgetLibrary.map((widget, index) => (
                     <motion.div
                       key={index}
-                      className="p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                      className="p-4 border border-border rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
                       onClick={() => addWidget(widget)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -725,10 +725,10 @@ export default function CustomizableDashboard({
                         </div>
                         <div>
                           <h4 className="font-medium">{widget.title}</h4>
-                          <span className="text-xs text-gray-500">{widget.category}</span>
+                          <span className="text-xs text-muted-foreground">{widget.category}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600">{widget.description}</p>
+                      <p className="text-sm text-muted-foreground">{widget.description}</p>
                     </motion.div>
                   ))}
                 </div>

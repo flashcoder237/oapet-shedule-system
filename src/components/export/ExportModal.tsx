@@ -205,12 +205,12 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                           className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                             selectedFormat === format.id
                               ? `${format.bgColor} border-current ${format.color}`
-                              : 'border-gray-200 hover:border-gray-300'
+                              : 'border-border hover:border-muted-foreground'
                           }`}
                           onClick={() => setSelectedFormat(format.id as any)}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={selectedFormat === format.id ? format.color : 'text-gray-400'}>
+                            <div className={selectedFormat === format.id ? format.color : 'text-muted-foreground'}>
                               {format.icon}
                             </div>
                             <div className="flex-1">

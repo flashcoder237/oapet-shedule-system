@@ -14,9 +14,9 @@ export default function ScheduleConflicts({ conflicts = [] }: ScheduleConflictsP
   if (conflicts.length === 0) {
     return (
       <div className="text-center py-8">
-        <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun conflit détecté</h3>
-        <p className="text-gray-500">Tous les horaires semblent compatibles.</p>
+        <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">Aucun conflit détecté</h3>
+        <p className="text-muted-foreground">Tous les horaires semblent compatibles.</p>
       </div>
     );
   }

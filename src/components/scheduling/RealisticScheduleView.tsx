@@ -163,7 +163,7 @@ export default function RealisticScheduleView({
       case 'EXAM':
         return `${baseClasses} bg-red-50 border-red-400 text-red-800`;
       default:
-        return `${baseClasses} bg-gray-50 border-gray-400 text-gray-800`;
+        return `${baseClasses} bg-muted border-border text-foreground`;
     }
   };
 
@@ -200,9 +200,9 @@ export default function RealisticScheduleView({
       <Card className="h-full">
         <CardContent className="flex items-center justify-center h-64">
           <div className="text-center">
-            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-600 mb-2">Aucun emploi du temps</h3>
-            <p className="text-gray-500">Sélectionnez ou créez un emploi du temps pour commencer</p>
+            <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Aucun emploi du temps</h3>
+            <p className="text-muted-foreground">Sélectionnez ou créez un emploi du temps pour commencer</p>
           </div>
         </CardContent>
       </Card>
@@ -217,7 +217,7 @@ export default function RealisticScheduleView({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl text-blue-600">{schedule.name}</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {schedule.curriculum} - {schedule.level} 
                 {schedule.isPublished ? (
                   <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
@@ -292,7 +292,7 @@ export default function RealisticScheduleView({
             </div>
 
             {/* Statistiques rapides */}
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <div className="flex items-center space-x-1">
                 <BookOpen className="w-4 h-4" />
                 <span>{filteredSessions.length} sessions</span>
@@ -313,15 +313,15 @@ export default function RealisticScheduleView({
         <CardContent className="p-0 h-full">
           <div className="grid grid-cols-7 h-full">
             {/* En-tête vide pour la colonne des heures */}
-            <div className="border-r border-b border-gray-200 bg-gray-50 p-3">
-              <div className="text-sm font-medium text-gray-600">Horaires</div>
+            <div className="border-r border-b border-border bg-muted p-3">
+              <div className="text-sm font-medium text-muted-foreground">Horaires</div>
             </div>
             
             {/* En-têtes des jours */}
             {weekDates.map((day) => (
-              <div key={day.key} className="border-r border-b border-gray-200 bg-gray-50 p-3 text-center">
-                <div className="text-sm font-medium text-gray-900">{day.short}</div>
-                <div className="text-xs text-gray-500">{day.dateStr}</div>
+              <div key={day.key} className="border-r border-b border-border bg-muted p-3 text-center">
+                <div className="text-sm font-medium text-foreground">{day.short}</div>
+                <div className="text-xs text-muted-foreground">{day.dateStr}</div>
               </div>
             ))}
             
@@ -329,11 +329,11 @@ export default function RealisticScheduleView({
             {timeSlots.map((slot, slotIndex) => (
               <React.Fragment key={slotIndex}>
                 {/* Colonne des heures */}
-                <div className="border-r border-b border-gray-200 bg-gray-50 p-3 text-right">
-                  <div className="text-xs font-medium text-gray-700">
+                <div className="border-r border-b border-border bg-muted p-3 text-right">
+                  <div className="text-xs font-medium text-foreground">
                     {slot.start}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     {slot.end}
                   </div>
                 </div>
@@ -345,7 +345,7 @@ export default function RealisticScheduleView({
                   return (
                     <div
                       key={`${day.key}-${slotIndex}`}
-                      className="border-r border-b border-gray-200 p-2 min-h-[80px] hover:bg-gray-50 transition-colors"
+                      className="border-r border-b border-border p-2 min-h-[80px] hover:bg-muted transition-colors"
                     >
                       <div className="space-y-2">
                         {sessions.map((session) => (
@@ -408,7 +408,7 @@ export default function RealisticScheduleView({
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              <div className="text-sm font-medium text-gray-700">Légende :</div>
+              <div className="text-sm font-medium text-foreground">Légende :</div>
               
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-1">
@@ -435,7 +435,7 @@ export default function RealisticScheduleView({
               </div>
             </div>
             
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-muted-foreground">
               Total: {filteredSessions.length} sessions programmées
             </div>
           </div>

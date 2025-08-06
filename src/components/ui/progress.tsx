@@ -191,7 +191,7 @@ const Stepper = ({
                   ? 'bg-primary border-primary text-white' 
                   : step.current 
                     ? 'border-primary text-primary bg-primary-subtle' 
-                    : 'border-gray-300 text-gray-400 bg-white'
+                    : 'border-border text-muted-foreground bg-background'
                 }
               `}
               whileHover={{ scale: 1.05 }}
@@ -226,7 +226,7 @@ const Stepper = ({
             <div className={`${isHorizontal ? 'text-center mt-2' : 'flex-1'}`}>
               <motion.p
                 className={`text-sm font-medium ${
-                  step.completed || step.current ? 'text-primary' : 'text-gray-400'
+                  step.completed || step.current ? 'text-primary' : 'text-muted-foreground'
                 }`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -255,7 +255,7 @@ const Stepper = ({
                   ? 'h-0.5 w-12 mx-2' 
                   : 'w-0.5 h-8 ml-4 my-2'
                 }
-                ${steps[index + 1]?.completed ? 'bg-primary' : 'bg-gray-300'}
+                ${steps[index + 1]?.completed ? 'bg-primary' : 'bg-muted'}
               `}
               initial={{ scaleX: isHorizontal ? 0 : 1, scaleY: isHorizontal ? 1 : 0 }}
               animate={{ scaleX: 1, scaleY: 1 }}

@@ -27,14 +27,14 @@ export default function SimpleDragDropScheduler({
     <div className="h-full">
       <div className="grid grid-cols-7 gap-1 h-full">
         {/* En-tête vide pour la colonne des heures */}
-        <div className="p-2 border-b border-gray-200 bg-gray-50">
-          <div className="text-sm font-medium text-gray-600">Horaire</div>
+        <div className="p-2 border-b border-border bg-muted">
+          <div className="text-sm font-medium text-muted-foreground">Horaire</div>
         </div>
         
         {/* En-têtes des jours */}
         {weekDays.map((day, dayIndex) => (
-          <div key={dayIndex} className="p-2 border-b border-gray-200 bg-gray-50 text-center">
-            <div className="text-sm font-medium text-gray-900">{day}</div>
+          <div key={dayIndex} className="p-2 border-b border-border bg-muted text-center">
+            <div className="text-sm font-medium text-foreground">{day}</div>
           </div>
         ))}
         
@@ -42,7 +42,7 @@ export default function SimpleDragDropScheduler({
         {timeSlots.map((hour, slotIndex) => (
           <React.Fragment key={slotIndex}>
             {/* Colonne des heures */}
-            <div className="p-2 text-xs text-gray-500 border-r border-gray-200 bg-gray-50 text-right">
+            <div className="p-2 text-xs text-muted-foreground border-r border-border bg-muted text-right">
               {hour.toString().padStart(2, '0')}:00
             </div>
             
@@ -50,7 +50,7 @@ export default function SimpleDragDropScheduler({
             {weekDays.map((day, dayIndex) => (
               <div
                 key={`${dayIndex}-${slotIndex}`}
-                className="min-h-[60px] border border-gray-100 p-1 hover:bg-gray-50 transition-colors cursor-pointer"
+                className="min-h-[60px] border border-border p-1 hover:bg-muted transition-colors cursor-pointer"
               >
                 {/* Contenu vide pour l'instant */}
               </div>

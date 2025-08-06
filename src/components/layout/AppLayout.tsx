@@ -19,10 +19,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Show loading state if auth is still loading
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600">
+          <p className="mt-4 text-muted-foreground">
             Vérification de l'authentification...
           </p>
         </div>
@@ -37,13 +37,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Main application layout
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header />
         
-        <main className="flex-1 overflow-auto bg-gray-50 relative">
+        <main className="flex-1 overflow-auto bg-background relative">
           {/* Content */}
           <div className="relative z-10 p-6 h-full">
             {children}

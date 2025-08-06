@@ -11,17 +11,17 @@
   --color-surface: #ffffff;
   --color-surface-subtle: #f8fafc;
   
-  /* Primary Brand Colors */
-  --color-primary: #1e40af;
-  --color-primary-foreground: #f8fafc;
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-900: #1e3a8a;
-  --color-primary-subtle: #eff6ff;
-  --color-primary-muted: #dbeafe;
+  /* Primary Brand Colors - Violet/Purple Theme */
+  --color-primary: #8b5cf6;
+  --color-primary-foreground: #ffffff;
+  --color-primary-50: #faf5ff;
+  --color-primary-100: #f3e8ff;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-900: #581c87;
+  --color-primary-subtle: #faf5ff;
+  --color-primary-muted: #f3e8ff;
   
   /* Secondary Colors */
   --color-secondary: #f1f5f9;
@@ -29,13 +29,13 @@
   --color-secondary-600: #475569;
   --color-secondary-muted: #f1f5f9;
   
-  /* Accent Colors */
-  --color-accent: #0ea5e9;
-  --color-accent-foreground: #f0f9ff;
-  --color-accent-50: #f0f9ff;
-  --color-accent-500: #0ea5e9;
-  --color-accent-subtle: #f0f9ff;
-  --color-accent-muted: #e0f2fe;
+  /* Accent Colors - Rose/Pink Theme */
+  --color-accent: #f472b6;
+  --color-accent-foreground: #ffffff;
+  --color-accent-50: #fdf2f8;
+  --color-accent-500: #f472b6;
+  --color-accent-subtle: #fdf2f8;
+  --color-accent-muted: #fce7f3;
   
   /* Tertiary Colors */
   --color-tertiary-muted: #f8fafc;
@@ -44,7 +44,7 @@
   --color-subtle: #f8fafc;
   --color-border: #e2e8f0;
   --color-input: #ffffff;
-  --color-ring: #3b82f6;
+  --color-ring: #6366f1;
   
   /* Semantic Colors */
   --color-success: #059669;
@@ -85,26 +85,26 @@
   --color-surface: #1a1a1a;
   --color-surface-subtle: #1e293b;
   
-  /* Primary Brand Colors - Dark Mode */
-  --color-primary: #3b82f6;
+  /* Primary Brand Colors - Dark Mode Violet/Purple */
+  --color-primary: #a78bfa;
   --color-primary-foreground: #030712;
-  --color-primary-50: #1e3a8a;
-  --color-primary-100: #1e40af;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-900: #dbeafe;
+  --color-primary-50: #581c87;
+  --color-primary-100: #6d28d9;
+  --color-primary-500: #a78bfa;
+  --color-primary-600: #8b5cf6;
+  --color-primary-700: #7c3aed;
+  --color-primary-900: #f3e8ff;
   
   /* Secondary Colors - Dark Mode */
   --color-secondary: #1e293b;
   --color-secondary-foreground: #f8fafc;
   --color-secondary-600: #94a3b8;
   
-  /* Accent Colors - Dark Mode */
-  --color-accent: #0ea5e9;
+  /* Accent Colors - Dark Mode Rose/Pink */
+  --color-accent: #fb7185;
   --color-accent-foreground: #0c0a09;
-  --color-accent-50: #0c4a6e;
-  --color-accent-500: #0ea5e9;
+  --color-accent-50: #881337;
+  --color-accent-500: #fb7185;
   
   /* Semantic Colors - Dark Mode */
   --color-success: #10b981;
@@ -142,17 +142,17 @@
   --popover: #ffffff;
   --popover-foreground: #0a0a0a;
   
-  /* Primary Brand Colors */
-  --primary: #1e40af;
-  --primary-foreground: #f8fafc;
-  --primary-50: #eff6ff;
-  --primary-100: #dbeafe;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
-  --primary-900: #1e3a8a;
-  --primary-subtle: #eff6ff;
-  --primary-muted: #dbeafe;
+  /* Primary Brand Colors - Violet/Purple Theme */
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --primary-50: #faf5ff;
+  --primary-100: #f3e8ff;
+  --primary-500: #8b5cf6;
+  --primary-600: #7c3aed;
+  --primary-700: #6d28d9;
+  --primary-900: #581c87;
+  --primary-subtle: #faf5ff;
+  --primary-muted: #f3e8ff;
   
   /* Secondary Colors */
   --secondary: #f1f5f9;
@@ -160,13 +160,13 @@
   --secondary-600: #475569;
   --secondary-muted: #f1f5f9;
   
-  /* Accent Colors */
-  --accent: #0ea5e9;
-  --accent-foreground: #f0f9ff;
-  --accent-50: #f0f9ff;
-  --accent-500: #0ea5e9;
-  --accent-subtle: #f0f9ff;
-  --accent-muted: #e0f2fe;
+  /* Accent Colors - Rose/Pink Theme */
+  --accent: #f472b6;
+  --accent-foreground: #ffffff;
+  --accent-50: #fdf2f8;
+  --accent-500: #f472b6;
+  --accent-subtle: #fdf2f8;
+  --accent-muted: #fce7f3;
   
   /* Tertiary Colors */
   --tertiary-muted: #f8fafc;
@@ -195,12 +195,13 @@
   --muted-foreground: #64748b;
   --border: #e2e8f0;
   --input: #ffffff;
-  --ring: #3b82f6;
+  --ring: #8b5cf6;
   
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  /* Gradients - Violet/Purple + Rose/Pink Theme */
+  --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
   --gradient-secondary: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  --gradient-accent: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  --gradient-accent: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+  --gradient-brand: linear-gradient(135deg, #8b5cf6 0%, #f472b6 100%);
   --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
   
   /* Shadows */
@@ -241,23 +242,25 @@
     --popover: #1a1a1a;
     --popover-foreground: #fafafa;
     
-    --primary: #3b82f6;
+    /* Primary Brand Colors - Dark Mode Violet/Purple */
+    --primary: #a78bfa;
     --primary-foreground: #030712;
-    --primary-50: #1e3a8a;
-    --primary-100: #1e40af;
-    --primary-500: #3b82f6;
-    --primary-600: #2563eb;
-    --primary-700: #1d4ed8;
-    --primary-900: #dbeafe;
+    --primary-50: #581c87;
+    --primary-100: #6d28d9;
+    --primary-500: #a78bfa;
+    --primary-600: #8b5cf6;
+    --primary-700: #7c3aed;
+    --primary-900: #f3e8ff;
     
     --secondary: #1e293b;
     --secondary-foreground: #f8fafc;
     --secondary-600: #94a3b8;
     
-    --accent: #0ea5e9;
+    /* Accent Colors - Dark Mode Rose/Pink */
+    --accent: #fb7185;
     --accent-foreground: #0c0a09;
-    --accent-50: #0c4a6e;
-    --accent-500: #0ea5e9;
+    --accent-50: #881337;
+    --accent-500: #fb7185;
     
     --success: #10b981;
     --success-foreground: #14532d;
@@ -278,7 +281,7 @@
     --muted-foreground: #94a3b8;
     --border: #334155;
     --input: #1e293b;
-    --ring: #3b82f6;
+    --ring: #a78bfa;
   }
 }
 
@@ -537,7 +540,7 @@ body {
 
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary, #1e40af), 0 0 0 4px rgba(30, 64, 175, 0.1);
+  box-shadow: 0 0 0 2px var(--color-primary, #8b5cf6), 0 0 0 4px rgba(139, 92, 246, 0.1);
 }
 
 .focus-primary {
@@ -547,20 +550,20 @@ body {
 
 .focus-primary:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #3b82f6, 0 0 0 4px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 2px #8b5cf6, 0 0 0 4px rgba(139, 92, 246, 0.1);
 }
 
 .focus\:ring-primary {
-  --tw-ring-color: rgb(59 130 246);
+  --tw-ring-color: rgb(139 92 246);
 }
 
 .focus\:ring-primary\/50 {
-  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-color: rgb(139 92 246 / 0.5);
 }
 
 .focus\:border-primary {
   --tw-border-opacity: 1;
-  border-color: rgb(30 64 175 / var(--tw-border-opacity));
+  border-color: rgb(139 92 246 / var(--tw-border-opacity));
 }
 
 /* Hover Effects */

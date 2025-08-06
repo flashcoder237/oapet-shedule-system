@@ -103,7 +103,7 @@ export const EnhancedStats: React.FC<EnhancedStatsProps> = ({ stats, className =
       case 'down':
         return <TrendingDown className="w-4 h-4 text-red-500" />;
       default:
-        return <Activity className="w-4 h-4 text-gray-500" />;
+        return <Activity className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -114,7 +114,7 @@ export const EnhancedStats: React.FC<EnhancedStatsProps> = ({ stats, className =
       case 'down':
         return 'text-red-600';
       default:
-        return 'text-gray-600';
+        return 'text-muted-foreground';
     }
   };
 
@@ -147,13 +147,13 @@ export const EnhancedStats: React.FC<EnhancedStatsProps> = ({ stats, className =
 
             {/* Valeur principale */}
             <div className="mb-2">
-              <div className="text-3xl font-bold text-gray-900 mb-1">
+              <div className="text-3xl font-bold text-foreground mb-1">
                 {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
               </div>
-              <div className="text-sm font-semibold text-gray-700 mb-1">
+              <div className="text-sm font-semibold text-foreground mb-1">
                 {stat.title}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-muted-foreground">
                 {stat.description}
               </div>
             </div>
@@ -161,11 +161,11 @@ export const EnhancedStats: React.FC<EnhancedStatsProps> = ({ stats, className =
             {/* Barre de progression */}
             {stat.percentage && (
               <div className="mb-4">
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                   <span>Progression</span>
                   <span>{Math.round(stat.percentage)}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${stat.percentage}%` }}
@@ -181,7 +181,7 @@ export const EnhancedStats: React.FC<EnhancedStatsProps> = ({ stats, className =
 
             {/* Objectif */}
             {stat.target && (
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Target className="w-3 h-3" />
                   Objectif: {stat.target.toLocaleString()}
@@ -253,10 +253,10 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, className =
           >
             {metric.icon}
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
+          <div className="text-2xl font-bold text-foreground mb-1">
             {metric.value}%
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             {metric.label}
           </div>
         </motion.div>

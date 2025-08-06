@@ -142,7 +142,7 @@ export function AnimatedProgress({
   
   return (
     <div className={`relative ${className}`}>
-      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
         <motion.div
           className={`h-full ${color} rounded-full relative`}
           initial={{ width: 0 }}
@@ -287,7 +287,7 @@ export function AnimatedSwitch({
         className={`
           relative ${currentSize.width} ${currentSize.height}
           rounded-full transition-colors duration-200
-          ${checked ? 'bg-primary' : 'bg-gray-300'}
+          ${checked ? 'bg-primary' : 'bg-muted'}
           ${disabled ? '' : 'hover:shadow-md'}
         `}
       >
@@ -304,7 +304,7 @@ export function AnimatedSwitch({
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         >
           <motion.div
-            className="w-1 h-1 bg-gray-400 rounded-full"
+            className="w-1 h-1 bg-muted-foreground rounded-full"
             animate={{
               scale: checked ? 0 : 1,
               opacity: checked ? 0 : 1
@@ -480,7 +480,7 @@ export function HoverCard({
             transition={{ duration: 0.15 }}
             className={`absolute z-50 ${sideClasses[side]}`}
           >
-            <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-xs">
+            <div className="bg-card border border-border rounded-lg shadow-lg p-3 max-w-xs">
               {content}
             </div>
           </motion.div>

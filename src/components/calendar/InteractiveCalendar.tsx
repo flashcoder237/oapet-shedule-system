@@ -181,7 +181,7 @@ export default function InteractiveCalendar({
       case 'confirmed': return <CheckCircle className="w-3 h-3 text-green-500" />;
       case 'pending': return <Clock className="w-3 h-3 text-yellow-500" />;
       case 'cancelled': return <AlertCircle className="w-3 h-3 text-red-500" />;
-      default: return <Info className="w-3 h-3 text-gray-500" />;
+      default: return <Info className="w-3 h-3 text-muted-foreground" />;
     }
   };
 
@@ -190,7 +190,7 @@ export default function InteractiveCalendar({
       case 'high': return 'border-l-red-500';
       case 'medium': return 'border-l-yellow-500';
       case 'low': return 'border-l-green-500';
-      default: return 'border-l-gray-500';
+      default: return 'border-l-border';
     }
   };
 
@@ -227,8 +227,8 @@ export default function InteractiveCalendar({
             <motion.div
               key={index}
               className={`
-                min-h-[80px] p-1 border border-gray-100 cursor-pointer
-                ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
+                min-h-[80px] p-1 border border-border cursor-pointer
+                ${!day.isCurrentMonth ? 'bg-muted text-muted-foreground' : 'bg-card'}
                 ${isToday ? 'bg-primary-subtle/20 border-primary' : ''}
                 ${isSelected ? 'ring-2 ring-primary' : ''}
                 hover:bg-primary-subtle/10 transition-colors
@@ -268,7 +268,7 @@ export default function InteractiveCalendar({
                       <span className="truncate flex-1">{event.title}</span>
                       {getStatusIcon(event.status)}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                       <Clock className="w-2 h-2" />
                       <span>{event.startTime}</span>
                     </div>
@@ -276,7 +276,7 @@ export default function InteractiveCalendar({
                 ))}
                 
                 {dayEvents.length > 2 && (
-                  <div className="text-xs text-center text-gray-500 cursor-pointer hover:text-primary">
+                  <div className="text-xs text-center text-muted-foreground cursor-pointer hover:text-primary">
                     +{dayEvents.length - 2} autres
                   </div>
                 )}
@@ -326,7 +326,7 @@ export default function InteractiveCalendar({
         {timeSlots.map(time => (
           <React.Fragment key={time}>
             {/* Colonne des heures */}
-            <div className="p-2 text-sm text-gray-500 border-r border-gray-200 text-right">
+            <div className="p-2 text-sm text-muted-foreground border-r border-border text-right">
               {time}
             </div>
             
@@ -341,7 +341,7 @@ export default function InteractiveCalendar({
               return (
                 <div
                   key={`${date.toISOString()}-${time}`}
-                  className="min-h-[60px] border border-gray-100 p-1 hover:bg-primary-subtle/10 cursor-pointer transition-colors"
+                  className="min-h-[60px] border border-border p-1 hover:bg-muted cursor-pointer transition-colors"
                   onClick={() => handleDateClick(date)}
                 >
                   {dayEvents.map(event => (
@@ -385,13 +385,13 @@ export default function InteractiveCalendar({
           <div className="flex items-center gap-2">
             {/* Recherche */}
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 w-48"
+                className="pl-8 pr-3 py-1 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 w-48"
               />
             </div>
 
@@ -498,7 +498,7 @@ export default function InteractiveCalendar({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white rounded-lg p-6 max-w-md w-full"
+              className="bg-card rounded-lg p-6 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
@@ -513,34 +513,34 @@ export default function InteractiveCalendar({
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-gray-500" />
+                  <Clock className="w-4 h-4 text-muted-foreground" />
                   <span>{selectedEvent.startTime} - {selectedEvent.endTime}</span>
                 </div>
                 
                 {selectedEvent.professor && (
                   <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-500" />
+                    <User className="w-4 h-4 text-muted-foreground" />
                     <span>{selectedEvent.professor}</span>
                   </div>
                 )}
                 
                 {selectedEvent.room && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
                     <span>{selectedEvent.room}</span>
                   </div>
                 )}
                 
                 {selectedEvent.participants && (
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-gray-500" />
+                    <Users className="w-4 h-4 text-muted-foreground" />
                     <span>{selectedEvent.participants} participants</span>
                   </div>
                 )}
 
                 {selectedEvent.description && (
                   <div className="mt-4">
-                    <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                    <p className="text-sm text-muted-foreground">{selectedEvent.description}</p>
                   </div>
                 )}
               </div>

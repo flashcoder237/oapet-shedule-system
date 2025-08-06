@@ -42,8 +42,8 @@ export default function AdvancedStats({ stats = [] }: AdvancedStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">Aucune statistique disponible</p>
+            <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">Aucune statistique disponible</p>
           </div>
         </CardContent>
       </Card>
@@ -54,7 +54,7 @@ export default function AdvancedStats({ stats = [] }: AdvancedStatsProps) {
     switch (trend) {
       case 'up': return <TrendingUp className="w-4 h-4 text-green-500" />;
       case 'down': return <TrendingDown className="w-4 h-4 text-red-500" />;
-      default: return <BarChart3 className="w-4 h-4 text-gray-500" />;
+      default: return <BarChart3 className="w-4 h-4 text-muted-foreground" />;
     }
   };
 

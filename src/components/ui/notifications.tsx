@@ -211,7 +211,7 @@ export function NotificationCenter() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-secondary hover:text-primary transition-colors"
+        className="relative p-2 text-muted-foreground hover:text-primary transition-colors"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
@@ -231,15 +231,15 @@ export function NotificationCenter() {
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+            className="absolute right-0 top-full mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50"
           >
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-primary">Notifications</h3>
                 {notifications.length > 0 && (
                   <button
                     onClick={clearAll}
-                    className="text-xs text-secondary hover:text-primary"
+                    className="text-xs text-muted-foreground hover:text-primary"
                   >
                     Tout effacer
                   </button>
@@ -249,14 +249,14 @@ export function NotificationCenter() {
 
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-secondary">
+                <div className="p-8 text-center text-muted-foreground">
                   <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Aucune notification</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-border">
                   {notifications.map((notification) => (
-                    <div key={notification.id} className="p-4 hover:bg-gray-50">
+                    <div key={notification.id} className="p-4 hover:bg-muted/50">
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0">
                           {notification.type === 'success' && <CheckCircle className="w-4 h-4 text-green-500" />}
@@ -265,13 +265,13 @@ export function NotificationCenter() {
                           {notification.type === 'info' && <Info className="w-4 h-4 text-blue-500" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-primary truncate">
+                          <p className="font-medium text-sm text-foreground truncate">
                             {notification.title}
                           </p>
-                          <p className="text-xs text-secondary mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {notification.message}
                           </p>
-                          <p className="text-xs text-tertiary mt-1">
+                          <p className="text-xs text-muted-foreground/70 mt-1">
                             {formatTime(notification.timestamp)}
                           </p>
                         </div>

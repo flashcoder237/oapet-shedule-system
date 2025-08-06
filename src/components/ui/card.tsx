@@ -13,7 +13,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
-        className={`card rounded-xl border border-subtle bg-surface shadow-sm transition-all duration-200 ${
+        className={`card rounded-xl border border-border bg-card shadow-sm transition-all duration-200 ${
           hover ? 'hover:shadow-lg hover:-translate-y-1' : ''
         } ${
           interactive ? 'cursor-pointer hover:scale-[0.98] active:scale-95' : ''
@@ -47,7 +47,7 @@ const CardTitle = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <h3
     ref={ref}
-    className={`text-lg font-bold leading-none tracking-tight text-primary ${className}`}
+    className={`text-lg font-bold leading-none tracking-tight text-foreground ${className}`}
     {...props}
   >
     {children}
@@ -61,7 +61,7 @@ const CardDescription = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <p
     ref={ref}
-    className={`text-sm text-secondary leading-relaxed ${className}`}
+    className={`text-sm text-muted-foreground leading-relaxed ${className}`}
     {...props}
   >
     {children}
@@ -89,7 +89,7 @@ const CardFooter = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={`flex items-center p-6 pt-0 border-t border-subtle/50 ${className}`}
+    className={`flex items-center p-6 pt-0 border-t border-border/50 ${className}`}
     {...props}
   >
     {children}
@@ -112,7 +112,7 @@ const StatCard = React.forwardRef<
     <CardContent className="p-6">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <p className="text-sm text-secondary font-medium">{title}</p>
+          <p className="text-sm text-muted-foreground font-medium">{title}</p>
           <p className="text-3xl font-bold text-primary">
             {value}
           </p>
@@ -120,7 +120,7 @@ const StatCard = React.forwardRef<
             <p className={`text-xs flex items-center gap-1 ${
                 trend === 'up' ? 'text-green-600' : 
                 trend === 'down' ? 'text-red-600' : 
-                'text-secondary'
+                'text-muted-foreground'
               }`}
             >
               <span>{change}</span>
@@ -128,7 +128,7 @@ const StatCard = React.forwardRef<
           )}
         </div>
         {icon && (
-          <div className="w-12 h-12 bg-primary-subtle/50 rounded-xl flex items-center justify-center text-primary hover:scale-105 transition-transform">
+          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary hover:scale-105 transition-transform">
             {icon}
           </div>
         )}

@@ -477,7 +477,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
                           ? 'bg-primary text-white'
                           : step < currentStep
                           ? 'bg-green-500 text-white'
-                          : 'bg-gray-200 text-gray-500'
+                          : 'bg-muted text-muted-foreground'
                       }`}
                     >
                       {step < currentStep ? (
@@ -489,7 +489,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
                     {step < 3 && (
                       <div
                         className={`flex-1 h-1 mx-2 ${
-                          step < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                          step < currentStep ? 'bg-green-500' : 'bg-muted'
                         }`}
                       />
                     )}

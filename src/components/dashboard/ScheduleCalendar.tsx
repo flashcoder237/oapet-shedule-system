@@ -33,27 +33,27 @@ export default function ScheduleCalendar() {
       <table className="min-w-full border-collapse">
         <thead>
           <tr>
-            <th className="w-20 px-2 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="w-20 px-2 py-3 border-b border-border bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Horaire
             </th>
             {weekDays.map(day => (
-              <th key={day} className="px-3 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th key={day} className="px-3 py-3 border-b border-border bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {day}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-card divide-y divide-border">
           {timeSlots.map(time => (
             <tr key={time}>
-              <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-100">
+              <td className="px-2 py-4 whitespace-nowrap text-sm font-medium text-foreground border-r border-border">
                 {time}
               </td>
               {weekDays.map(day => {
                 const schedules = getScheduleForTimeSlot(day, time);
                 
                 return (
-                  <td key={`${day}-${time}`} className="px-2 py-2 border-r border-gray-100">
+                  <td key={`${day}-${time}`} className="px-2 py-2 border-r border-border">
                     {schedules.length > 0 ? (
                       <div className={`p-2 rounded border ${schedules[0].color}`}>
                         <p className="font-medium text-sm">{schedules[0].course}</p>

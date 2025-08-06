@@ -97,8 +97,8 @@ export default function RoomOccupancyChart({ data = [] }: RoomOccupancyChartProp
     return (
       <div className="h-[300px] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500">Aucune donnée d'occupation disponible</p>
+          <div className="w-16 h-16 bg-muted rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Aucune donnée d'occupation disponible</p>
         </div>
       </div>
     );

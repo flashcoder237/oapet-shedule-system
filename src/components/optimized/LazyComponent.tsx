@@ -57,7 +57,7 @@ export default function LazyComponent({
   }, [threshold, rootMargin, delay]);
 
   const defaultFallback = (
-    <div className="flex items-center justify-center h-32 bg-gray-50 rounded-lg animate-pulse">
+    <div className="flex items-center justify-center h-32 bg-muted rounded-lg animate-pulse">
       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
     </div>
   );
