@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { 
-  Grid3X3,
+  Grid3x3,
   Layout,
   Settings,
   Plus,

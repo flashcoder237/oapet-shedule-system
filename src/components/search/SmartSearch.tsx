@@ -39,7 +39,7 @@ import {
   Globe,
   Shield,
   Layers,
-  Grid3X3,
+  Grid3x3,
   List,
   SortAsc,
   SortDesc,
@@ -428,7 +428,7 @@ export default function SmartSearch({
                       size="sm"
                       onClick={() => setViewMode('grid')}
                     >
-                      <Grid3X3 className="w-4 h-4" />
+                      <Grid3x3 className="w-4 h-4" />
                     </Button>
                   </div>
 

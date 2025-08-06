@@ -23,7 +23,7 @@ import {
   Star,
   Filter,
   Search,
-  Grid3X3,
+  Grid3x3,
   List,
   Eye,
   Settings,

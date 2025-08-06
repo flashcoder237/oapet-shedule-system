@@ -15,7 +15,7 @@ import {
   Plus,
   Filter,
   Search,
-  Grid3X3,
+  Grid3x3,
   List,
   Eye,
   Edit,
@@ -409,7 +409,7 @@ export default function InteractiveCalendar({
                 onClick={() => setView('month')}
                 className="rounded-none"
               >
-                <Grid3X3 className="w-4 h-4" />
+                <Grid3x3 className="w-4 h-4" />
               </Button>
               <Button
                 variant={view === 'week' ? 'default' : 'ghost'}
