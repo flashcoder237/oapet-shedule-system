@@ -254,10 +254,10 @@ export default function Sidebar() {
 
                     {/* Tooltip for collapsed state */}
                     {collapsed && (
-                      <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                      <div className="absolute left-full ml-2 px-3 py-2 bg-popover text-popover-foreground text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-lg border border-border">
                         <div className="font-medium">{item.name}</div>
-                        <div className="text-xs text-gray-300">{item.description}</div>
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45" />
+                        <div className="text-xs text-muted-foreground">{item.description}</div>
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-popover rotate-45 border-l border-b border-border" />
                       </div>
                     )}
                   </motion.div>

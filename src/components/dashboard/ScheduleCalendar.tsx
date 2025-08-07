@@ -13,12 +13,12 @@ export default function ScheduleCalendar() {
   
   // Exemple de données d'emploi du temps
   const scheduleData = [
-    { id: 1, day: 'Lundi', startTime: '08:00', endTime: '10:00', course: 'Anatomie', professor: 'Dr. Kamga', room: 'A101', class: 'L2 Médecine', color: 'bg-green-100 border-green-300 text-green-800' },
-    { id: 2, day: 'Lundi', startTime: '14:00', endTime: '16:00', course: 'Biochimie', professor: 'Dr. Mbarga', room: 'B202', class: 'L1 Médecine', color: 'bg-green-100 border-green-300 text-green-800' },
-    { id: 3, day: 'Mardi', startTime: '10:00', endTime: '12:00', course: 'Physiologie', professor: 'Dr. Nkeng', room: 'A101', class: 'L3 Médecine', color: 'bg-purple-100 border-purple-300 text-purple-800' },
-    { id: 4, day: 'Mercredi', startTime: '08:00', endTime: '10:00', course: 'Pharmacologie', professor: 'Dr. Ebongue', room: 'C305', class: 'L4 Médecine', color: 'bg-yellow-100 border-yellow-300 text-yellow-800' },
-    { id: 5, day: 'Jeudi', startTime: '16:00', endTime: '18:00', course: 'Pathologie', professor: 'Dr. Simo', room: 'B202', class: 'L3 Médecine', color: 'bg-red-100 border-red-300 text-red-800' },
-    { id: 6, day: 'Vendredi', startTime: '12:00', endTime: '14:00', course: 'Immunologie', professor: 'Dr. Edimo', room: 'A101', class: 'L2 Médecine', color: 'bg-indigo-100 border-indigo-300 text-indigo-800' },
+    { id: 1, day: 'Lundi', startTime: '08:00', endTime: '10:00', course: 'Anatomie', professor: 'Dr. Kamga', room: 'A101', class: 'L2 Médecine', color: 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200' },
+    { id: 2, day: 'Lundi', startTime: '14:00', endTime: '16:00', course: 'Biochimie', professor: 'Dr. Mbarga', room: 'B202', class: 'L1 Médecine', color: 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200' },
+    { id: 3, day: 'Mardi', startTime: '10:00', endTime: '12:00', course: 'Physiologie', professor: 'Dr. Nkeng', room: 'A101', class: 'L3 Médecine', color: 'bg-violet-100 border-violet-300 text-violet-800 dark:bg-violet-900/30 dark:border-violet-700 dark:text-violet-200' },
+    { id: 4, day: 'Mercredi', startTime: '08:00', endTime: '10:00', course: 'Pharmacologie', professor: 'Dr. Ebongue', room: 'C305', class: 'L4 Médecine', color: 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200' },
+    { id: 5, day: 'Jeudi', startTime: '16:00', endTime: '18:00', course: 'Pathologie', professor: 'Dr. Simo', room: 'B202', class: 'L3 Médecine', color: 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200' },
+    { id: 6, day: 'Vendredi', startTime: '12:00', endTime: '14:00', course: 'Immunologie', professor: 'Dr. Edimo', room: 'A101', class: 'L2 Médecine', color: 'bg-indigo-100 border-indigo-300 text-indigo-800 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-200' },
   ];
   
   // Fonction pour obtenir les cours pour un jour et une heure spécifiques

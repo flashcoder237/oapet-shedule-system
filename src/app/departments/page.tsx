@@ -162,7 +162,7 @@ export default function DepartmentsPage() {
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-4 w-4 text-muted-foreground mr-2" />
-                  <span className="text-sm text-blue-600">N/A</span>
+                  <span className="text-sm text-primary">N/A</span>
                 </div>
                 <div className="flex items-center">
                   <Phone className="h-4 w-4 text-muted-foreground mr-2" />
@@ -174,20 +174,20 @@ export default function DepartmentsPage() {
             {/* Statistiques du département */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="text-center p-3 bg-primary/5 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{dept.teachers_count || 0}</div>
-                <div className="text-xs text-blue-600">Professeurs</div>
+                <div className="text-2xl font-bold text-primary">{dept.teachers_count || 0}</div>
+                <div className="text-xs text-primary">Professeurs</div>
               </div>
               <div className="text-center p-3 bg-accent/5 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">{dept.courses_count || 0}</div>
-                <div className="text-xs text-yellow-600">Cours</div>
+                <div className="text-2xl font-bold text-accent">{dept.courses_count || 0}</div>
+                <div className="text-xs text-accent">Cours</div>
               </div>
               <div className="text-center p-3 bg-primary/5 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{dept.is_active ? 'Actif' : 'Inactif'}</div>
-                <div className="text-xs text-green-600">Statut</div>
+                <div className="text-2xl font-bold text-primary">{dept.is_active ? 'Actif' : 'Inactif'}</div>
+                <div className="text-xs text-primary">Statut</div>
               </div>
               <div className="text-center p-3 bg-secondary/5 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{dept.head_of_department_name || 'N/A'}</div>
-                <div className="text-xs text-purple-600">Chef</div>
+                <div className="text-2xl font-bold text-secondary">{dept.head_of_department_name || 'N/A'}</div>
+                <div className="text-xs text-secondary">Chef</div>
               </div>
             </div>
 
@@ -205,7 +205,7 @@ export default function DepartmentsPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Statut:</span>
-                <span className={`font-medium ${dept.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`font-medium ${dept.is_active ? 'text-primary' : 'text-destructive'}`}>
                   {dept.is_active ? 'Actif' : 'Inactif'}
                 </span>
               </div>
@@ -254,7 +254,7 @@ export default function DepartmentsPage() {
               <Button variant="outline" onClick={() => setShowAddModal(false)}>
                 Annuler
               </Button>
-              <Button className="bg-green-700 hover:bg-green-700-dark">
+              <Button className="bg-primary hover:bg-primary/90">
                 Créer
               </Button>
             </div>

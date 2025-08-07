@@ -65,7 +65,7 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
       <CardContent>
         <div className="space-y-6">
           {/* Graphique principal */}
-          <div className="relative h-64 bg-gradient-to-t from-primary-subtle/10 to-transparent rounded-lg p-4">
+          <div className="relative h-64 bg-gradient-to-t from-muted/50 to-transparent rounded-lg p-4">
             <div className="absolute inset-4 flex items-end justify-between">
               {weekData.map((data, index) => (
                 <motion.div
@@ -93,8 +93,8 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
                     {/* Indicateur d'efficacité */}
                     <motion.div
                       className={`w-3 h-3 rounded-full mt-2 ${
-                        data.efficiency >= 90 ? 'bg-green-500' :
-                        data.efficiency >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                        data.efficiency >= 90 ? 'bg-emerald-500' :
+                        data.efficiency >= 80 ? 'bg-amber-500' : 'bg-red-500'
                       }`}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -103,7 +103,7 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
                   </div>
                   
                   {/* Label du jour */}
-                  <span className="text-sm font-medium text-secondary">
+                  <span className="text-sm font-medium text-muted-foreground">
                     {data.day}
                   </span>
                 </motion.div>
@@ -117,15 +117,15 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="text-center p-4 bg-surface rounded-lg"
+              className="text-center p-4 bg-muted/50 rounded-lg"
             >
               <div className="text-2xl font-bold text-primary mb-1">
                 {weekData.reduce((sum, d) => sum + d.courses, 0)}
               </div>
-              <div className="text-sm text-secondary">Total cours</div>
+              <div className="text-sm text-muted-foreground">Total cours</div>
               <div className="flex items-center justify-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">+12%</span>
+                <TrendingUp className="w-4 h-4 text-emerald-500 mr-1" />
+                <span className="text-xs text-emerald-600">+12%</span>
               </div>
             </motion.div>
 
@@ -133,15 +133,15 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="text-center p-4 bg-surface rounded-lg"
+              className="text-center p-4 bg-muted/50 rounded-lg"
             >
               <div className="text-2xl font-bold text-primary mb-1">
                 {Math.round(weekData.reduce((sum, d) => sum + d.efficiency, 0) / weekData.length)}%
               </div>
-              <div className="text-sm text-secondary">Efficacité moy.</div>
+              <div className="text-sm text-muted-foreground">Efficacité moy.</div>
               <div className="flex items-center justify-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">+5%</span>
+                <TrendingUp className="w-4 h-4 text-emerald-500 mr-1" />
+                <span className="text-xs text-emerald-600">+5%</span>
               </div>
             </motion.div>
 
@@ -149,15 +149,15 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
-              className="text-center p-4 bg-surface rounded-lg"
+              className="text-center p-4 bg-muted/50 rounded-lg"
             >
               <div className="text-2xl font-bold text-primary mb-1">
                 {weekData.reduce((sum, d) => sum + d.students, 0)}
               </div>
-              <div className="text-sm text-secondary">Total étudiants</div>
+              <div className="text-sm text-muted-foreground">Total étudiants</div>
               <div className="flex items-center justify-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-xs text-green-600">+8%</span>
+                <TrendingUp className="w-4 h-4 text-emerald-500 mr-1" />
+                <span className="text-xs text-emerald-600">+8%</span>
               </div>
             </motion.div>
           </div>
@@ -171,19 +171,19 @@ export default function WeeklyChart({ weekData = [] }: WeeklyChartProps) {
           >
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-gradient-to-t from-primary to-accent rounded"></div>
-              <span className="text-secondary">Nombre de cours</span>
+              <span className="text-muted-foreground">Nombre de cours</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-secondary">Efficacité ≥90%</span>
+              <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+              <span className="text-muted-foreground">Efficacité ≥90%</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="text-secondary">Efficacité 80-89%</span>
+              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+              <span className="text-muted-foreground">Efficacité 80-89%</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="text-secondary">Efficacité &lt;80%</span>
+              <span className="text-muted-foreground">Efficacité &lt;80%</span>
             </div>
           </motion.div>
         </div>

@@ -60,8 +60,8 @@ export default function SimpleDragDropScheduler({
       </div>
       
       {/* Message temporaire */}
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
+      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
           Planificateur simplifié - Fonctionnalité de drag & drop temporairement désactivée
         </p>
       </div>

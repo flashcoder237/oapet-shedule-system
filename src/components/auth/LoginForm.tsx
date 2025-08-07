@@ -74,7 +74,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
         transition={{ duration: 0.5 }}
         className="relative z-10 w-full max-w-md"
       >
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-primary/10 p-8">
+        <div className="bg-card/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-border p-8">
           {/* Header */}
           <div className="text-center mb-8">
             <motion.div
@@ -99,7 +99,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="text-secondary"
+              className="text-muted-foreground"
             >
               Accédez au système de gestion d'emplois du temps
             </motion.p>
@@ -110,10 +110,10 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3"
+              className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center gap-3"
             >
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-700 text-sm">{error}</p>
+              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+              <p className="text-destructive text-sm">{error}</p>
             </motion.div>
           )}
 
@@ -124,18 +124,18 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 }}
             >
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Nom d'utilisateur
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-secondary" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   type="text"
                   name="username"
                   value={credentials.username}
                   onChange={handleChange}
                   required
-                  className="w-full pl-12 pr-4 py-3 border border-primary/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                  className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-foreground placeholder:text-muted-foreground"
                   placeholder="Votre nom d'utilisateur"
                 />
               </div>
@@ -146,24 +146,24 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6 }}
             >
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-secondary" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={credentials.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-12 pr-12 py-3 border border-primary/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                  className="w-full pl-12 pr-12 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-foreground placeholder:text-muted-foreground"
                   placeholder="Votre mot de passe"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-secondary hover:text-primary transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? '🙈' : '👁️'}
                 </button>
@@ -199,9 +199,9 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-6 p-4 bg-primary-50/30 rounded-xl"
+            className="mt-6 p-4 bg-muted/30 rounded-xl"
           >
-            <p className="text-sm text-secondary mb-2">Comptes de test :</p>
+            <p className="text-sm text-muted-foreground mb-2">Comptes de test :</p>
             <div className="text-xs space-y-1">
               <p><span className="font-medium">Admin :</span> admin / admin123</p>
               <p><span className="font-medium">Enseignant :</span> teacher / teacher123</p>

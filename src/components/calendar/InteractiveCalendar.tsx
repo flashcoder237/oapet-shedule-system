@@ -178,18 +178,18 @@ export default function InteractiveCalendar({
 
   const getStatusIcon = (status: CalendarEvent['status']) => {
     switch (status) {
-      case 'confirmed': return <CheckCircle className="w-3 h-3 text-green-500" />;
-      case 'pending': return <Clock className="w-3 h-3 text-yellow-500" />;
-      case 'cancelled': return <AlertCircle className="w-3 h-3 text-red-500" />;
+      case 'confirmed': return <CheckCircle className="w-3 h-3 text-emerald-500" />;
+      case 'pending': return <Clock className="w-3 h-3 text-amber-500" />;
+      case 'cancelled': return <AlertCircle className="w-3 h-3 text-destructive" />;
       default: return <Info className="w-3 h-3 text-muted-foreground" />;
     }
   };
 
   const getPriorityColor = (priority: CalendarEvent['priority']) => {
     switch (priority) {
-      case 'high': return 'border-l-red-500';
-      case 'medium': return 'border-l-yellow-500';
-      case 'low': return 'border-l-green-500';
+      case 'high': return 'border-l-destructive';
+      case 'medium': return 'border-l-amber-500';
+      case 'low': return 'border-l-emerald-500';
       default: return 'border-l-border';
     }
   };
@@ -212,7 +212,7 @@ export default function InteractiveCalendar({
       <div className="grid grid-cols-7 gap-1">
         {/* En-têtes des jours */}
         {weekDays.map(day => (
-          <div key={day} className="p-2 text-center text-sm font-medium text-secondary">
+          <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
             {day}
           </div>
         ))}
@@ -253,9 +253,9 @@ export default function InteractiveCalendar({
                   <motion.div
                     key={event.id}
                     className={`
-                      text-xs p-1 rounded border-l-2 ${event.color} bg-white/80
+                      text-xs p-1 rounded border-l-2 ${event.color} bg-card/80
                       ${getPriorityColor(event.priority)} cursor-pointer
-                      hover:bg-white transition-colors
+                      hover:bg-card transition-colors
                     `}
                     whileHover={{ scale: 1.05 }}
                     onClick={(e) => {
@@ -314,7 +314,7 @@ export default function InteractiveCalendar({
           return (
             <div
               key={date.toISOString()}
-              className={`p-2 text-center ${isToday ? 'bg-primary text-white rounded' : ''}`}
+              className={`p-2 text-center ${isToday ? 'bg-primary text-primary-foreground rounded' : ''}`}
             >
               <div className="text-sm font-medium">{weekDays[date.getDay()]}</div>
               <div className="text-lg font-bold">{date.getDate()}</div>
@@ -391,7 +391,7 @@ export default function InteractiveCalendar({
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1 text-sm border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 w-48"
+                className="pl-8 pr-3 py-1 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 w-48 text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
@@ -457,15 +457,15 @@ export default function InteractiveCalendar({
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                <span>Cours</span>
+                <span className="text-muted-foreground">Cours</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-red-500 rounded"></div>
-                <span>Examens</span>
+                <span className="text-muted-foreground">Examens</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span>Réunions</span>
+                <span className="text-muted-foreground">Réunions</span>
               </div>
             </div>
           </div>

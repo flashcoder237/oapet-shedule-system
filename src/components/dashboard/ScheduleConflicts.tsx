@@ -24,26 +24,26 @@ export default function ScheduleConflicts({ conflicts = [] }: ScheduleConflictsP
   return (
     <div className="space-y-4">
       {conflicts.map(conflict => (
-        <div key={conflict.id} className="border border-red-200 rounded-lg p-3 bg-red-50">
+        <div key={conflict.id} className="border border-destructive/20 rounded-lg p-3 bg-destructive/10">
           <div className="flex items-start">
-            <div className="p-2 rounded-full bg-red-100 mr-3">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="p-2 rounded-full bg-destructive/20 mr-3">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div className="flex-1">
-              <h4 className="font-medium text-red-700">
+              <h4 className="font-medium text-destructive">
                 Conflit de {conflict.type === 'room' ? 'salle' : conflict.type === 'professor' ? 'professeur' : 'horaire'}
               </h4>
-              <p className="text-sm text-red-600 mt-1">
+              <p className="text-sm text-destructive mt-1">
                 {conflict.description || 'Conflit détecté'}
               </p>
-              <div className="flex items-center text-xs text-red-500 mt-2">
+              <div className="flex items-center text-xs text-destructive/80 mt-2">
                 {conflict.type === 'room' && <MapPin className="h-3.5 w-3.5 mr-1" />}
                 {conflict.type === 'professor' && <User className="h-3.5 w-3.5 mr-1" />}
                 {conflict.type === 'time' && <Clock className="h-3.5 w-3.5 mr-1" />}
                 <span>{conflict.details || 'Détails non disponibles'}</span>
               </div>
               <div className="flex justify-end mt-2">
-                <Button variant="outline" size="sm" className="text-xs border-red-300 text-red-700 hover:bg-red-100">
+                <Button variant="outline" size="sm" className="text-xs border-destructive/30 text-destructive hover:bg-destructive/10">
                   Résoudre
                 </Button>
               </div>

@@ -105,13 +105,13 @@ export default function UsersPage() {
           {/* Recherche */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Rechercher par nom, email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
               />
             </div>
           </div>
@@ -121,7 +121,7 @@ export default function UsersPage() {
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
             >
               {roles.map(role => (
                 <option key={role.value} value={role.value}>
@@ -136,7 +136,7 @@ export default function UsersPage() {
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary"
             >
               {departments.map(dept => (
                 <option key={dept.value} value={dept.value}>
@@ -171,8 +171,8 @@ export default function UsersPage() {
                 ) : (
                   <UserX className="w-5 h-5 text-red-500" />
                 )}
-                <button className="p-1 hover:bg-gray-100 rounded">
-                  <MoreVertical className="w-4 h-4 text-gray-400" />
+                <button className="p-1 hover:bg-muted rounded">
+                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function UsersPage() {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between">
+            <div className="mt-4 pt-4 border-t border-border flex justify-between">
               <Button variant="outline" size="sm">
                 <Edit className="w-4 h-4 mr-1" />
                 Modifier
@@ -224,9 +224,9 @@ export default function UsersPage() {
 
       {filteredUsers.length === 0 && (
         <div className="text-center py-12">
-          <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun utilisateur trouvé</h3>
-          <p className="text-gray-500">Essayez de modifier vos filtres ou d'ajouter un nouvel utilisateur.</p>
+          <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">Aucun utilisateur trouvé</h3>
+          <p className="text-muted-foreground">Essayez de modifier vos filtres ou d'ajouter un nouvel utilisateur.</p>
         </div>
       )}
     </div>

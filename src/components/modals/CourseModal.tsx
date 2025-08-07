@@ -186,20 +186,20 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       className="space-y-4"
     >
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Nom du cours *
         </label>
         <input
           type="text"
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-            errors.name ? 'border-red-300' : 'border-primary/20'
+          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
+            errors.name ? 'border-destructive/50' : 'border-border'
           }`}
           placeholder="Ex: Anatomie Générale"
         />
         {errors.name && (
-          <p className="text-red-500 text-sm mt-1 flex items-center">
+          <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
             {errors.name}
           </p>
@@ -207,20 +207,20 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Code du cours *
         </label>
         <input
           type="text"
           value={formData.code}
           onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-            errors.code ? 'border-red-300' : 'border-primary/20'
+          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
+            errors.code ? 'border-destructive/50' : 'border-border'
           }`}
           placeholder="Ex: ANAT101"
         />
         {errors.code && (
-          <p className="text-red-500 text-sm mt-1 flex items-center">
+          <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
             {errors.code}
           </p>
@@ -228,20 +228,20 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Enseignant *
         </label>
         <input
           type="text"
           value={formData.teacher}
           onChange={(e) => handleInputChange('teacher', e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-            errors.teacher ? 'border-red-300' : 'border-primary/20'
+          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
+            errors.teacher ? 'border-destructive/50' : 'border-border'
           }`}
           placeholder="Ex: Dr. Kamga"
         />
         {errors.teacher && (
-          <p className="text-red-500 text-sm mt-1 flex items-center">
+          <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
             {errors.teacher}
           </p>
@@ -249,14 +249,14 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Département *
         </label>
         <select
           value={formData.department}
           onChange={(e) => handleInputChange('department', e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-            errors.department ? 'border-red-300' : 'border-primary/20'
+          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground ${
+            errors.department ? 'border-destructive/50' : 'border-border'
           }`}
         >
           <option value="">Sélectionner un département</option>
@@ -265,7 +265,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
           ))}
         </select>
         {errors.department && (
-          <p className="text-red-500 text-sm mt-1 flex items-center">
+          <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
             {errors.department}
           </p>
@@ -283,14 +283,14 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-primary mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Niveau *
           </label>
           <select
             value={formData.level}
             onChange={(e) => handleInputChange('level', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-              errors.level ? 'border-red-300' : 'border-primary/20'
+            className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground ${
+              errors.level ? 'border-destructive/50' : 'border-border'
             }`}
           >
             <option value="">Sélectionner un niveau</option>
@@ -299,7 +299,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
             ))}
           </select>
           {errors.level && (
-            <p className="text-red-500 text-sm mt-1 flex items-center">
+            <p className="text-destructive text-sm mt-1 flex items-center">
               <AlertCircle className="w-4 h-4 mr-1" />
               {errors.level}
             </p>
@@ -307,7 +307,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-primary mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Crédits *
           </label>
           <input
@@ -316,12 +316,12 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
             max="10"
             value={formData.credits}
             onChange={(e) => handleInputChange('credits', parseInt(e.target.value))}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-              errors.credits ? 'border-red-300' : 'border-primary/20'
+            className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground ${
+              errors.credits ? 'border-destructive/50' : 'border-border'
             }`}
           />
           {errors.credits && (
-            <p className="text-red-500 text-sm mt-1 flex items-center">
+            <p className="text-destructive text-sm mt-1 flex items-center">
               <AlertCircle className="w-4 h-4 mr-1" />
               {errors.credits}
             </p>
@@ -330,7 +330,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Nombre d'étudiants
         </label>
         <input
@@ -338,13 +338,13 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
           min="0"
           value={formData.student_count}
           onChange={(e) => handleInputChange('student_count', parseInt(e.target.value) || 0)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-            errors.student_count ? 'border-red-300' : 'border-primary/20'
+          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
+            errors.student_count ? 'border-destructive/50' : 'border-border'
           }`}
           placeholder="0"
         />
         {errors.student_count && (
-          <p className="text-red-500 text-sm mt-1 flex items-center">
+          <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
             {errors.student_count}
           </p>
@@ -352,14 +352,14 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Description
         </label>
         <textarea
           value={formData.description || ''}
           onChange={(e) => handleInputChange('description', e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 border border-primary/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
           placeholder="Description du cours..."
         />
       </div>
@@ -374,14 +374,14 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       className="space-y-4"
     >
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Équipements requis
         </label>
         <div className="grid grid-cols-2 gap-2">
           {equipmentOptions.map(equipment => (
             <label
               key={equipment}
-              className="flex items-center space-x-2 cursor-pointer p-2 rounded-lg hover:bg-surface transition-colors"
+              className="flex items-center space-x-2 cursor-pointer p-2 rounded-lg hover:bg-muted transition-colors"
             >
               <input
                 type="checkbox"
@@ -389,34 +389,34 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
                 onChange={() => handleEquipmentToggle(equipment)}
                 className="rounded"
               />
-              <span className="text-sm">{equipment}</span>
+              <span className="text-sm text-foreground">{equipment}</span>
             </label>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Prérequis (séparés par des virgules)
         </label>
         <input
           type="text"
           value={(formData.prerequisites || []).join(', ')}
           onChange={(e) => handleArrayInputChange('prerequisites', e.target.value)}
-          className="w-full px-3 py-2 border border-primary/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
           placeholder="Ex: ANAT100, BIOC101"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-primary mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Salles préférées (séparées par des virgules)
         </label>
         <input
           type="text"
           value={(formData.preferred_rooms || []).join(', ')}
           onChange={(e) => handleArrayInputChange('preferred_rooms', e.target.value)}
-          className="w-full px-3 py-2 border border-primary/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
           placeholder="Ex: A101, Amphi A, Labo Bio"
         />
       </div>
@@ -452,7 +452,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
                     <h2 className="text-xl font-bold text-primary">
                       {course ? 'Modifier le cours' : 'Nouveau cours'}
                     </h2>
-                    <p className="text-secondary text-sm">
+                    <p className="text-muted-foreground text-sm">
                       Étape {currentStep} sur 3
                     </p>
                   </div>
@@ -476,7 +476,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
                         step === currentStep
                           ? 'bg-primary text-white'
                           : step < currentStep
-                          ? 'bg-green-500 text-white'
+                          ? 'bg-emerald-500 text-white'
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >
@@ -489,7 +489,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
                     {step < 3 && (
                       <div
                         className={`flex-1 h-1 mx-2 ${
-                          step < currentStep ? 'bg-green-500' : 'bg-muted'
+                          step < currentStep ? 'bg-emerald-500' : 'bg-muted'
                         }`}
                       />
                     )}

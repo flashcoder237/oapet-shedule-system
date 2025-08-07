@@ -357,7 +357,7 @@ export default function SchedulePage() {
 
   const renderWeeklyScheduleTable = () => {
     if (!weeklyData || !weeklyData.sessions_by_day) {
-      return <div className="text-center py-8 text-gray-500">Aucune donnée hebdomadaire disponible</div>;
+      return <div className="text-center py-8 text-muted-foreground">Aucune donnée hebdomadaire disponible</div>;
     }
     
     const days = [
@@ -377,11 +377,11 @@ export default function SchedulePage() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b-2 border-primary/20">
-              <th className="p-4 text-left font-semibold text-gray-700 bg-secondary/10 sticky left-0 z-10">
+              <th className="p-4 text-left font-semibold text-foreground bg-secondary/10 sticky left-0 z-10">
                 Horaires
               </th>
               {days.map(day => (
-                <th key={day.key} className="p-4 text-center font-semibold text-gray-700 bg-secondary/10 min-w-48">
+                <th key={day.key} className="p-4 text-center font-semibold text-foreground bg-secondary/10 min-w-48">
                   {day.label}
                 </th>
               ))}
@@ -389,12 +389,12 @@ export default function SchedulePage() {
           </thead>
           <tbody>
             {Array.from({length: 11}, (_, i) => i + 8).map(hour => (
-              <tr key={hour} className="border-b border-gray-100 hover:bg-secondary/5 transition-colors">
-                <td className="p-4 font-medium text-gray-600 bg-secondary/5 sticky left-0 z-10 border-r">
+              <tr key={hour} className="border-b border-border hover:bg-secondary/5 transition-colors">
+                <td className="p-4 font-medium text-muted-foreground bg-secondary/5 sticky left-0 z-10 border-r">
                   <div className="text-lg font-bold text-primary">
                     {hour.toString().padStart(2, '0')}:00
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-muted-foreground">
                     {(hour + 1).toString().padStart(2, '0')}:00
                   </div>
                 </td>
@@ -426,13 +426,13 @@ export default function SchedulePage() {
                                   'border-l-red-500 bg-red-50 hover:bg-red-100'
                                 }`}
                               >
-                                <div className="font-semibold text-gray-900 mb-1 text-xs">
+                                <div className="font-semibold text-foreground mb-1 text-xs">
                                   {session.course_details?.code || 'N/A'}
                                 </div>
-                                <div className="text-xs text-gray-600 mb-1">
+                                <div className="text-xs text-muted-foreground mb-1">
                                   {formatTime(startTime)}-{formatTime(endTime)}
                                 </div>
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <MapPin className="w-3 h-3" />
                                   {session.room_details?.code || 'N/A'}
                                 </div>
@@ -462,10 +462,10 @@ export default function SchedulePage() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b-2 border-primary/20">
-              <th className="p-4 text-left font-semibold text-gray-700 bg-secondary/10 sticky left-0 z-10">
+              <th className="p-4 text-left font-semibold text-foreground bg-secondary/10 sticky left-0 z-10">
                 Horaires
               </th>
-              <th className="p-4 text-center font-semibold text-gray-700 bg-secondary/10 min-w-96">
+              <th className="p-4 text-center font-semibold text-foreground bg-secondary/10 min-w-96">
                 Planning du {formatDate(typeof selectedDate === 'string' ? selectedDate : selectedDate.toISOString().split('T')[0])}
               </th>
             </tr>
@@ -479,12 +479,12 @@ export default function SchedulePage() {
               });
 
               return (
-                <tr key={hour} className="border-b border-gray-100 hover:bg-secondary/5 transition-colors">
-                  <td className="p-4 font-medium text-gray-600 bg-secondary/5 sticky left-0 z-10 border-r">
+                <tr key={hour} className="border-b border-border hover:bg-secondary/5 transition-colors">
+                  <td className="p-4 font-medium text-muted-foreground bg-secondary/5 sticky left-0 z-10 border-r">
                     <div className="text-lg font-bold text-primary">
                       {hour.toString().padStart(2, '0')}:00
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       {(hour + 1).toString().padStart(2, '0')}:00
                     </div>
                   </td>
@@ -511,14 +511,14 @@ export default function SchedulePage() {
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <h4 className="font-semibold text-gray-900 text-lg">
+                                    <h4 className="font-semibold text-foreground text-lg">
                                       {session.course_details?.name || 'Cours non défini'}
                                     </h4>
                                     <Badge className={getSessionTypeColor(session.session_type)}>
                                       {session.session_type}
                                     </Badge>
                                   </div>
-                                  <p className="text-sm font-medium text-gray-600 mb-2">
+                                  <p className="text-sm font-medium text-muted-foreground mb-2">
                                     {session.course_details?.code || 'Code non défini'}
                                   </p>
                                 </div>
@@ -532,7 +532,7 @@ export default function SchedulePage() {
                               
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                 <div className="flex items-center gap-2">
-                                  <User className="w-4 h-4 text-gray-400" />
+                                  <User className="w-4 h-4 text-muted-foreground" />
                                   <span className="font-medium">
                                     {session.teacher_details?.user ? 
                                       `${session.teacher_details.user.first_name} ${session.teacher_details.user.last_name}` : 
@@ -541,7 +541,7 @@ export default function SchedulePage() {
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <MapPin className="w-4 h-4 text-gray-400" />
+                                  <MapPin className="w-4 h-4 text-muted-foreground" />
                                   <span className="font-medium">
                                     {session.room_details ? 
                                       `${session.room_details.code} - ${session.room_details.name}` : 
@@ -550,7 +550,7 @@ export default function SchedulePage() {
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <Users className="w-4 h-4 text-gray-400" />
+                                  <Users className="w-4 h-4 text-muted-foreground" />
                                   <span className="font-medium">
                                     {session.expected_students} étudiants
                                   </span>
@@ -561,7 +561,7 @@ export default function SchedulePage() {
                         })}
                       </div>
                     ) : (
-                      <div className="h-16 flex items-center justify-center text-gray-400 text-sm">
+                      <div className="h-16 flex items-center justify-center text-muted-foreground text-sm">
                         Aucun cours programmé
                       </div>
                     )}
@@ -581,7 +581,7 @@ export default function SchedulePage() {
         <AnimatedBackground variant="schedule" intensity="low" />
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement des données...</p>
+          <p className="text-muted-foreground">Chargement des données...</p>
         </div>
       </div>
     );
@@ -657,8 +657,8 @@ export default function SchedulePage() {
                         >
                           <stat.icon className="w-5 h-5" />
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                        <div className="text-xs text-gray-600">{stat.label}</div>
+                        <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                        <div className="text-xs text-muted-foreground">{stat.label}</div>
                       </div>
                     ));
                   })()}
@@ -677,7 +677,7 @@ export default function SchedulePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 {/* Mode de vue */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
                     Vue
                   </label>
                   <div className="flex bg-secondary/10 rounded-lg p-1">
@@ -686,7 +686,7 @@ export default function SchedulePage() {
                       className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
                         viewMode === 'week'
                           ? 'bg-primary text-white shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
                       }`}
                     >
                       <CalendarRange className="w-4 h-4" />
@@ -697,7 +697,7 @@ export default function SchedulePage() {
                       className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
                         viewMode === 'day'
                           ? 'bg-primary text-white shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
                       }`}
                     >
                       <CalendarDays className="w-4 h-4" />
@@ -708,7 +708,7 @@ export default function SchedulePage() {
                 
                 {/* Sélection classe */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
                     Classe
                   </label>
                   <Select value={selectedCurriculum} onValueChange={setSelectedCurriculum}>
@@ -720,7 +720,7 @@ export default function SchedulePage() {
                         <SelectItem key={curriculum.code} value={curriculum.code}>
                           <div>
                             <div className="font-medium">{curriculum.name}</div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-muted-foreground">
                               {curriculum.code} - {curriculum.department.name}
                             </div>
                           </div>
@@ -732,7 +732,7 @@ export default function SchedulePage() {
                 
                 {/* Date */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
                     {viewMode === 'week' ? 'Semaine du' : 'Date'}
                   </label>
                   <div className="flex items-center gap-2">
@@ -756,7 +756,7 @@ export default function SchedulePage() {
                             prevWeek.setDate(prevWeek.getDate() - 7);
                             setCurrentWeek(prevWeek);
                           }}
-                          className="p-2 rounded-md hover:bg-secondary/10 text-gray-500 hover:text-gray-700"
+                          className="p-2 rounded-md hover:bg-secondary/10 text-muted-foreground hover:text-foreground"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
@@ -766,7 +766,7 @@ export default function SchedulePage() {
                             nextWeek.setDate(nextWeek.getDate() + 7);
                             setCurrentWeek(nextWeek);
                           }}
-                          className="p-2 rounded-md hover:bg-secondary/10 text-gray-500 hover:text-gray-700"
+                          className="p-2 rounded-md hover:bg-secondary/10 text-muted-foreground hover:text-foreground"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -777,11 +777,11 @@ export default function SchedulePage() {
                 
                 {/* Recherche */}
                 <div className="lg:col-span-2">
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
                     Recherche
                   </label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       placeholder="Cours, enseignant, salle..."
                       value={searchTerm}
@@ -793,7 +793,7 @@ export default function SchedulePage() {
                 
                 {/* Filtre */}
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
                     Type
                   </label>
                   <Select value={filterType} onValueChange={(value: FilterType) => setFilterType(value)}>
@@ -821,7 +821,7 @@ export default function SchedulePage() {
               transition={{ delay: 0.4, duration: 0.5 }}
             >
               <MicroCard>
-                <div className="p-6 border-b border-gray-100">
+                <div className="p-6 border-b border-border">
                   <div className="flex items-center justify-between">
                     <h3 className="text-heading flex items-center gap-3">
                       <Eye className="w-6 h-6 text-primary" />
@@ -844,18 +844,18 @@ export default function SchedulePage() {
                     <div className="flex justify-center items-center h-64">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                        <p className="text-gray-600">Chargement des sessions...</p>
+                        <p className="text-muted-foreground">Chargement des sessions...</p>
                       </div>
                     </div>
                   ) : filteredSessions.length === 0 ? (
                     <div className="text-center py-16">
                       <div className="mx-auto w-24 h-24 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
-                        <Calendar className="h-12 w-12 text-gray-400" />
+                        <Calendar className="h-12 w-12 text-muted-foreground" />
                       </div>
-                      <h4 className="text-heading text-gray-700 mb-2">
+                      <h4 className="text-heading text-foreground mb-2">
                         {sessions.length === 0 ? 'Aucune session programmée' : 'Aucun résultat'}
                       </h4>
-                      <p className="text-body text-gray-500 mb-6">
+                      <p className="text-body text-muted-foreground mb-6">
                         {sessions.length === 0 
                           ? `Aucun cours trouvé pour ${viewMode === 'week' ? 'cette semaine' : 'cette date'} et cette classe`
                           : 'Modifiez vos critères de recherche'

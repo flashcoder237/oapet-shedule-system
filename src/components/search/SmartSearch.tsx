@@ -284,12 +284,12 @@ export default function SmartSearch({
 
   const getTypeColor = (type: SearchResult['type']) => {
     switch (type) {
-      case 'course': return 'text-blue-600 bg-blue-50';
-      case 'teacher': return 'text-green-600 bg-green-50';
-      case 'room': return 'text-purple-600 bg-purple-50';
-      case 'schedule': return 'text-orange-600 bg-orange-50';
-      case 'student': return 'text-indigo-600 bg-indigo-50';
-      case 'department': return 'text-red-600 bg-red-50';
+      case 'course': return 'text-blue-600 bg-blue-50 dark:text-blue-200 dark:bg-blue-900/30';
+      case 'teacher': return 'text-emerald-600 bg-emerald-50 dark:text-emerald-200 dark:bg-emerald-900/30';
+      case 'room': return 'text-violet-600 bg-violet-50 dark:text-violet-200 dark:bg-violet-900/30';
+      case 'schedule': return 'text-orange-600 bg-orange-50 dark:text-orange-200 dark:bg-orange-900/30';
+      case 'student': return 'text-indigo-600 bg-indigo-50 dark:text-indigo-200 dark:bg-indigo-900/30';
+      case 'department': return 'text-red-600 bg-red-50 dark:text-red-200 dark:bg-red-900/30';
       default: return 'text-muted-foreground bg-muted';
     }
   };
@@ -354,7 +354,7 @@ export default function SmartSearch({
                     <select
                       value={filters.type}
                       onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     >
                       <option value="all">Tous</option>
                       <option value="course">Cours</option>
@@ -371,7 +371,7 @@ export default function SmartSearch({
                     <select
                       value={filters.department}
                       onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     >
                       <option value="all">Tous</option>
                       <option value="Médecine">Médecine</option>
@@ -387,7 +387,7 @@ export default function SmartSearch({
                     <select
                       value={filters.level}
                       onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value }))}
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     >
                       <option value="all">Tous</option>
                       <option value="L1">L1</option>
@@ -405,7 +405,7 @@ export default function SmartSearch({
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                     >
                       <option value="relevance">Pertinence</option>
                       <option value="date">Date</option>
@@ -506,7 +506,7 @@ export default function SmartSearch({
                                     {result.title}
                                   </h4>
                                   {result.isFavorite && (
-                                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                    <Star className="w-4 h-4 text-amber-500 fill-current" />
                                   )}
                                 </div>
                                 

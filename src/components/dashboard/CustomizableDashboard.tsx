@@ -226,8 +226,8 @@ export default function CustomizableDashboard({
       config: {
         showTitle: true,
         showBorder: true,
-        backgroundColor: '#ffffff',
-        textColor: '#000000',
+        backgroundColor: 'var(--card)',
+        textColor: 'var(--foreground),',
         refreshInterval: 300000 // 5 minutes
       },
       isVisible: true,
@@ -356,7 +356,7 @@ export default function CustomizableDashboard({
               </div>
               <div className="text-sm text-muted-foreground mb-1">{data.label}</div>
               <div className={`text-xs flex items-center justify-center gap-1 ${
-                data.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                data.trend === 'up' ? 'text-emerald-600' : 'text-destructive'
               }`}>
                 <TrendingUp className="w-3 h-3" />
                 {data.change}
@@ -471,20 +471,20 @@ export default function CustomizableDashboard({
           return (
             <div className="text-center">
               <div className={`text-4xl font-bold mb-2 ${
-                data.color === 'green' ? 'text-green-600' : 
-                data.color === 'red' ? 'text-red-600' : 'text-blue-600'
+                data.color === 'green' ? 'text-emerald-600' : 
+                data.color === 'red' ? 'text-destructive' : 'text-blue-600'
               }`}>
                 {data.value}{data.unit}
               </div>
               <div className="text-sm text-muted-foreground">{data.label}</div>
               <div className="mt-2">
                 <div className={`w-full h-2 rounded-full ${
-                  data.color === 'green' ? 'bg-green-100' : 
+                  data.color === 'green' ? 'bg-emerald-100' : 
                   data.color === 'red' ? 'bg-red-100' : 'bg-blue-100'
                 }`}>
                   <div 
                     className={`h-2 rounded-full ${
-                      data.color === 'green' ? 'bg-green-500' : 
+                      data.color === 'green' ? 'bg-emerald-500' : 
                       data.color === 'red' ? 'bg-red-500' : 'bg-blue-500'
                     }`}
                     style={{ width: `${data.value}%` }}
@@ -569,7 +569,7 @@ export default function CustomizableDashboard({
                 size="sm" 
                 variant="outline" 
                 onClick={() => removeWidget(widget.id)}
-                className="text-red-600 hover:bg-red-50"
+                className="text-destructive hover:bg-destructive/10"
               >
                 <Trash2 className="w-3 h-3" />
               </Button>

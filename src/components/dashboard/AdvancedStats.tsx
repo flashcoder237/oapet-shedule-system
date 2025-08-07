@@ -52,8 +52,8 @@ export default function AdvancedStats({ stats = [] }: AdvancedStatsProps) {
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
-      case 'up': return <TrendingUp className="w-4 h-4 text-green-500" />;
-      case 'down': return <TrendingDown className="w-4 h-4 text-red-500" />;
+      case 'up': return <TrendingUp className="w-4 h-4 text-emerald-500" />;
+      case 'down': return <TrendingDown className="w-4 h-4 text-destructive" />;
       default: return <BarChart3 className="w-4 h-4 text-muted-foreground" />;
     }
   };
@@ -81,7 +81,7 @@ export default function AdvancedStats({ stats = [] }: AdvancedStatsProps) {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 * index }}
-                  className="text-center p-4 rounded-lg bg-surface hover:bg-surface-subtle transition-colors"
+                  className="text-center p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center justify-center mb-2">
                     {getTrendIcon(stat.trend)}
@@ -89,8 +89,8 @@ export default function AdvancedStats({ stats = [] }: AdvancedStatsProps) {
                   <div className={`text-2xl font-bold ${stat.color} mb-1`}>
                     {stat.value}
                   </div>
-                  <div className="text-sm text-secondary mb-1">{stat.label}</div>
-                  <div className="text-xs text-tertiary">{stat.change} vs semaine dernière</div>
+                  <div className="text-sm text-foreground mb-1">{stat.label}</div>
+                  <div className="text-xs text-muted-foreground">{stat.change} vs semaine dernière</div>
                 </motion.div>
               ))}
             </div>

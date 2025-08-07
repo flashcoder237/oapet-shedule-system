@@ -61,7 +61,7 @@ export default function AIPage() {
       case 1: return 'text-red-600 bg-red-50 border-red-200';
       case 2: return 'text-orange-600 bg-orange-50 border-orange-200';
       case 3: return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      default: return 'text-muted-foreground bg-muted border-border';
     }
   };
 
@@ -70,7 +70,7 @@ export default function AIPage() {
       case 'élevée': return 'text-red-600';
       case 'moyenne': return 'text-orange-600';
       case 'faible': return 'text-green-600';
-      default: return 'text-gray-600';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -319,7 +319,7 @@ export default function AIPage() {
                     className={`p-4 rounded-lg border-2 transition-colors ${
                       model.is_active 
                         ? 'border-primary bg-primary-subtle/20' 
-                        : 'border-gray-200 bg-gray-50'
+                        : 'border-border bg-muted'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">

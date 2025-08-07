@@ -47,15 +47,15 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
       description: 'Format portable, idéal pour l\'impression',
       icon: <FileText className="w-5 h-5" />,
       color: 'text-red-600',
-      bgColor: 'bg-red-50 border-red-200'
+      bgColor: 'bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-700'
     },
     {
       id: 'excel',
       name: 'Excel',
       description: 'Fichier Excel pour analyse et modification',
       icon: <Table className="w-5 h-5" />,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50 border-green-200'
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-700'
     },
     {
       id: 'csv',
@@ -63,15 +63,15 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
       description: 'Format compatible avec tous les logiciels',
       icon: <FileText className="w-5 h-5" />,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50 border-blue-200'
+      bgColor: 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-700'
     },
     {
       id: 'ical',
       name: 'iCal',
       description: 'Calendrier pour Outlook, Google Calendar',
       icon: <Calendar className="w-5 h-5" />,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50 border-purple-200'
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-50 border-violet-200 dark:bg-violet-900/30 dark:border-violet-700'
     }
   ];
 
@@ -153,7 +153,7 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-primary">{getTitle()}</h2>
-                    <p className="text-secondary text-sm">
+                    <p className="text-muted-foreground text-sm">
                       Choisissez le format et les options d'export
                     </p>
                   </div>
@@ -178,14 +178,14 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+                    className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4"
                   >
-                    <CheckCircle className="w-8 h-8 text-green-600" />
+                    <CheckCircle className="w-8 h-8 text-emerald-600" />
                   </motion.div>
                   <h3 className="text-lg font-semibold text-primary mb-2">
                     Export terminé !
                   </h3>
-                  <p className="text-secondary">
+                  <p className="text-muted-foreground">
                     Le fichier a été téléchargé avec succès
                   </p>
                 </motion.div>
@@ -214,8 +214,8 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                               {format.icon}
                             </div>
                             <div className="flex-1">
-                              <h4 className="font-medium text-primary">{format.name}</h4>
-                              <p className="text-sm text-secondary">{format.description}</p>
+                              <h4 className="font-medium text-foreground">{format.name}</h4>
+                              <p className="text-sm text-muted-foreground">{format.description}</p>
                             </div>
                             {selectedFormat === format.id && (
                               <motion.div
@@ -241,13 +241,13 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                     <div className="space-y-4">
                       {/* Période */}
                       <div>
-                        <label className="block text-sm font-medium text-primary mb-2">
+                        <label className="block text-sm font-medium text-foreground mb-2">
                           Période
                         </label>
                         <select
                           value={exportOptions.dateRange}
                           onChange={(e) => setExportOptions(prev => ({ ...prev, dateRange: e.target.value }))}
-                          className="w-full px-3 py-2 border border-primary/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
                         >
                           {dateRanges.map(range => (
                             <option key={range.id} value={range.id}>{range.name}</option>
@@ -257,7 +257,7 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
 
                       {/* Contenu */}
                       <div>
-                        <label className="block text-sm font-medium text-primary mb-2">
+                        <label className="block text-sm font-medium text-foreground mb-2">
                           Contenu à inclure
                         </label>
                         <div className="space-y-2">
@@ -271,7 +271,7 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                               }))}
                               className="rounded"
                             />
-                            <span className="ml-2 text-sm">Images et logos</span>
+                            <span className="ml-2 text-sm text-foreground">Images et logos</span>
                           </label>
                           <label className="flex items-center">
                             <input
@@ -283,7 +283,7 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                               }))}
                               className="rounded"
                             />
-                            <span className="ml-2 text-sm">Statistiques</span>
+                            <span className="ml-2 text-sm text-foreground">Statistiques</span>
                           </label>
                           <label className="flex items-center">
                             <input
@@ -295,7 +295,7 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                               }))}
                               className="rounded"
                             />
-                            <span className="ml-2 text-sm">Notes et commentaires</span>
+                            <span className="ml-2 text-sm text-foreground">Notes et commentaires</span>
                           </label>
                         </div>
                       </div>
@@ -304,7 +304,7 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                       {type === 'schedule' && (
                         <>
                           <div>
-                            <label className="block text-sm font-medium text-primary mb-2">
+                            <label className="block text-sm font-medium text-foreground mb-2">
                               Départements
                             </label>
                             <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
@@ -328,14 +328,14 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                                     }}
                                     className="rounded"
                                   />
-                                  <span className="ml-2 text-xs">{dept}</span>
+                                  <span className="ml-2 text-xs text-foreground">{dept}</span>
                                 </label>
                               ))}
                             </div>
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-primary mb-2">
+                            <label className="block text-sm font-medium text-foreground mb-2">
                               Niveaux
                             </label>
                             <div className="grid grid-cols-3 gap-2 max-h-24 overflow-y-auto">
@@ -359,7 +359,7 @@ export default function ExportModal({ isOpen, onClose, data, type }: ExportModal
                                     }}
                                     className="rounded"
                                   />
-                                  <span className="ml-2 text-xs">{level}</span>
+                                  <span className="ml-2 text-xs text-foreground">{level}</span>
                                 </label>
                               ))}
                             </div>

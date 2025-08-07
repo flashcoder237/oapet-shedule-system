@@ -253,7 +253,7 @@ export default function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.3 }}
-        className={`h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}
+        className={`h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-card' : ''}`}
       >
         {activeModule === 'overview' && (
           <div className="space-y-6">
@@ -355,7 +355,7 @@ export default function Dashboard() {
                         key={action.id}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="p-4 rounded-lg border border-gray-200 cursor-pointer hover:shadow-md transition-all"
+                        className="p-4 rounded-lg border border-border cursor-pointer hover:shadow-md transition-all"
                         onClick={action.action}
                       >
                         <div className="flex items-center gap-3">
@@ -364,7 +364,7 @@ export default function Dashboard() {
                           </div>
                           <div>
                             <h4 className="font-medium">{action.title}</h4>
-                            <p className="text-sm text-gray-600">{action.description}</p>
+                            <p className="text-sm text-muted-foreground">{action.description}</p>
                           </div>
                         </div>
                       </motion.div>
@@ -385,14 +385,14 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     {recentActivities.map(activity => (
                       <div key={activity.id} className="flex items-start gap-3">
-                        <div className="p-2 bg-gray-100 rounded-lg">
+                        <div className="p-2 bg-muted rounded-lg">
                           {activity.icon}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm">
                             <span className="font-medium">{activity.user}</span> {activity.action}
                           </p>
-                          <p className="text-xs text-gray-500">{activity.time}</p>
+                          <p className="text-xs text-muted-foreground">{activity.time}</p>
                         </div>
                       </div>
                     ))}
@@ -462,16 +462,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${getViewModeClasses()}`}>
+    <div className={`min-h-screen bg-muted ${getViewModeClasses()}`}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div className="bg-card border-b border-border sticky top-0 z-40">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Tableau de Bord Avancé
               </h1>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Sparkles className="w-4 h-4" />
                 <span>Interface moderne avec composants interactifs</span>
               </div>
@@ -558,7 +558,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-t border-gray-200 bg-gray-50"
+            className="border-t border-border bg-muted"
           >
             <div className="px-6 py-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -569,7 +569,7 @@ export default function Dashboard() {
                     className={`p-4 rounded-lg border cursor-pointer transition-all ${
                       activeModule === module.id
                         ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
+                        : 'border-border bg-card hover:border-border'
                     }`}
                     onClick={() => {
                       setActiveModule(module.id);
@@ -578,16 +578,16 @@ export default function Dashboard() {
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 rounded-lg ${
-                        activeModule === module.id ? 'bg-blue-500 text-white' : 'bg-gray-100'
+                        activeModule === module.id ? 'bg-blue-500 text-white' : 'bg-muted'
                       }`}>
                         {module.icon}
                       </div>
                       <div>
                         <h4 className="font-medium">{module.title}</h4>
-                        <p className="text-xs text-gray-500">{module.category}</p>
+                        <p className="text-xs text-muted-foreground">{module.category}</p>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600">{module.description}</p>
+                    <p className="text-sm text-muted-foreground">{module.description}</p>
                   </motion.div>
                 ))}
               </div>

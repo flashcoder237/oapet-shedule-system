@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { NotificationCenter } from '@/components/ui/notifications';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
+import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 
 export default function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -111,6 +112,15 @@ export default function Header() {
         
         {/* Right section */}
         <div className="flex items-center gap-2">
+          {/* Theme Switcher */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15 }}
+          >
+            <ThemeSwitcher />
+          </motion.div>
+          
           {/* Notifications */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
