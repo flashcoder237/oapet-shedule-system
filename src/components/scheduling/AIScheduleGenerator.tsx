@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
+import { mlService } from '@/lib/api/services/ml';
 
 interface GenerationConstraints {
   preferredTimeSlots: string[];
@@ -103,49 +104,32 @@ export function AIScheduleGenerator({
     setGenerationResult(null);
 
     try {
-      // Simulation d'appel API IA
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const mockResult: GenerationResult = {
-        success: true,
-        scheduleId: `schedule_${Date.now()}`,
-        conflicts: [
-          {
-            type: 'teacher',
-            severity: 'medium',
-            message: 'Prof. Martin a un conflit le mardi 14h-16h',
-            sessionId: 'session_1',
-            suggestions: ['Déplacer vers 16h-18h', 'Assigner un autre enseignant']
-          },
-          {
-            type: 'room',
-            severity: 'low',
-            message: 'Salle A101 occupée le vendredi 10h-12h',
-            sessionId: 'session_2',
-            suggestions: ['Utiliser la salle A102', 'Décaler d\'une heure']
-          }
-        ],
-        metrics: {
-          totalHours: 24,
-          utilizationRate: 85,
-          conflictScore: 7.5,
-          balanceScore: 92,
-          teacherSatisfaction: 88,
-          roomUtilization: 75
-        },
-        suggestions: [
-          'Optimiser les créneaux du vendredi après-midi',
-          'Regrouper les cours de TP pour minimiser les déplacements',
-          'Prévoir des pauses plus longues entre les cours magistraux'
-        ]
+      // Appel à l'API backend pour générer l'emploi du temps avec l'IA
+      const result = await mlService.generateSchedule({
+        selectedClass,
+        constraints
+      });
+
+      const generationResult: GenerationResult = {
+        success: result.success,
+        scheduleId: result.scheduleId,
+        conflicts: result.conflicts.map(conflict => ({
+          type: conflict.type as 'teacher' | 'room' | 'student_group' | 'time_preference',
+          severity: conflict.severity as 'high' | 'medium' | 'low',
+          message: conflict.message,
+          sessionId: conflict.sessionId,
+          suggestions: conflict.suggestions
+        })),
+        metrics: result.metrics,
+        suggestions: result.suggestions
       };
 
-      setGenerationResult(mockResult);
+      setGenerationResult(generationResult);
       
       addToast({
-        title: "Emploi du temps généré avec succès",
-        description: `${mockResult.conflicts.length} conflits détectés - Score de qualité: ${mockResult.metrics.balanceScore}%`,
-        variant: mockResult.conflicts.length === 0 ? "default" : "destructive"
+        title: "Emploi du temps généré par IA avec succès",
+        description: `${generationResult.conflicts.length} conflits détectés - Score de qualité: ${generationResult.metrics.balanceScore}% (Modèle: ${result.model_used})`,
+        variant: generationResult.conflicts.length === 0 ? "default" : "destructive"
       });
 
     } catch (error) {

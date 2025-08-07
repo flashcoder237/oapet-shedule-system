@@ -18,42 +18,57 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import type { Course } from '@/types/api';
 
-interface Course {
-  id?: string;
+interface CourseFormData {
+  id?: number;
   name: string;
   code: string;
-  teacher: string;
-  department: string;
+  teacher: number;
+  department: number;
   level: string;
   credits: number;
-  student_count: number;
+  max_students: number;
   description?: string;
-  prerequisites?: string[];
-  required_equipment?: string[];
-  preferred_rooms?: string[];
+  course_type: 'CM' | 'TD' | 'TP' | 'CONF' | 'EXAM';
+  hours_per_week: number;
+  total_hours: number;
+  min_room_capacity: number;
+  requires_computer: boolean;
+  requires_projector: boolean;
+  requires_laboratory: boolean;
+  semester: string;
+  academic_year: string;
+  is_active: boolean;
 }
 
 interface CourseModalProps {
   isOpen: boolean;
   onClose: () => void;
   course?: Course | null;
-  onSave: (course: Course) => Promise<void>;
+  onSave: (course: CourseFormData) => Promise<void>;
 }
 
 export default function CourseModal({ isOpen, onClose, course, onSave }: CourseModalProps) {
-  const [formData, setFormData] = useState<Course>({
+  const [formData, setFormData] = useState<CourseFormData>({
     name: '',
     code: '',
-    teacher: '',
-    department: '',
-    level: '',
+    teacher: 0,
+    department: 0,
+    level: 'L1',
     credits: 3,
-    student_count: 0,
+    max_students: 50,
     description: '',
-    prerequisites: [],
-    required_equipment: [],
-    preferred_rooms: []
+    course_type: 'CM',
+    hours_per_week: 2,
+    total_hours: 30,
+    min_room_capacity: 30,
+    requires_computer: false,
+    requires_projector: false,
+    requires_laboratory: false,
+    semester: 'S1',
+    academic_year: '2024-2025',
+    is_active: true
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -62,20 +77,47 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
 
   useEffect(() => {
     if (course) {
-      setFormData(course);
+      setFormData({
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        teacher: course.teacher,
+        department: course.department,
+        level: course.level,
+        credits: course.credits,
+        max_students: course.max_students,
+        description: course.description || '',
+        course_type: course.course_type,
+        hours_per_week: course.hours_per_week,
+        total_hours: course.total_hours,
+        min_room_capacity: course.min_room_capacity,
+        requires_computer: course.requires_computer,
+        requires_projector: course.requires_projector,
+        requires_laboratory: course.requires_laboratory,
+        semester: course.semester,
+        academic_year: course.academic_year,
+        is_active: course.is_active
+      });
     } else {
       setFormData({
         name: '',
         code: '',
-        teacher: '',
-        department: '',
-        level: '',
+        teacher: 0,
+        department: 0,
+        level: 'L1',
         credits: 3,
-        student_count: 0,
+        max_students: 50,
         description: '',
-        prerequisites: [],
-        required_equipment: [],
-        preferred_rooms: []
+        course_type: 'CM',
+        hours_per_week: 2,
+        total_hours: 30,
+        min_room_capacity: 30,
+        requires_computer: false,
+        requires_projector: false,
+        requires_laboratory: false,
+        semester: 'S1',
+        academic_year: '2024-2025',
+        is_active: true
       });
     }
     setCurrentStep(1);
@@ -113,7 +155,7 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
     if (step === 1) {
       if (!formData.name.trim()) newErrors.name = 'Le nom du cours est requis';
       if (!formData.code.trim()) newErrors.code = 'Le code du cours est requis';
-      if (!formData.teacher.trim()) newErrors.teacher = 'L\'enseignant est requis';
+      if (!formData.teacher) newErrors.teacher = 'L\'enseignant est requis';
       if (!formData.department) newErrors.department = 'Le département est requis';
     }
 
@@ -122,8 +164,11 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
       if (formData.credits < 1 || formData.credits > 10) {
         newErrors.credits = 'Les crédits doivent être entre 1 et 10';
       }
-      if (formData.student_count < 0) {
-        newErrors.student_count = 'Le nombre d\'étudiants ne peut pas être négatif';
+      if (formData.max_students < 0) {
+        newErrors.max_students = 'Le nombre d\'étudiants ne peut pas être négatif';
+      }
+      if (formData.hours_per_week < 1) {
+        newErrors.hours_per_week = 'Le nombre d\'heures par semaine doit être positif';
       }
     }
 
@@ -141,25 +186,24 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleInputChange = (field: keyof Course, value: any) => {
+  const handleInputChange = (field: keyof CourseFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  const handleArrayInputChange = (field: keyof Course, value: string) => {
-    const items = value.split(',').map(item => item.trim()).filter(item => item);
-    setFormData(prev => ({ ...prev, [field]: items }));
+  const handleBooleanToggle = (field: keyof CourseFormData) => {
+    setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const handleEquipmentToggle = (equipment: string) => {
-    const current = formData.required_equipment || [];
-    const updated = current.includes(equipment)
-      ? current.filter(item => item !== equipment)
-      : [...current, equipment];
-    setFormData(prev => ({ ...prev, required_equipment: updated }));
-  };
+  const courseTypes = [
+    { value: 'CM', label: 'Cours Magistral' },
+    { value: 'TD', label: 'Travaux Dirigés' },
+    { value: 'TP', label: 'Travaux Pratiques' },
+    { value: 'CONF', label: 'Conférence' },
+    { value: 'EXAM', label: 'Examen' }
+  ];
 
   const handleSubmit = async () => {
     if (!validateStep(1) || !validateStep(2)) {
@@ -232,13 +276,13 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
           Enseignant *
         </label>
         <input
-          type="text"
-          value={formData.teacher}
-          onChange={(e) => handleInputChange('teacher', e.target.value)}
+          type="number"
+          value={formData.teacher || ''}
+          onChange={(e) => handleInputChange('teacher', parseInt(e.target.value) || 0)}
           className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
             errors.teacher ? 'border-destructive/50' : 'border-border'
           }`}
-          placeholder="Ex: Dr. Kamga"
+          placeholder="ID de l'enseignant"
         />
         {errors.teacher && (
           <p className="text-destructive text-sm mt-1 flex items-center">
@@ -252,18 +296,15 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         <label className="block text-sm font-medium text-foreground mb-2">
           Département *
         </label>
-        <select
-          value={formData.department}
-          onChange={(e) => handleInputChange('department', e.target.value)}
-          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground ${
+        <input
+          type="number"
+          value={formData.department || ''}
+          onChange={(e) => handleInputChange('department', parseInt(e.target.value) || 0)}
+          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
             errors.department ? 'border-destructive/50' : 'border-border'
           }`}
-        >
-          <option value="">Sélectionner un département</option>
-          {departments.map(dept => (
-            <option key={dept} value={dept}>{dept}</option>
-          ))}
-        </select>
+          placeholder="ID du département"
+        />
         {errors.department && (
           <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
@@ -329,26 +370,81 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          Nombre d'étudiants
-        </label>
-        <input
-          type="number"
-          min="0"
-          value={formData.student_count}
-          onChange={(e) => handleInputChange('student_count', parseInt(e.target.value) || 0)}
-          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
-            errors.student_count ? 'border-destructive/50' : 'border-border'
-          }`}
-          placeholder="0"
-        />
-        {errors.student_count && (
-          <p className="text-destructive text-sm mt-1 flex items-center">
-            <AlertCircle className="w-4 h-4 mr-1" />
-            {errors.student_count}
-          </p>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Nombre max d'étudiants
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={formData.max_students}
+            onChange={(e) => handleInputChange('max_students', parseInt(e.target.value) || 0)}
+            className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
+              errors.max_students ? 'border-destructive/50' : 'border-border'
+            }`}
+            placeholder="50"
+          />
+          {errors.max_students && (
+            <p className="text-destructive text-sm mt-1 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              {errors.max_students}
+            </p>
+          )}
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Heures par semaine
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={formData.hours_per_week}
+            onChange={(e) => handleInputChange('hours_per_week', parseInt(e.target.value) || 0)}
+            className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
+              errors.hours_per_week ? 'border-destructive/50' : 'border-border'
+            }`}
+            placeholder="2"
+          />
+          {errors.hours_per_week && (
+            <p className="text-destructive text-sm mt-1 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              {errors.hours_per_week}
+            </p>
+          )}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Type de cours
+          </label>
+          <select
+            value={formData.course_type}
+            onChange={(e) => handleInputChange('course_type', e.target.value)}
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+          >
+            {courseTypes.map(type => (
+              <option key={type.value} value={type.value}>{type.label}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Total d'heures
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={formData.total_hours}
+            onChange={(e) => handleInputChange('total_hours', parseInt(e.target.value) || 0)}
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+            placeholder="30"
+          />
+        </div>
       </div>
 
       <div>
@@ -377,48 +473,92 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         <label className="block text-sm font-medium text-foreground mb-2">
           Équipements requis
         </label>
-        <div className="grid grid-cols-2 gap-2">
-          {equipmentOptions.map(equipment => (
-            <label
-              key={equipment}
-              className="flex items-center space-x-2 cursor-pointer p-2 rounded-lg hover:bg-muted transition-colors"
-            >
-              <input
-                type="checkbox"
-                checked={(formData.required_equipment || []).includes(equipment)}
-                onChange={() => handleEquipmentToggle(equipment)}
-                className="rounded"
-              />
-              <span className="text-sm text-foreground">{equipment}</span>
-            </label>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <label className="flex items-center space-x-2 cursor-pointer p-3 rounded-lg border hover:bg-muted transition-colors">
+            <input
+              type="checkbox"
+              checked={formData.requires_projector}
+              onChange={() => handleBooleanToggle('requires_projector')}
+              className="rounded"
+            />
+            <span className="text-sm text-foreground">Projecteur</span>
+          </label>
+          
+          <label className="flex items-center space-x-2 cursor-pointer p-3 rounded-lg border hover:bg-muted transition-colors">
+            <input
+              type="checkbox"
+              checked={formData.requires_computer}
+              onChange={() => handleBooleanToggle('requires_computer')}
+              className="rounded"
+            />
+            <span className="text-sm text-foreground">Ordinateurs</span>
+          </label>
+          
+          <label className="flex items-center space-x-2 cursor-pointer p-3 rounded-lg border hover:bg-muted transition-colors">
+            <input
+              type="checkbox"
+              checked={formData.requires_laboratory}
+              onChange={() => handleBooleanToggle('requires_laboratory')}
+              className="rounded"
+            />
+            <span className="text-sm text-foreground">Laboratoire</span>
+          </label>
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Semestre
+          </label>
+          <select
+            value={formData.semester}
+            onChange={(e) => handleInputChange('semester', e.target.value)}
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+          >
+            <option value="S1">Semestre 1</option>
+            <option value="S2">Semestre 2</option>
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Année académique
+          </label>
+          <input
+            type="text"
+            value={formData.academic_year}
+            onChange={(e) => handleInputChange('academic_year', e.target.value)}
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+            placeholder="2024-2025"
+          />
+        </div>
+      </div>
+      
       <div>
         <label className="block text-sm font-medium text-foreground mb-2">
-          Prérequis (séparés par des virgules)
+          Capacité min. de salle
         </label>
         <input
-          type="text"
-          value={(formData.prerequisites || []).join(', ')}
-          onChange={(e) => handleArrayInputChange('prerequisites', e.target.value)}
+          type="number"
+          min="1"
+          value={formData.min_room_capacity}
+          onChange={(e) => handleInputChange('min_room_capacity', parseInt(e.target.value) || 0)}
           className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
-          placeholder="Ex: ANAT100, BIOC101"
+          placeholder="30"
         />
       </div>
-
+      
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          Salles préférées (séparées par des virgules)
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={formData.is_active}
+            onChange={() => handleBooleanToggle('is_active')}
+            className="rounded"
+          />
+          <span className="text-sm text-foreground">Cours actif</span>
         </label>
-        <input
-          type="text"
-          value={(formData.preferred_rooms || []).join(', ')}
-          onChange={(e) => handleArrayInputChange('preferred_rooms', e.target.value)}
-          className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
-          placeholder="Ex: A101, Amphi A, Labo Bio"
-        />
       </div>
     </motion.div>
   );

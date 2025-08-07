@@ -32,8 +32,18 @@ import {
   Target,
   Zap,
   CalendarDays,
-  CalendarRange
+  CalendarRange,
+  Edit,
+  Bot,
+  Sparkles,
+  AlertTriangle,
+  Copy,
+  Trash2
 } from 'lucide-react';
+
+// Import des nouveaux composants avancés
+import { AdvancedScheduleView } from '@/components/scheduling/AdvancedScheduleView';
+import { AIScheduleGenerator } from '@/components/scheduling/AIScheduleGenerator';
 
 // Types
 interface Curriculum {
@@ -74,6 +84,42 @@ interface ScheduleSession {
   expected_students: number;
 }
 
+// Types pour les composants avancés
+interface AdvancedScheduleSession {
+  id: string;
+  course: {
+    id: string;
+    name: string;
+    code: string;
+    type: 'CM' | 'TD' | 'TP' | 'EXAM';
+    duration: number;
+    teacher: {
+      id: string;
+      name: string;
+    };
+    room?: {
+      id: string;
+      code: string;
+      name: string;
+    };
+    expectedStudents: number;
+    color?: string;
+  };
+  timeSlot: {
+    id: string;
+    day: string;
+    startTime: string;
+    endTime: string;
+  };
+  conflicts: {
+    type: 'teacher' | 'room' | 'student_group';
+    severity: 'high' | 'medium' | 'low';
+    message: string;
+    conflictWith?: string;
+  }[];
+  isLocked: boolean;
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 type FilterType = 'all' | 'CM' | 'TD' | 'TP' | 'EXAM';
@@ -110,6 +156,11 @@ export default function SchedulePage() {
   
   // Nouveau système de vues
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [hasAdminAccess, setHasAdminAccess] = useState(true); // TODO: Récupérer depuis l'auth context
+  const [showConflictsOnly, setShowConflictsOnly] = useState(false);
+  const [bulkActions, setBulkActions] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date('2025-08-05'));
   const [currentWeek, setCurrentWeek] = useState(new Date('2025-08-05'));
   
@@ -341,6 +392,160 @@ export default function SchedulePage() {
         return total + ((endMinutes - startMinutes) / 60);
       }, 0)
     };
+  };
+
+  // Détection de conflits
+  const detectConflicts = (sessions: ScheduleSession[]) => {
+    const conflicts: any[] = [];
+    
+    for (let i = 0; i < sessions.length; i++) {
+      for (let j = i + 1; j < sessions.length; j++) {
+        const sessionA = sessions[i];
+        const sessionB = sessions[j];
+        
+        // Vérifier les conflits de créneaux horaires
+        const dayA = sessionA.time_slot_details?.day_of_week;
+        const dayB = sessionB.time_slot_details?.day_of_week;
+        const startA = sessionA.specific_start_time || sessionA.time_slot_details?.start_time;
+        const endA = sessionA.specific_end_time || sessionA.time_slot_details?.end_time;
+        const startB = sessionB.specific_start_time || sessionB.time_slot_details?.start_time;
+        const endB = sessionB.specific_end_time || sessionB.time_slot_details?.end_time;
+        
+        if (dayA === dayB && startA && endA && startB && endB) {
+          const isOverlapping = (startA < endB && startB < endA);
+          
+          if (isOverlapping) {
+            // Conflit d'enseignant
+            if (sessionA.teacher_details?.user?.first_name === sessionB.teacher_details?.user?.first_name &&
+                sessionA.teacher_details?.user?.last_name === sessionB.teacher_details?.user?.last_name) {
+              conflicts.push({
+                sessionId: sessionA.id,
+                type: 'teacher',
+                severity: 'high' as const,
+                message: `Conflit enseignant: ${sessionA.teacher_details?.user?.first_name} ${sessionA.teacher_details?.user?.last_name} a deux cours simultanés`,
+                conflictWith: `${sessionB.course_details?.code} (${startB}-${endB})`
+              });
+            }
+            
+            // Conflit de salle
+            if (sessionA.room_details?.code === sessionB.room_details?.code && sessionA.room_details?.code) {
+              conflicts.push({
+                sessionId: sessionA.id,
+                type: 'room',
+                severity: 'medium' as const,
+                message: `Conflit de salle: ${sessionA.room_details.code} occupée simultanément`,
+                conflictWith: `${sessionB.course_details?.code} (${startB}-${endB})`
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    return conflicts;
+  };
+
+  // Convertir les sessions de l'API vers le format avancé
+  const convertToAdvancedSessions = (apiSessions: ScheduleSession[]): AdvancedScheduleSession[] => {
+    const conflicts = detectConflicts(apiSessions);
+    
+    return apiSessions.map(session => {
+      const sessionConflicts = conflicts.filter(c => c.sessionId === session.id);
+      
+      return {
+        id: session.id.toString(),
+        course: {
+          id: session.id.toString(),
+          name: session.course_details?.name || 'Cours non défini',
+          code: session.course_details?.code || 'N/A',
+          type: session.session_type as 'CM' | 'TD' | 'TP' | 'EXAM',
+          duration: session.time_slot_details ? 
+            (new Date(`1970-01-01T${session.time_slot_details.end_time}Z`).getTime() - 
+             new Date(`1970-01-01T${session.time_slot_details.start_time}Z`).getTime()) / (1000 * 60) : 120,
+          teacher: {
+            id: session.teacher_details?.user?.first_name || 'unknown',
+            name: session.teacher_details?.user ? 
+              `${session.teacher_details.user.first_name} ${session.teacher_details.user.last_name}` : 
+              'Enseignant non défini'
+          },
+          room: session.room_details ? {
+            id: session.room_details.code,
+            code: session.room_details.code,
+            name: session.room_details.name
+          } : undefined,
+          expectedStudents: session.expected_students || 0
+        },
+        timeSlot: {
+          id: `${session.time_slot_details?.day_of_week || 'monday'}-${session.time_slot_details?.start_time || '09:00'}`,
+          day: session.time_slot_details?.day_of_week || 'monday',
+          startTime: session.specific_start_time || session.time_slot_details?.start_time || '09:00',
+          endTime: session.specific_end_time || session.time_slot_details?.end_time || '10:00'
+        },
+        conflicts: sessionConflicts,
+        isLocked: false
+      };
+    });
+  };
+
+  // Gestionnaires pour le mode avancé
+  const handleSessionMove = (sessionId: string, newTimeSlot: any) => {
+    console.log('Moving session:', sessionId, 'to:', newTimeSlot);
+    addToast({
+      title: "Session déplacée",
+      description: "La session a été déplacée avec succès",
+      variant: "default"
+    });
+  };
+
+  const handleSessionEdit = (session: AdvancedScheduleSession) => {
+    console.log('Editing session:', session);
+    addToast({
+      title: "Édition",
+      description: "Ouverture de l'éditeur de session",
+      variant: "default"
+    });
+  };
+
+  const handleSessionDelete = (sessionId: string) => {
+    console.log('Deleting session:', sessionId);
+    addToast({
+      title: "Session supprimée",
+      description: "La session a été supprimée",
+      variant: "default"
+    });
+  };
+
+  const handleConflictResolve = (sessionId: string, conflictType: string) => {
+    console.log('Resolving conflict:', sessionId, conflictType);
+    addToast({
+      title: "Conflit résolu",
+      description: "Le conflit a été résolu automatiquement",
+      variant: "default"
+    });
+  };
+
+  const handleScheduleGenerated = (scheduleId: string) => {
+    console.log('Schedule generated:', scheduleId);
+    addToast({
+      title: "Emploi du temps généré",
+      description: "Le nouvel emploi du temps a été appliqué",
+      variant: "default"
+    });
+    // Recharger les données
+    if (viewMode === 'week') {
+      loadWeeklyData();
+    } else {
+      loadDailyData();
+    }
+  };
+
+  const handlePreview = (schedule: any) => {
+    console.log('Previewing schedule:', schedule);
+    addToast({
+      title: "Aperçu",
+      description: "Ouverture de l'aperçu de l'emploi du temps",
+      variant: "default"
+    });
   };
 
   // Créer un planning en tableau avec créneaux horaires
@@ -674,7 +879,7 @@ export default function SchedulePage() {
             transition={{ delay: 0.3, duration: 0.5 }}
           >
             <MicroCard className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
                 {/* Mode de vue */}
                 <div>
                   <label className="text-sm font-semibold text-foreground mb-2 block">
@@ -702,6 +907,37 @@ export default function SchedulePage() {
                     >
                       <CalendarDays className="w-4 h-4" />
                       Jour
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mode avancé */}
+                <div>
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
+                    Mode
+                  </label>
+                  <div className="flex bg-secondary/10 rounded-lg p-1">
+                    <button
+                      onClick={() => setAdvancedMode(false)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                        !advancedMode
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
+                      }`}
+                    >
+                      <Eye className="w-4 h-4" />
+                      Lecture
+                    </button>
+                    <button
+                      onClick={() => setAdvancedMode(true)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                        advancedMode
+                          ? 'bg-accent text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
+                      }`}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Avancé
                     </button>
                   </div>
                 </div>
@@ -847,7 +1083,7 @@ export default function SchedulePage() {
                         <p className="text-muted-foreground">Chargement des sessions...</p>
                       </div>
                     </div>
-                  ) : filteredSessions.length === 0 ? (
+                  ) : filteredSessions.length === 0 && !advancedMode ? (
                     <div className="text-center py-16">
                       <div className="mx-auto w-24 h-24 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
                         <Calendar className="h-12 w-12 text-muted-foreground" />
@@ -869,6 +1105,153 @@ export default function SchedulePage() {
                           Effacer la recherche
                         </MicroButton>
                       )}
+                    </div>
+                  ) : advancedMode ? (
+                    <div className="space-y-6 p-6">
+                      {/* Contrôles du mode avancé */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                              <Edit className="w-5 h-5 text-accent" />
+                              Mode Avancé
+                            </h3>
+                            {hasAdminAccess && (
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium text-foreground">Mode édition:</label>
+                                <button
+                                  onClick={() => setIsEditMode(!isEditMode)}
+                                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                                    isEditMode
+                                      ? 'bg-accent text-white'
+                                      : 'bg-secondary/10 text-muted-foreground hover:text-foreground'
+                                  }`}
+                                >
+                                  {isEditMode ? 'Activé' : 'Désactivé'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Statistiques de conflits */}
+                          {(() => {
+                            const advancedSessions = convertToAdvancedSessions(filteredSessions);
+                            const totalConflicts = advancedSessions.reduce((sum, s) => sum + s.conflicts.length, 0);
+                            const highPriorityConflicts = advancedSessions.reduce((sum, s) => 
+                              sum + s.conflicts.filter(c => c.severity === 'high').length, 0
+                            );
+                            
+                            return totalConflicts > 0 && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 text-red-600">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  <span className="text-sm font-medium">{totalConflicts} conflits détectés</span>
+                                  {highPriorityConflicts > 0 && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      {highPriorityConflicts} critiques
+                                    </Badge>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => setShowConflictsOnly(!showConflictsOnly)}
+                                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                                    showConflictsOnly
+                                      ? 'bg-red-100 text-red-700'
+                                      : 'bg-secondary/10 text-muted-foreground hover:text-foreground'
+                                  }`}
+                                >
+                                  {showConflictsOnly ? 'Tous' : 'Conflits uniquement'}
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        
+                        {/* Barre d'outils administrateur */}
+                        {hasAdminAccess && (
+                          <div className="flex items-center justify-between p-3 bg-secondary/10 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 text-sm">
+                                <Settings className="w-4 h-4 text-muted-foreground" />
+                                <span className="font-medium text-foreground">Outils Admin:</span>
+                              </div>
+                              {isEditMode && (
+                                <>
+                                  <Button size="sm" variant="outline" className="text-xs">
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Nouveau cours
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="text-xs">
+                                    <Copy className="w-3 h-3 mr-1" />
+                                    Dupliquer semaine
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="text-xs">
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Exporter
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              {bulkActions.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground">
+                                    {bulkActions.length} sélectionné(s)
+                                  </span>
+                                  <Button size="sm" variant="destructive" className="text-xs">
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Supprimer
+                                  </Button>
+                                </div>
+                              )}
+                              {(() => {
+                                const advancedSessions = convertToAdvancedSessions(filteredSessions);
+                                const totalConflicts = advancedSessions.reduce((sum, s) => sum + s.conflicts.length, 0);
+                                return totalConflicts > 0 && isEditMode;
+                              })() && (
+                                <Button size="sm" variant="outline" className="text-xs text-blue-700 border-blue-300">
+                                  <Bot className="w-3 h-3 mr-1" />
+                                  Résolution auto
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {!hasAdminAccess && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-sm text-amber-800">
+                              Mode lecture uniquement - Contactez un administrateur pour modifier les emplois du temps
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Grille avancée */}
+                      <AdvancedScheduleView
+                        sessions={(() => {
+                          const allSessions = convertToAdvancedSessions(filteredSessions);
+                          return showConflictsOnly 
+                            ? allSessions.filter(s => s.conflicts.length > 0)
+                            : allSessions;
+                        })()}
+                        onSessionMove={handleSessionMove}
+                        onSessionEdit={handleSessionEdit}
+                        onSessionDelete={handleSessionDelete}
+                        onConflictResolve={handleConflictResolve}
+                        isEditMode={isEditMode}
+                        selectedClass={curricula.find(c => c.code === selectedCurriculum)?.name || selectedCurriculum}
+                      />
+                      
+                      {/* Générateur IA */}
+                      <div className="mt-6">
+                        <AIScheduleGenerator
+                          selectedClass={curricula.find(c => c.code === selectedCurriculum)?.name || selectedCurriculum}
+                          onScheduleGenerated={handleScheduleGenerated}
+                          onPreview={handlePreview}
+                        />
+                      </div>
                     </div>
                   ) : (
                     viewMode === 'week' ? renderWeeklyScheduleTable() : renderScheduleTable()

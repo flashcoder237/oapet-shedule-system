@@ -93,7 +93,7 @@ export default function CoursesPage() {
     setShowCourseModal(true);
   };
 
-  const handleSaveCourse = async (courseData: Course) => {
+  const handleSaveCourse = async (courseData: any) => {
     try {
       if (selectedCourse) {
         // Mise à jour existante
@@ -421,10 +421,12 @@ export default function CoursesPage() {
       </motion.div>
 
       {/* Modales */}
-      {/* CourseModal temporairement désactivé pour éviter les erreurs de types */}
-      {false && (
-        <div>Course Modal</div>
-      )}
+      <CourseModal
+        isOpen={showCourseModal}
+        onClose={() => setShowCourseModal(false)}
+        course={selectedCourse}
+        onSave={handleSaveCourse}
+      />
 
       <ExportModal
         isOpen={showExportModal}

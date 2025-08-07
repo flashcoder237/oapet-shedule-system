@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { mlService } from '@/lib/api/services/ml';
 
 interface SearchResult {
   id: string;
@@ -112,8 +113,29 @@ export default function SmartSearch({
 
   // Les données viennent maintenant des props uniquement
 
-  // Les suggestions devraient venir de l'API ou être générées dynamiquement
-  const suggestions_data: SearchSuggestion[] = [];
+  // Chargement des suggestions depuis l'API IA
+  const loadSuggestions = async (searchQuery?: string) => {
+    try {
+      setIsLoading(true);
+      const response = await mlService.getSearchSuggestions(searchQuery, 8);
+      
+      const aiSuggestions: SearchSuggestion[] = response.suggestions.map((item, index) => ({
+        id: `ai-${index}`,
+        text: item.text,
+        type: item.type as 'recent' | 'popular' | 'suggestion' | 'filter',
+        category: item.category,
+        count: Math.floor(Math.random() * 50) + 1 // Simulation du count
+      }));
+      
+      setSuggestions(aiSuggestions);
+    } catch (error) {
+      console.error('Erreur lors du chargement des suggestions IA:', error);
+      // Fallback sur des suggestions par défaut en cas d'erreur
+      setSuggestions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Simulation de recherche
   useEffect(() => {
@@ -163,15 +185,20 @@ export default function SmartSearch({
     }
   }, [query, filters, sortBy, data]);
 
-  // Gestion des suggestions - maintenant vides par défaut
+  // Gestion des suggestions IA
   useEffect(() => {
-    if (query.length === 0 && showSuggestions) {
-      setSuggestions(suggestions_data);
-    } else if (query.length > 0) {
-      const filtered = suggestions_data.filter(s => 
-        s.text.toLowerCase().includes(query.toLowerCase())
-      );
-      setSuggestions(filtered);
+    if (showSuggestions) {
+      if (query.length === 0) {
+        // Charger les suggestions populaires
+        loadSuggestions();
+      } else if (query.length >= 2) {
+        // Charger les suggestions basées sur la query
+        const debounceTimeout = setTimeout(() => {
+          loadSuggestions(query);
+        }, 300);
+        
+        return () => clearTimeout(debounceTimeout);
+      }
     }
   }, [query, showSuggestions]);
 
