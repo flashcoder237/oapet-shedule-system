@@ -14,10 +14,20 @@ import {
   Save,
   AlertCircle,
   CheckCircle,
-  Loader2
+  Loader2,
+  Brain,
+  Zap,
+  Lightbulb,
+  TrendingUp,
+  Target,
+  Sparkles
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { mlService } from '@/lib/api/services/ml';
+import SmartFormAssistant from '@/components/forms/SmartFormAssistant';
 import type { Course } from '@/types/api';
 
 interface CourseFormData {
@@ -50,6 +60,7 @@ interface CourseModalProps {
 }
 
 export default function CourseModal({ isOpen, onClose, course, onSave }: CourseModalProps) {
+  const { addToast } = useToast();
   const [formData, setFormData] = useState<CourseFormData>({
     name: '',
     code: '',
@@ -74,6 +85,12 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
+  
+  // IA - États pour la prédiction de difficulté
+  const [aiPrediction, setAiPrediction] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
+  const [showFormAssistant, setShowFormAssistant] = useState(true);
 
   useEffect(() => {
     if (course) {
@@ -191,11 +208,62 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+    
+    // IA - Déclencher l'analyse si les champs clés changent
+    if (['name', 'credits', 'max_students', 'hours_per_week', 'course_type'].includes(field)) {
+      debouncedAnalyzeCourse({ ...formData, [field]: value });
+    }
   };
 
   const handleBooleanToggle = (field: keyof CourseFormData) => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
+
+  // IA - Fonction d'analyse de la difficulté du cours
+  const analyzeCourse = async (courseData: CourseFormData) => {
+    if (!courseData.name.trim() || !courseData.credits) return;
+    
+    setIsAnalyzing(true);
+    try {
+      const prediction = await mlService.predictCourseDifficulty({
+        course_name: courseData.name,
+        lectures: courseData.hours_per_week,
+        min_days: Math.ceil(courseData.hours_per_week / 2),
+        students: courseData.max_students,
+        teacher: `teacher_${courseData.teacher}`,
+        total_courses: 50,
+        total_rooms: 20,
+        total_days: 5,
+        periods_per_day: 6,
+        lecture_density: courseData.hours_per_week / 30,
+        student_lecture_ratio: courseData.max_students / courseData.hours_per_week,
+        course_room_ratio: 2.5,
+        utilization_pressure: 0.7
+      });
+      
+      setAiPrediction(prediction);
+      setAiRecommendations(prediction.recommendations || []);
+      
+      addToast({
+        title: "Analyse IA terminée",
+        description: `Niveau de difficulté: ${prediction.complexity_level}`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Erreur d\'analyse IA:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // IA - Fonction avec debounce pour éviter trop d'appels
+  const debouncedAnalyzeCourse = (() => {
+    let timeoutId: NodeJS.Timeout;
+    return (courseData: CourseFormData) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => analyzeCourse(courseData), 1000);
+    };
+  })();
 
   const courseTypes = [
     { value: 'CM', label: 'Cours Magistral' },
@@ -459,6 +527,86 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
           placeholder="Description du cours..."
         />
       </div>
+
+      {/* IA - Panel d'analyse de difficulté */}
+      {(aiPrediction || isAnalyzing) && (
+        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+              {isAnalyzing ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <Brain className="w-4 h-4 text-white" />
+              )}
+            </div>
+            <h4 className="font-semibold text-foreground flex items-center gap-1">
+              Analyse IA du cours
+              <Sparkles className="w-4 h-4 text-purple-500" />
+            </h4>
+          </div>
+
+          {isAnalyzing ? (
+            <div className="flex items-center gap-2 text-blue-600">
+              <span className="text-sm">Analyse en cours...</span>
+            </div>
+          ) : aiPrediction && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Target className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-medium text-blue-600">Difficulté</span>
+                  </div>
+                  <Badge 
+                    variant={aiPrediction.complexity_level === 'Élevée' ? 'destructive' : 
+                            aiPrediction.complexity_level === 'Moyenne' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {aiPrediction.complexity_level}
+                  </Badge>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <TrendingUp className="w-4 h-4 text-purple-600" />
+                    <span className="text-xs font-medium text-purple-600">Score</span>
+                  </div>
+                  <span className="text-sm font-bold text-purple-600">
+                    {Math.round(aiPrediction.difficulty_score * 100)}%
+                  </span>
+                </div>
+                
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Zap className="w-4 h-4 text-orange-600" />
+                    <span className="text-xs font-medium text-orange-600">Priorité</span>
+                  </div>
+                  <span className="text-sm font-bold text-orange-600">
+                    {aiPrediction.priority}/3
+                  </span>
+                </div>
+              </div>
+
+              {aiRecommendations.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-1 mb-2">
+                    <Lightbulb className="w-4 h-4 text-yellow-600" />
+                    <span className="text-xs font-medium text-yellow-600">Recommandations IA</span>
+                  </div>
+                  <div className="space-y-1">
+                    {aiRecommendations.slice(0, 3).map((rec, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                        <span className="text-blue-500">•</span>
+                        <span>{rec}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 
@@ -578,12 +726,15 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="w-full max-w-2xl max-h-[90vh] overflow-auto"
+          className="w-full max-w-6xl max-h-[90vh] overflow-auto"
         >
           <Card>
-            <CardContent className="p-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
+            <CardContent className="p-0">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 h-full">
+                {/* Formulaire principal - 2/3 */}
+                <div className="lg:col-span-2 p-6 border-r border-border">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <BookOpen className="w-6 h-6 text-primary" />
@@ -686,6 +837,35 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
                       )}
                     </Button>
                   )}
+                </div>
+              </div>
+                </div>
+
+                {/* Assistant IA - 1/3 */}
+                <div className="p-4 bg-muted/30">
+                  <SmartFormAssistant
+                    formData={formData}
+                    formFields={[
+                      { name: 'name', value: formData.name, type: 'text', label: 'Nom du cours', required: true },
+                      { name: 'code', value: formData.code, type: 'text', label: 'Code du cours', required: true },
+                      { name: 'credits', value: formData.credits, type: 'number', label: 'Crédits', required: true },
+                      { name: 'max_students', value: formData.max_students, type: 'number', label: 'Max étudiants' },
+                      { name: 'hours_per_week', value: formData.hours_per_week, type: 'number', label: 'Heures/semaine' },
+                      { name: 'description', value: formData.description, type: 'textarea', label: 'Description' },
+                      { name: 'teacher', value: formData.teacher, type: 'number', label: 'Enseignant', required: true },
+                      { name: 'department', value: formData.department, type: 'number', label: 'Département', required: true }
+                    ]}
+                    formType="course"
+                    isOpen={showFormAssistant}
+                    onToggle={() => setShowFormAssistant(!showFormAssistant)}
+                    onFieldSuggestion={(field: string, value: any) => {
+                      setFormData(prev => ({ ...prev, [field]: value }));
+                    }}
+                    onValidationChange={(result) => {
+                      // Utiliser les résultats de validation pour ajuster l'UI
+                    }}
+                    className="h-full"
+                  />
                 </div>
               </div>
             </CardContent>

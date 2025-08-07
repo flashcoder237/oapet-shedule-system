@@ -66,6 +66,7 @@ import InteractiveCalendar from '@/components/calendar/InteractiveCalendar';
 import SmartSearch from '@/components/search/SmartSearch';
 import CustomizableDashboard from '@/components/dashboard/CustomizableDashboard';
 import UltraStableDragDropScheduler from '@/components/scheduling/UltraStableDragDropScheduler';
+import AIInsightsPanel from '@/components/dashboard/AIInsightsPanel';
 import { useAuth } from '@/lib/auth/context';
 import { courseService } from '@/lib/api/services/courses';
 import type { DashboardStats } from '@/types/api';
@@ -337,6 +338,9 @@ export default function Dashboard() {
                 </div>
               </motion.div>
             </div>
+
+            {/* Panel AI Insights */}
+            <AIInsightsPanel className="mb-6" />
 
             {/* Actions rapides et activités récentes */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -44,6 +44,7 @@ import {
 // Import des nouveaux composants avancés
 import { AdvancedScheduleView } from '@/components/scheduling/AdvancedScheduleView';
 import { AIScheduleGenerator } from '@/components/scheduling/AIScheduleGenerator';
+import RealTimeConflictDetector from '@/components/scheduling/RealTimeConflictDetector';
 
 // Types
 interface Curriculum {
@@ -871,6 +872,33 @@ export default function SchedulePage() {
               </MicroCard>
             </motion.div>
           )}
+
+          {/* Panel de détection de conflits IA */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.5 }}
+          >
+            <RealTimeConflictDetector 
+              scheduleData={{ sessions: filteredSessions, curriculum: selectedCurriculum }}
+              onConflictResolved={(conflictId) => {
+                addToast({
+                  title: "Conflit résolu",
+                  description: "Le conflit a été résolu avec succès",
+                  variant: "default"
+                });
+              }}
+              onAutoResolve={(conflictId) => {
+                // Recharger les données après résolution automatique
+                if (viewMode === 'week') {
+                  loadWeeklyData();
+                } else {
+                  loadDailyData();
+                }
+              }}
+              autoDetect={true}
+            />
+          </motion.div>
 
           {/* Contrôles principaux */}
           <motion.div
