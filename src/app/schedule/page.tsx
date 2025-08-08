@@ -106,7 +106,9 @@ function FloatingHeader({
   onEditModeChange,
   onSave,
   hasChanges,
-  curricula
+  curricula,
+  conflicts,
+  addToast
 }: any) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -438,6 +440,34 @@ function FloatingHeader({
                     <Save className="w-4 h-4 mr-2" />
                   </motion.div>
                   Sauvegarder
+                </Button>
+              </motion.div>
+            )}
+
+            {conflicts && conflicts.length > 0 && (
+              <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Afficher les détails des conflits
+                    const conflictDetails = conflicts.map((c: any) => 
+                      `• ${c.description}\n  ${c.details || 'Détails non disponibles'}`
+                    ).join('\n\n');
+                    
+                    addToast({
+                      title: `${conflicts.length} conflits détectés`,
+                      description: conflicts.length > 0 ? conflicts[0].description : "Conflits trouvés",
+                      variant: "destructive"
+                    });
+                    
+                    // Log pour debug
+                    console.log('Conflits détectés:', conflicts);
+                  }}
+                  title={`${conflicts.length} conflits détectés`}
+                  className="transition-all duration-200 hover:bg-red-50 hover:border-red-300 border-red-200"
+                >
+                  <AlertTriangle className="w-4 h-4 mr-1 text-red-500" />
+                  <span className="text-red-600 font-semibold">{conflicts.length}</span>
                 </Button>
               </motion.div>
             )}
@@ -818,6 +848,7 @@ export default function SchedulePage() {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [editMode, setEditMode] = useState<EditMode>('view');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [backendConflicts, setBackendConflicts] = useState<any[]>([]);
   const [weeklyData, setWeeklyData] = useState<any>(null);
   const [dailyData, setDailyData] = useState<any>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -881,6 +912,37 @@ export default function SchedulePage() {
     }
   };
 
+  // Fonction pour détecter les conflits via le backend
+  const detectConflictsFromBackend = async () => {
+    if (!weeklyData || !weeklyData.results || weeklyData.results.length === 0) return [];
+    
+    try {
+      // Trouver un schedule ID à partir des sessions
+      const firstSession = weeklyData.results[0];
+      if (!firstSession.schedule) return [];
+      
+      const response = await fetch(`${API_BASE_URL}/schedules/schedules/${firstSession.schedule}/detect_conflicts/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        console.error('Erreur lors de la détection des conflits:', response.status);
+        return [];
+      }
+      
+      const conflictData = await response.json();
+      console.log('Conflits détectés par le backend:', conflictData);
+      
+      return conflictData.conflicts || [];
+    } catch (error) {
+      console.error('Erreur lors de la détection des conflits:', error);
+      return [];
+    }
+  };
+
   const loadWeeklyData = async () => {
     if (!selectedCurriculum) return;
     
@@ -896,10 +958,15 @@ export default function SchedulePage() {
       setSessions(Object.values(data.sessions_by_day).flat() as ScheduleSession[]);
       setFilteredSessions(Object.values(data.sessions_by_day).flat() as ScheduleSession[]);
       
+      // Détecter les conflits via le backend
+      const conflicts = await detectConflictsFromBackend();
+      setBackendConflicts(conflicts);
+      
       // Debug: afficher les données reçues
       if (data.results && data.results.length > 0) {
         console.log('Sample session data:', data.results[0]);
         console.log('Days in data:', data.results.map((s: any) => s.time_slot_details?.day_of_week).filter((d: any) => d));
+        console.log('Backend conflicts:', conflicts);
       }
       
     } catch (error) {
@@ -1072,11 +1139,120 @@ export default function SchedulePage() {
   // Détection de conflits
   const detectConflicts = (sessions: ScheduleSession[]) => {
     const conflictsList: any[] = [];
-    // Logique de détection de conflits simplifiée
+    
+    // Créer des maps pour détecter les conflits
+    const roomTimeSlots = new Map<string, ScheduleSession[]>();
+    const teacherTimeSlots = new Map<string, ScheduleSession[]>();
+    const curriculumTimeSlots = new Map<string, ScheduleSession[]>();
+    
+    // Organiser les sessions par salle, enseignant et curriculum
+    sessions.forEach(session => {
+      const startTime = session.specific_start_time || session.time_slot_details?.start_time;
+      const endTime = session.specific_end_time || session.time_slot_details?.end_time;
+      const dayOfWeek = session.time_slot_details?.day_of_week;
+      const sessionDate = session.specific_date;
+      
+      if (!startTime || !endTime || !dayOfWeek) return;
+      
+      // Créer une clé unique pour le créneau (jour + heure ou date spécifique + heure)
+      const timeKey = sessionDate ? 
+        `${sessionDate}-${startTime}-${endTime}` : 
+        `${dayOfWeek}-${startTime}-${endTime}`;
+      
+      // Conflits de salle
+      if (session.room_details?.code) {
+        const roomKey = `${session.room_details.code}-${timeKey}`;
+        if (!roomTimeSlots.has(roomKey)) {
+          roomTimeSlots.set(roomKey, []);
+        }
+        roomTimeSlots.get(roomKey)!.push(session);
+      }
+      
+      // Conflits d'enseignant
+      if (session.teacher_details?.employee_id) {
+        const teacherKey = `${session.teacher_details.employee_id}-${timeKey}`;
+        if (!teacherTimeSlots.has(teacherKey)) {
+          teacherTimeSlots.set(teacherKey, []);
+        }
+        teacherTimeSlots.get(teacherKey)!.push(session);
+      }
+      
+      // Conflits de curriculum (même classe) - utiliser le curriculum depuis les détails du schedule
+      const curriculumCode = (session as any).schedule_details?.curriculum_details?.code || 
+                            selectedCurriculum;
+      if (curriculumCode) {
+        const curriculumKey = `${curriculumCode}-${timeKey}`;
+        if (!curriculumTimeSlots.has(curriculumKey)) {
+          curriculumTimeSlots.set(curriculumKey, []);
+        }
+        curriculumTimeSlots.get(curriculumKey)!.push(session);
+      }
+    });
+    
+    // Détecter les conflits de salle
+    roomTimeSlots.forEach((sessionsInRoom, key) => {
+      if (sessionsInRoom.length > 1) {
+        const [roomCode] = key.split('-');
+        conflictsList.push({
+          id: `room-${key}`,
+          type: 'room',
+          severity: 'critical',
+          description: `Conflit de salle ${roomCode}`,
+          details: `${sessionsInRoom.length} cours programmés en même temps`,
+          sessions: sessionsInRoom,
+          resource: roomCode
+        });
+      }
+    });
+    
+    // Détecter les conflits d'enseignant
+    teacherTimeSlots.forEach((sessionsForTeacher, key) => {
+      if (sessionsForTeacher.length > 1) {
+        const [teacherId] = key.split('-');
+        const teacherName = sessionsForTeacher[0].teacher_details?.user_details?.full_name ||
+                           `${sessionsForTeacher[0].teacher_details?.user_details?.first_name || ''} ${sessionsForTeacher[0].teacher_details?.user_details?.last_name || ''}`.trim();
+        conflictsList.push({
+          id: `teacher-${key}`,
+          type: 'teacher',
+          severity: 'high',
+          description: `Conflit d'enseignant ${teacherName || teacherId}`,
+          details: `${sessionsForTeacher.length} cours programmés en même temps`,
+          sessions: sessionsForTeacher,
+          resource: teacherId
+        });
+      }
+    });
+    
+    // Détecter les conflits de curriculum (étudiants)
+    curriculumTimeSlots.forEach((sessionsForCurriculum, key) => {
+      if (sessionsForCurriculum.length > 1) {
+        const [curriculumCode] = key.split('-');
+        conflictsList.push({
+          id: `curriculum-${key}`,
+          type: 'curriculum',
+          severity: 'high',
+          description: `Conflit de classe ${curriculumCode}`,
+          details: `${sessionsForCurriculum.length} cours programmés en même temps pour la même classe`,
+          sessions: sessionsForCurriculum,
+          resource: curriculumCode
+        });
+      }
+    });
+    
     return conflictsList;
   };
 
-  const conflicts = detectConflicts(filteredSessions);
+  // Combiner les conflits frontend et backend
+  const frontendConflicts = detectConflicts(filteredSessions);
+  const allConflicts = [...frontendConflicts, ...backendConflicts];
+  const conflicts = allConflicts;
+
+  // Helper function pour vérifier si une session a un conflit
+  const hasSessionConflict = (sessionId: string) => {
+    return conflicts.some(conflict => 
+      conflict.sessions && conflict.sessions.some((s: any) => s.id === sessionId)
+    );
+  };
 
   // Rendu de la vue jour
   const renderDayView = () => {
@@ -1147,7 +1323,7 @@ export default function SchedulePage() {
                             onDelete={handleSessionDelete}
                             onDuplicate={handleSessionDuplicate}
                             editMode={editMode}
-                            hasConflict={false}
+                            hasConflict={hasSessionConflict(session.id.toString())}
                           />
                         ))
                       )}
@@ -1162,7 +1338,28 @@ export default function SchedulePage() {
     );
   };
 
-  // Rendu de la vue semaine
+  // Fonction utilitaire pour calculer la durée d'une session en minutes
+  const getSessionDurationMinutes = (session: ScheduleSession) => {
+    const startTime = session.specific_start_time || session.time_slot_details?.start_time;
+    const endTime = session.specific_end_time || session.time_slot_details?.end_time;
+    
+    if (startTime && endTime) {
+      const [startHour, startMin] = startTime.split(':').map(Number);
+      const [endHour, endMin] = endTime.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      return endMinutes - startMinutes;
+    }
+    return 120; // Default 2 hours
+  };
+
+  // Fonction pour convertir les minutes en pixels (1 minute = 1 pixel)
+  const getSessionHeightPixels = (session: ScheduleSession) => {
+    const durationMinutes = getSessionDurationMinutes(session);
+    return Math.max(durationMinutes, 60); // Minimum 60px de hauteur
+  };
+
+  // Rendu de la vue semaine avec positioning absolu pour les durées réelles
   const renderWeekView = () => {
     const days = [
       { key: 'monday', label: 'Lundi' },
@@ -1177,76 +1374,116 @@ export default function SchedulePage() {
       return <div className="text-center py-8 text-muted-foreground">Aucune donnée disponible</div>;
     }
 
+    // Créer une grille de temps de 7h à 21h (14 heures * 60 minutes = 840 minutes)
+    const startHour = 7;
+    const endHour = 21;
+    const totalMinutes = (endHour - startHour) * 60;
+
+    // Fonction pour calculer la position Y d'une session
+    const getSessionTopPosition = (session: ScheduleSession) => {
+      const startTime = session.specific_start_time || session.time_slot_details?.start_time;
+      if (startTime) {
+        const [hour, min] = startTime.split(':').map(Number);
+        const sessionStartMinutes = hour * 60 + min;
+        const gridStartMinutes = startHour * 60;
+        return sessionStartMinutes - gridStartMinutes; // Position en minutes depuis 7h
+      }
+      return 0;
+    };
+
     return (
       <div className="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-gray-50">
-                <th className="p-2 text-left text-xs font-medium text-gray-600 w-20">Heure</th>
-                {days.map(day => (
-                  <th key={day.key} className="p-2 text-center text-xs font-medium text-gray-600 min-w-[150px]">
-                    {day.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {timeSlots.map(time => (
-                <tr key={time} className="border-b border-gray-100">
-                  <td className="p-2 text-xs font-medium text-gray-600 bg-gray-50">{time}</td>
-                  {days.map(day => {
-                    const daySessions = (weeklyData.sessions_by_day[day.key] || []).filter((session: ScheduleSession) => {
-                      const sessionTime = session.specific_start_time || session.time_slot_details?.start_time;
-                      return sessionTime?.startsWith(time.slice(0, 2));
-                    });
+          <div className="grid grid-cols-7 gap-0" style={{ minWidth: '1000px' }}>
+            {/* En-tête avec les jours */}
+            <div className="p-2 text-left text-xs font-medium text-gray-600 bg-gray-50 border-b">
+              Heure
+            </div>
+            {days.map(day => (
+              <div key={day.key} className="p-2 text-center text-xs font-medium text-gray-600 bg-gray-50 border-b border-l">
+                {day.label}
+              </div>
+            ))}
 
-                    return (
-                      <td
-                        key={`${day.key}-${time}`}
-                        className={`
-                          p-1 border-l border-gray-100 align-top relative
-                          ${editMode === 'drag' && draggedSession ? 'hover:bg-blue-50' : ''}
-                          ${dropTarget?.day === day.key && dropTarget?.time === time ? 'bg-blue-100' : ''}
-                        `}
-                        style={{ minHeight: '60px' }}
-                        onDragOver={(e) => {
-                          if (editMode === 'drag') {
-                            e.preventDefault();
-                            setDropTarget({ day: day.key, time });
-                          }
-                        }}
-                        onDragLeave={() => setDropTarget(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (editMode === 'drag') {
-                            handleDrop(day.key, time);
-                          }
-                        }}
-                      >
-                        <div className="space-y-1">
-                          {daySessions.map((session: ScheduleSession) => (
-                            <SessionCard
-                              key={session.id}
-                              session={session}
-                              isDragging={draggedSession?.id === session.id}
-                              onDragStart={() => handleDragStart(session)}
-                              onDragEnd={handleDragEnd}
-                              onEdit={handleSessionEdit}
-                              onDelete={handleSessionDelete}
-                              onDuplicate={handleSessionDuplicate}
-                              editMode={editMode}
-                              hasConflict={false}
-                            />
-                          ))}
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            {/* Colonne des heures */}
+            <div className="relative bg-gray-50 border-r" style={{ height: `${totalMinutes}px` }}>
+              {Array.from({ length: endHour - startHour + 1 }, (_, i) => {
+                const hour = startHour + i;
+                return (
+                  <div
+                    key={hour}
+                    className="absolute left-0 right-0 text-xs font-medium text-gray-600 p-2 border-t"
+                    style={{ top: `${i * 60}px`, height: '60px' }}
+                  >
+                    {hour.toString().padStart(2, '0')}:00
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Colonnes pour chaque jour */}
+            {days.map(day => (
+              <div
+                key={day.key}
+                className="relative border-l border-gray-200"
+                style={{ height: `${totalMinutes}px` }}
+                onDragOver={(e) => {
+                  if (editMode === 'drag') {
+                    e.preventDefault();
+                    setDropTarget({ day: day.key, time: '08:00' });
+                  }
+                }}
+                onDragLeave={() => setDropTarget(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (editMode === 'drag') {
+                    handleDrop(day.key, '08:00');
+                  }
+                }}
+              >
+                {/* Lignes horizontales pour chaque heure */}
+                {Array.from({ length: endHour - startHour + 1 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="absolute left-0 right-0 border-t border-gray-100"
+                    style={{ top: `${i * 60}px` }}
+                  />
+                ))}
+
+                {/* Sessions positionnées selon leur heure et durée réelles */}
+                {(weeklyData.sessions_by_day[day.key] || []).map((session: ScheduleSession) => {
+                  const topPosition = getSessionTopPosition(session);
+                  const height = getSessionHeightPixels(session);
+                  
+                  // Ne pas afficher les sessions en dehors de la plage horaire
+                  if (topPosition < 0 || topPosition >= totalMinutes) return null;
+
+                  return (
+                    <div
+                      key={session.id}
+                      className="absolute left-1 right-1 z-10"
+                      style={{
+                        top: `${topPosition}px`,
+                        height: `${height}px`
+                      }}
+                    >
+                      <SessionCard
+                        session={session}
+                        isDragging={draggedSession?.id === session.id}
+                        onDragStart={() => handleDragStart(session)}
+                        onDragEnd={handleDragEnd}
+                        onEdit={handleSessionEdit}
+                        onDelete={handleSessionDelete}
+                        onDuplicate={handleSessionDuplicate}
+                        editMode={editMode}
+                        hasConflict={hasSessionConflict(session.id.toString())}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -1366,6 +1603,8 @@ export default function SchedulePage() {
         onSave={handleSave}
         hasChanges={hasChanges}
         curricula={curricula}
+        conflicts={conflicts}
+        addToast={addToast}
       />
 
       {/* Contenu principal */}
@@ -1379,6 +1618,37 @@ export default function SchedulePage() {
             searchTerm={searchTerm}
             onSearchChange={handleSearchChange}
           />
+        )}
+
+        {/* Section Conflits */}
+        {!sessionsLoading && conflicts.length > 0 && (
+          <div className="mb-4">
+            <Card className="border-red-200 bg-red-50/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-red-700 text-sm font-medium flex items-center">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {conflicts.slice(0, 3).map((conflict: any, index: number) => (
+                    <div key={conflict.id || index} className="text-xs text-red-600 bg-white/50 p-2 rounded border">
+                      <div className="font-medium">{conflict.description}</div>
+                      {conflict.details && (
+                        <div className="text-red-500 mt-1">{conflict.details}</div>
+                      )}
+                    </div>
+                  ))}
+                  {conflicts.length > 3 && (
+                    <div className="text-xs text-red-500 text-center py-1">
+                      ... et {conflicts.length - 3} autre{conflicts.length - 3 > 1 ? 's' : ''} conflit{conflicts.length - 3 > 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
         
         {sessionsLoading ? (
