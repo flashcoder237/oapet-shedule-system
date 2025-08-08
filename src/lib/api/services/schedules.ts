@@ -116,6 +116,100 @@ export const scheduleService = {
     return apiClient.delete(`${API_ENDPOINTS.SCHEDULE_SESSIONS}${id}/`);
   },
 
+  // Fonctions utilitaires
+  formatDate: (date: Date) => {
+    return date.toISOString().split('T')[0];
+  },
+
+  getWeekStart: (date: Date) => {
+    const startOfWeek = new Date(date);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+    startOfWeek.setDate(diff);
+    return startOfWeek.toISOString().split('T')[0];
+  },
+
+  // Sessions hebdomadaires
+  async getWeeklySessions(params: { week_start: string; curriculum?: string }): Promise<{
+    sessions_by_day: { [key: string]: ScheduleSession[] };
+    results: ScheduleSession[];
+  }> {
+    // Charger toutes les sessions disponibles
+    const sessions = await this.getScheduleSessions();
+    
+    let filteredResults = sessions.results || [];
+    
+    // Filtrer par curriculum si spécifié
+    if (params.curriculum && sessions.results) {
+      try {
+        const schedulesResponse = await this.getSchedules();
+        const schedulesForCurriculum = schedulesResponse.results?.filter((schedule: any) => {
+          return schedule.curriculum_details?.code === params.curriculum;
+        }) || [];
+        
+        const scheduleIds = schedulesForCurriculum.map((s: any) => s.id);
+        
+        filteredResults = sessions.results.filter((session: any) => {
+          return scheduleIds.includes(session.schedule);
+        });
+        
+        console.log(`Weekly view: Filtered ${sessions.results.length} sessions to ${filteredResults.length} for curriculum ${params.curriculum}`);
+      } catch (error) {
+        console.error('Error filtering weekly sessions by curriculum:', error);
+      }
+    }
+    
+    // Organiser les sessions par jour de la semaine
+    const sessionsByDay: { [key: string]: ScheduleSession[] } = {
+      monday: [],
+      tuesday: [],
+      wednesday: [],
+      thursday: [],
+      friday: [],
+      saturday: [],
+      sunday: []
+    };
+
+    // Mapping des jours pour organiser les sessions
+    const dayMapping: { [key: string]: string } = {
+      'monday': 'monday', 'lundi': 'monday', 'mon': 'monday', 'lun': 'monday',
+      'tuesday': 'tuesday', 'mardi': 'tuesday', 'tue': 'tuesday', 'mar': 'tuesday',
+      'wednesday': 'wednesday', 'mercredi': 'wednesday', 'wed': 'wednesday', 'mer': 'wednesday',
+      'thursday': 'thursday', 'jeudi': 'thursday', 'thu': 'thursday', 'jeu': 'thursday',
+      'friday': 'friday', 'vendredi': 'friday', 'fri': 'friday', 'ven': 'friday',
+      'saturday': 'saturday', 'samedi': 'saturday', 'sat': 'saturday', 'sam': 'saturday',
+      'sunday': 'sunday', 'dimanche': 'sunday', 'sun': 'sunday', 'dim': 'sunday'
+    };
+
+    // Organiser les sessions filtrées par jour
+    filteredResults.forEach((session: ScheduleSession) => {
+      const sessionDay = session.time_slot_details?.day_of_week?.toLowerCase();
+      const mappedDay = sessionDay ? dayMapping[sessionDay] : null;
+      
+      if (mappedDay && sessionsByDay[mappedDay]) {
+        sessionsByDay[mappedDay].push(session);
+      } else {
+        // Si le jour n'est pas reconnu, essayer de le dériver de la date
+        const sessionDate = session.specific_date;
+        if (sessionDate) {
+          const date = new Date(sessionDate);
+          const dayIndex = date.getDay(); // 0 = dimanche, 1 = lundi, etc.
+          const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          const derivedDay = dayNames[dayIndex];
+          if (sessionsByDay[derivedDay]) {
+            sessionsByDay[derivedDay].push(session);
+          }
+        }
+      }
+    });
+    
+    return {
+      sessions_by_day: sessionsByDay,
+      results: filteredResults
+    };
+  },
+
+
   // Conflits
   async getConflicts(params?: {
     schedule?: number;
@@ -157,8 +251,8 @@ export const scheduleService = {
     });
   },
 
-  // Nouvelles méthodes pour récupérer les emplois du temps par période
-  async getWeeklySessions(params: {
+  // API methods for fetching sessions by period
+  async getWeeklySessionsFromAPI(params: {
     week_start: string; // Format YYYY-MM-DD
     curriculum?: string;
     teacher?: number;
@@ -180,7 +274,7 @@ export const scheduleService = {
     return apiClient.get(`${API_ENDPOINTS.SCHEDULES}weekly_sessions/`, params);
   },
 
-  async getDailySessions(params: {
+  async getDailySessionsFromAPI(params: {
     date: string; // Format YYYY-MM-DD
     curriculum?: string;
     teacher?: number;
@@ -195,17 +289,41 @@ export const scheduleService = {
     return apiClient.get(`${API_ENDPOINTS.SCHEDULES}daily_sessions/`, params);
   },
 
-  // Fonction utilitaire pour obtenir le début de semaine
-  getWeekStart(date: Date): string {
-    const startOfWeek = new Date(date);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Lundi = début de semaine
-    startOfWeek.setDate(diff);
-    return startOfWeek.toISOString().split('T')[0];
-  },
-
-  // Fonction utilitaire pour formater une date
-  formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+  // Legacy method for backward compatibility - reproduit l'ancienne logique et format
+  async getDailySessions(params: { date: string; curriculum?: string }): Promise<any> {
+    const paginatedResponse = await this.getScheduleSessions({ date: params.date });
+    
+    let filteredResults = paginatedResponse.results || [];
+    
+    // Si un curriculum est spécifié, on doit filtrer les sessions
+    if (params.curriculum && paginatedResponse.results) {
+      // D'abord, récupérer tous les emplois du temps pour trouver ceux du curriculum sélectionné
+      try {
+        const schedulesResponse = await this.getSchedules();
+        const schedulesForCurriculum = schedulesResponse.results?.filter((schedule: any) => {
+          // Le curriculum est identifié par son code
+          return schedule.curriculum_details?.code === params.curriculum;
+        }) || [];
+        
+        const scheduleIds = schedulesForCurriculum.map((s: any) => s.id);
+        
+        // Filtrer les sessions qui appartiennent à ces emplois du temps
+        filteredResults = paginatedResponse.results.filter((session: any) => {
+          return scheduleIds.includes(session.schedule);
+        });
+        
+        console.log(`Filtered ${paginatedResponse.results.length} sessions to ${filteredResults.length} for curriculum ${params.curriculum}`);
+      } catch (error) {
+        console.error('Error filtering by curriculum:', error);
+        // En cas d'erreur, retourner toutes les sessions
+      }
+    }
+    
+    // Retourner le format attendu par l'ancienne page
+    return {
+      ...paginatedResponse,
+      results: filteredResults,
+      sessions: filteredResults
+    };
   },
 };

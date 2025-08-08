@@ -56,25 +56,13 @@ import {
   Info,
   Menu,
   ChevronDown,
-  GripVertical
+  GripVertical,
+  GraduationCap
 } from 'lucide-react';
 
 // Import the API types
 import { ScheduleSession as ApiScheduleSession, Teacher, Course, Room, TimeSlot } from '@/types/api';
 import { scheduleService } from '@/lib/api/services/schedules';
-
-// Fonctions utilitaires
-const formatDate = (date: Date) => {
-  return date.toISOString().split('T')[0];
-};
-
-const getWeekStart = (date: Date) => {
-  const startOfWeek = new Date(date);
-  const day = startOfWeek.getDay();
-  const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-  startOfWeek.setDate(diff);
-  return formatDate(startOfWeek);
-};
 
 // Types
 interface Curriculum {
@@ -121,216 +109,361 @@ function FloatingHeader({
   curricula
 }: any) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   if (!isOpen) {
     return (
       <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        className="fixed top-4 left-4 z-50"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-24 right-6 z-50"
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
       >
         <Button
           onClick={() => setIsOpen(true)}
-          className="rounded-full w-14 h-14 shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 p-0"
+          className="rounded-full w-16 h-16 shadow-xl bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-purple-600 hover:to-purple-700 p-0 transition-all duration-300 border-2 border-white/20"
         >
-          <Calendar className="h-6 w-6 text-white" />
+          <motion.div
+            animate={{ 
+              rotate: isHovered ? 360 : 0,
+              scale: isHovered ? 1.1 : 1 
+            }}
+            transition={{ duration: 0.3 }}
+          >
+            <Calendar className="h-7 w-7 text-white" />
+          </motion.div>
         </Button>
+        
+        {/* Tooltip animé */}
+        <motion.div
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : 10 }}
+          className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap pointer-events-none"
+        >
+          Ouvrir les contrôles
+          <div className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-gray-900 border-t-2 border-b-2 border-t-transparent border-b-transparent"></div>
+        </motion.div>
       </motion.div>
     );
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8, x: -100 }}
-      animate={{ opacity: 1, scale: 1, x: 0 }}
-      className="fixed top-4 left-4 z-50 w-96"
+      initial={{ opacity: 0, scale: 0.8, x: 100, y: 20 }}
+      animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+      exit={{ opacity: 0, scale: 0.8, x: 100, y: 20 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      className="fixed bottom-24 right-6 z-50 w-96"
     >
-      <Card className="shadow-2xl border-2 border-blue-200">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-2 pt-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-lg">Emplois du temps</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setIsOpen(false)}
+      <Card className="shadow-2xl border-2 border-blue-200/50 backdrop-blur-sm bg-white/95">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-2 pt-3 relative overflow-hidden">
+          {/* Effet de brillance animé */}
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: "100%" }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+          />
+          
+          <div className="flex items-center justify-between relative">
+            <motion.div 
+              className="flex items-center gap-2"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
             >
-              <X className="h-4 w-4" />
-            </Button>
+              <motion.div
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              >
+                <Calendar className="h-5 w-5 text-blue-600" />
+              </motion.div>
+              <CardTitle className="text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Emplois du temps
+              </CardTitle>
+            </motion.div>
+            
+            <motion.div
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-full hover:bg-red-100 transition-colors duration-200 group"
+                onClick={() => setIsOpen(false)}
+              >
+                <X className="h-4 w-4 text-gray-500 group-hover:text-red-500 transition-colors duration-200" />
+              </Button>
+            </motion.div>
           </div>
         </CardHeader>
 
         <CardContent className="p-4 space-y-4">
           {/* Sélection de classe */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Classe</label>
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <GraduationCap className="h-4 w-4 text-blue-500" />
+              </motion.div>
+              Classe
+            </label>
             <Select value={selectedClass} onValueChange={onClassChange}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full transition-all duration-200 hover:border-blue-400 focus:ring-blue-500">
                 <SelectValue placeholder="Sélectionner une classe" />
               </SelectTrigger>
               <SelectContent>
                 {curricula.map((c: Curriculum) => (
-                  <SelectItem key={c.code} value={c.code}>
+                  <SelectItem key={c.code} value={c.code} className="hover:bg-blue-50">
                     <span className="font-medium">{c.name}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </motion.div>
 
           {/* Navigation temporelle */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Date</label>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="p-2"
-                onClick={() => {
-                  const newDate = new Date(selectedDate);
-                  if (viewMode === 'week') {
-                    newDate.setDate(newDate.getDate() - 7);
-                  } else if (viewMode === 'day') {
-                    newDate.setDate(newDate.getDate() - 1);
-                  } else {
-                    newDate.setMonth(newDate.getMonth() - 1);
-                  }
-                  onDateChange(newDate);
-                }}
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <motion.div
+                animate={{ rotate: [0, 15, -15, 0] }}
+                transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
               >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
+                <Clock className="h-4 w-4 text-green-500" />
+              </motion.div>
+              Date
+            </label>
+            <div className="flex items-center gap-2">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="p-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                  onClick={() => {
+                    const newDate = new Date(selectedDate);
+                    if (viewMode === 'week') {
+                      newDate.setDate(newDate.getDate() - 7);
+                    } else if (viewMode === 'day') {
+                      newDate.setDate(newDate.getDate() - 1);
+                    } else {
+                      newDate.setMonth(newDate.getMonth() - 1);
+                    }
+                    onDateChange(newDate);
+                  }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+              </motion.div>
 
               <Input 
                 type="date" 
-                value={formatDate(selectedDate)}
+                value={scheduleService.formatDate(selectedDate)}
                 onChange={(e) => onDateChange(new Date(e.target.value))}
-                className="flex-1"
+                className="flex-1 transition-all duration-200 hover:border-blue-400 focus:ring-blue-500"
               />
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="p-2"
-                onClick={() => {
-                  const newDate = new Date(selectedDate);
-                  if (viewMode === 'week') {
-                    newDate.setDate(newDate.getDate() + 7);
-                  } else if (viewMode === 'day') {
-                    newDate.setDate(newDate.getDate() + 1);
-                  } else {
-                    newDate.setMonth(newDate.getMonth() + 1);
-                  }
-                  onDateChange(newDate);
-                }}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="p-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                  onClick={() => {
+                    const newDate = new Date(selectedDate);
+                    if (viewMode === 'week') {
+                      newDate.setDate(newDate.getDate() + 7);
+                    } else if (viewMode === 'day') {
+                      newDate.setDate(newDate.getDate() + 1);
+                    } else {
+                      newDate.setMonth(newDate.getMonth() + 1);
+                    }
+                    onDateChange(newDate);
+                  }}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Mode de vue */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Vue</label>
-            <div className="flex bg-muted rounded-md p-1">
-              <Button
-                variant={viewMode === 'day' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onViewModeChange('day')}
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <motion.div
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 3 }}
               >
-                <CalendarDays className="w-4 h-4 mr-2" />
-                Jour
-              </Button>
-              <Button
-                variant={viewMode === 'week' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onViewModeChange('week')}
-              >
-                <CalendarRange className="w-4 h-4 mr-2" />
-                Semaine
-              </Button>
-              <Button
-                variant={viewMode === 'month' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onViewModeChange('month')}
-              >
-                <Grid3x3 className="w-4 h-4 mr-2" />
-                Mois
-              </Button>
+                <Eye className="h-4 w-4 text-purple-500" />
+              </motion.div>
+              Vue
+            </label>
+            <div className="flex bg-muted rounded-lg p-1 gap-1">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                <Button
+                  variant={viewMode === 'day' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full transition-all duration-200 hover:bg-blue-100"
+                  onClick={() => onViewModeChange('day')}
+                >
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Jour
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                <Button
+                  variant={viewMode === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full transition-all duration-200 hover:bg-blue-100"
+                  onClick={() => onViewModeChange('week')}
+                >
+                  <CalendarRange className="w-4 h-4 mr-2" />
+                  Semaine
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                <Button
+                  variant={viewMode === 'month' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full transition-all duration-200 hover:bg-blue-100"
+                  onClick={() => onViewModeChange('month')}
+                >
+                  <Grid3x3 className="w-4 h-4 mr-2" />
+                  Mois
+                </Button>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Mode édition */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Mode</label>
-            <div className="flex bg-muted rounded-md p-1">
-              <Button
-                variant={editMode === 'view' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onEditModeChange('view')}
-                title="Mode consultation"
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <motion.div
+                animate={{ rotateY: [0, 180, 360] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 4 }}
               >
-                <Eye className="w-4 h-4 mr-2" />
-                Vue
-              </Button>
-              <Button
-                variant={editMode === 'edit' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onEditModeChange('edit')}
-                title="Mode édition"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Éditer
-              </Button>
-              <Button
-                variant={editMode === 'drag' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onEditModeChange('drag')}
-                title="Mode glisser-déposer"
-              >
-                <Move className="w-4 h-4 mr-2" />
-                Déplacer
-              </Button>
+                <Settings className="h-4 w-4 text-orange-500" />
+              </motion.div>
+              Mode
+            </label>
+            <div className="flex bg-muted rounded-lg p-1 gap-1">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                <Button
+                  variant={editMode === 'view' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full transition-all duration-200 hover:bg-green-100"
+                  onClick={() => onEditModeChange('view')}
+                  title="Mode consultation"
+                >
+                  <Eye className="w-4 h-4 mr-1" />
+                  Vue
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                <Button
+                  variant={editMode === 'edit' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full transition-all duration-200 hover:bg-yellow-100"
+                  onClick={() => onEditModeChange('edit')}
+                  title="Mode édition"
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  Éditer
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                <Button
+                  variant={editMode === 'drag' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full transition-all duration-200 hover:bg-purple-100"
+                  onClick={() => onEditModeChange('drag')}
+                  title="Mode glisser-déposer"
+                >
+                  <Move className="w-4 h-4 mr-1" />
+                  Drag
+                </Button>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <motion.div 
+            className="flex gap-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+          >
             {editMode !== 'view' && hasChanges && (
-              <Button
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                onClick={onSave}
+              <motion.div 
+                className="flex-1"
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.98 }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
               >
-                <Save className="w-4 h-4 mr-2" />
-                Sauvegarder
-              </Button>
+                <Button
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg"
+                  onClick={onSave}
+                >
+                  <motion.div
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                  </motion.div>
+                  Sauvegarder
+                </Button>
+              </motion.div>
             )}
 
-            <Button
-              variant="outline"
-              onClick={onExport}
-              title="Exporter"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
+            <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                onClick={onExport}
+                title="Exporter"
+                className="transition-all duration-200 hover:bg-blue-50 hover:border-blue-300"
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+            </motion.div>
 
-            <Button
-              variant="outline"
-              onClick={onImport}
-              title="Importer"
-            >
-              <Upload className="w-4 h-4" />
-            </Button>
-          </div>
+            <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                onClick={onImport}
+                title="Importer"
+                className="transition-all duration-200 hover:bg-blue-50 hover:border-blue-300"
+              >
+                <Upload className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          </motion.div>
         </CardContent>
       </Card>
     </motion.div>
@@ -418,7 +551,7 @@ function FloatingStats({ sessions, conflicts }: any) {
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        className="fixed top-20 right-4 z-50"
+        className="fixed bottom-40 right-6 z-50"
       >
         <Button
           onClick={() => setIsOpen(true)}
@@ -449,7 +582,7 @@ function FloatingStats({ sessions, conflicts }: any) {
     <motion.div
       initial={{ opacity: 0, scale: 0.8, y: 100 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="fixed top-20 right-4 z-50 w-80"
+      className="fixed bottom-40 right-6 z-50 w-80"
     >
       <Card className="shadow-2xl border-2 border-green-200">
         <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 pb-2 pt-3">
@@ -753,15 +886,21 @@ export default function SchedulePage() {
     
     setSessionsLoading(true);
     try {
-      // Pour la vue semaine, on charge les sessions de la date sélectionnée
-      const dateString = formatDate(selectedDate);
-      const data = await scheduleService.getScheduleSessions({
-        date: dateString
+      const weekStart = scheduleService.getWeekStart(selectedDate);
+      const data = await scheduleService.getWeeklySessions({
+        week_start: weekStart,
+        curriculum: selectedCurriculum
       });
       
       setWeeklyData(data);
-      setSessions(data.results || []);
-      setFilteredSessions(data.results || []);
+      setSessions(Object.values(data.sessions_by_day).flat() as ScheduleSession[]);
+      setFilteredSessions(Object.values(data.sessions_by_day).flat() as ScheduleSession[]);
+      
+      // Debug: afficher les données reçues
+      if (data.results && data.results.length > 0) {
+        console.log('Sample session data:', data.results[0]);
+        console.log('Days in data:', data.results.map((s: any) => s.time_slot_details?.day_of_week).filter((d: any) => d));
+      }
       
     } catch (error) {
       console.error('Erreur lors du chargement des données hebdomadaires:', error);
@@ -778,14 +917,21 @@ export default function SchedulePage() {
     
     setSessionsLoading(true);
     try {
-      const dateString = formatDate(selectedDate);
-      const data = await scheduleService.getScheduleSessions({
-        date: dateString
+      const dateString = scheduleService.formatDate(selectedDate);
+      const data = await scheduleService.getDailySessions({
+        date: dateString,
+        curriculum: selectedCurriculum
       });
       
       setDailyData(data);
       setSessions(data.results || []);
       setFilteredSessions(data.results || []);
+      
+      // Debug: afficher les données reçues
+      if (data.results && data.results.length > 0) {
+        console.log('Daily session data:', data.results[0]);
+        console.log('Session dates:', data.results.map((s: any) => s.specific_date).filter((d: any) => d));
+      }
       
     } catch (error) {
       console.error('Erreur lors du chargement des données journalières:', error);
@@ -948,8 +1094,16 @@ export default function SchedulePage() {
           <div className="space-y-2">
             {timeSlots.map(time => {
               const slotSessions = filteredSessions.filter(session => {
+                // Vérifier que c'est le bon jour
+                const sessionDate = session.specific_date;
+                const isCorrectDay = sessionDate ? 
+                  new Date(sessionDate).toDateString() === selectedDate.toDateString() : true;
+                
+                // Vérifier l'heure
                 const sessionTime = session.specific_start_time || session.time_slot_details?.start_time;
-                return sessionTime?.startsWith(time.slice(0, 2));
+                const timeMatches = sessionTime?.startsWith(time.slice(0, 2));
+                
+                return isCorrectDay && timeMatches;
               });
 
               return (
@@ -1019,7 +1173,7 @@ export default function SchedulePage() {
       { key: 'saturday', label: 'Samedi' }
     ];
 
-    if (!filteredSessions || filteredSessions.length === 0) {
+    if (!weeklyData || !weeklyData.sessions_by_day) {
       return <div className="text-center py-8 text-muted-foreground">Aucune donnée disponible</div>;
     }
 
@@ -1042,16 +1196,9 @@ export default function SchedulePage() {
                 <tr key={time} className="border-b border-gray-100">
                   <td className="p-2 text-xs font-medium text-gray-600 bg-gray-50">{time}</td>
                   {days.map(day => {
-                    const daySessions = filteredSessions.filter((session: ScheduleSession) => {
-                      // Vérifier le jour de la semaine
-                      const sessionDay = session.time_slot_details?.day_of_week;
-                      const dayMatches = sessionDay?.toLowerCase() === day.key;
-                      
-                      // Vérifier l'heure
+                    const daySessions = (weeklyData.sessions_by_day[day.key] || []).filter((session: ScheduleSession) => {
                       const sessionTime = session.specific_start_time || session.time_slot_details?.start_time;
-                      const timeMatches = sessionTime?.startsWith(time.slice(0, 2));
-                      
-                      return dayMatches && timeMatches;
+                      return sessionTime?.startsWith(time.slice(0, 2));
                     });
 
                     return (
