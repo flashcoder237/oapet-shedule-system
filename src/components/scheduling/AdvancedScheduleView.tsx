@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { FloatingAIConflictDetector } from './FloatingAIConflictDetector';
 
 // Types
 interface TimeSlot {
@@ -89,11 +90,38 @@ const DAYS = [
   { key: 'saturday', label: 'Samedi' }
 ];
 
-const TIME_SLOTS = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
-  '16:00', '16:30', '17:00', '17:30', '18:00'
-];
+// Génération d'une grille horaire détaillée (07:30 à 18:30 par intervalles de 15 minutes)
+const generateTimeSlots = () => {
+  const slots = [];
+  let hour = 7;
+  let minute = 30;
+  
+  while (hour < 18 || (hour === 18 && minute <= 30)) {
+    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    slots.push(timeString);
+    
+    minute += 15;
+    if (minute >= 60) {
+      minute = 0;
+      hour++;
+    }
+  }
+  return slots;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+
+// Identifie les créneaux principaux (toutes les 2 heures)
+const isMainTimeSlot = (time: string): boolean => {
+  const [hour, minute] = time.split(':').map(Number);
+  return minute === 0 && hour % 2 === 0;
+};
+
+// Identifie les créneaux horaires (toutes les heures)
+const isHourSlot = (time: string): boolean => {
+  const [, minute] = time.split(':').map(Number);
+  return minute === 0;
+};
 
 export function AdvancedScheduleView({ 
   sessions, 
@@ -130,14 +158,32 @@ export function AdvancedScheduleView({
   };
 
   const getSessionsForSlot = (day: string, time: string) => {
-    return sessions.filter(session => 
-      session.timeSlot.day === day && session.timeSlot.startTime === time
-    );
+    return sessions.filter(session => {
+      if (session.timeSlot.day !== day) return false;
+      
+      // Vérifier si la session commence exactement à ce créneau ou le chevauche
+      const sessionStart = session.timeSlot.startTime;
+      const sessionEnd = session.timeSlot.endTime;
+      
+      // Conversion en minutes pour comparaison précise
+      const timeToMinutes = (timeStr: string) => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
+      const slotMinutes = timeToMinutes(time);
+      const nextSlotMinutes = slotMinutes + 15; // Prochaine slot de 15 min
+      const startMinutes = timeToMinutes(sessionStart);
+      const endMinutes = timeToMinutes(sessionEnd);
+      
+      // La session chevauche ce créneau si elle commence avant la fin du slot et se termine après le début
+      return startMinutes < nextSlotMinutes && endMinutes > slotMinutes;
+    });
   };
 
   const calculateSessionHeight = (duration: number) => {
-    const slotsNeeded = Math.ceil(duration / 30); // 30 min par slot
-    return `${slotsNeeded * 4}rem`; // 4rem par slot
+    const slotsNeeded = Math.ceil(duration / 15); // 15 min par slot
+    return `${slotsNeeded * 1.5}rem`; // 1.5rem par slot (plus compact)
   };
 
   const handleDragStart = (session: ScheduleSession) => {
@@ -221,32 +267,49 @@ export function AdvancedScheduleView({
           </div>
         )}
 
-        {/* Contenu de la session */}
+        {/* Contenu de la session - horaires proéminents */}
         <div className="space-y-1">
-          <div className="font-semibold text-sm truncate">
-            {session.course.code}
-          </div>
-          <div className="text-xs text-muted-foreground truncate">
-            {session.course.name}
-          </div>
-          <div className="flex items-center gap-1 text-xs">
-            <Clock className="w-3 h-3" />
-            <span>{session.timeSlot.startTime}-{session.timeSlot.endTime}</span>
-          </div>
-          {session.course.room && (
-            <div className="flex items-center gap-1 text-xs">
-              <MapPin className="w-3 h-3" />
-              <span className="truncate">{session.course.room.code}</span>
+          {/* Horaires très visibles */}
+          <div className="bg-white/80 rounded px-2 py-1 text-center mb-2">
+            <div className="font-bold text-xs text-primary font-mono">
+              {session.timeSlot.startTime}-{session.timeSlot.endTime}
             </div>
-          )}
-          <div className="flex items-center gap-1 text-xs">
-            <User className="w-3 h-3" />
-            <span className="truncate">{session.course.teacher.name}</span>
           </div>
           
-          <Badge className={`text-xs ${getSessionTypeColor(session.course.type)}`}>
-            {session.course.type}
-          </Badge>
+          {/* Code et type du cours */}
+          <div className="flex items-center justify-between mb-1">
+            <div className="font-semibold text-xs truncate">
+              {session.course.code}
+            </div>
+            <Badge className={`text-xs px-1 py-0 ${getSessionTypeColor(session.course.type)}`}>
+              {session.course.type}
+            </Badge>
+          </div>
+          
+          {/* Nom du cours (seulement si assez de place) */}
+          {session.course.duration > 45 && (
+            <div className="text-xs text-muted-foreground truncate leading-tight">
+              {session.course.name}
+            </div>
+          )}
+          
+          {/* Informations compactes */}
+          <div className="space-y-0.5">
+            {session.course.room && (
+              <div className="flex items-center gap-1 text-xs">
+                <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
+                <span className="truncate font-medium">{session.course.room.code}</span>
+              </div>
+            )}
+            
+            {/* Enseignant seulement si assez de durée */}
+            {session.course.duration > 30 && (
+              <div className="flex items-center gap-1 text-xs">
+                <User className="w-2.5 h-2.5 flex-shrink-0" />
+                <span className="truncate">{session.course.teacher.name.split(' ').pop()}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Menu contextuel en mode édition */}
@@ -283,7 +346,7 @@ export function AdvancedScheduleView({
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden relative">
       {/* Header avec contrôles */}
       <div className="p-4 border-b border-border bg-muted/50">
         <div className="flex items-center justify-between">
@@ -332,17 +395,28 @@ export function AdvancedScheduleView({
               </tr>
             </thead>
             <tbody>
-              {TIME_SLOTS.map((time, index) => (
-                <tr key={time} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                  <td className="p-2 font-medium text-muted-foreground bg-muted/10 sticky left-0 z-10 border-r border-border">
-                    <div className="text-sm font-bold text-primary">
-                      {time}
+              {TIME_SLOTS.map((time, index) => {
+                const isMain = isMainTimeSlot(time);
+                const isHour = isHourSlot(time);
+                
+                return (
+                <tr key={time} className={`transition-colors ${
+                  isMain ? 'border-b-2 border-gray-300 bg-gray-50/50' :
+                  isHour ? 'border-b border-gray-200 bg-gray-25/50' :
+                  'border-b border-gray-100 hover:bg-muted/10'
+                }`}>
+                  <td className={`p-1 font-medium text-muted-foreground sticky left-0 z-10 border-r border-border ${
+                    isMainTimeSlot(time) ? 'bg-muted/20 border-b-2 border-gray-400' : 
+                    isHourSlot(time) ? 'bg-muted/10 border-b border-gray-300' : 
+                    'bg-muted/5 border-b border-gray-100'
+                  }`}>
+                    <div className={`font-mono ${
+                      isMainTimeSlot(time) ? 'text-sm font-bold text-primary' :
+                      isHourSlot(time) ? 'text-xs font-semibold text-secondary-foreground' :
+                      'text-xs text-muted-foreground'
+                    }`}>
+                      {isMainTimeSlot(time) || isHourSlot(time) ? time : ''}
                     </div>
-                    {index < TIME_SLOTS.length - 1 && (
-                      <div className="text-xs text-muted-foreground">
-                        {TIME_SLOTS[index + 1]}
-                      </div>
-                    )}
                   </td>
                   {DAYS.map(day => {
                     const slotSessions = getSessionsForSlot(day.key, time);
@@ -354,7 +428,7 @@ export function AdvancedScheduleView({
                         className={`p-1 align-top relative transition-colors ${
                           isHovered && draggedSession ? 'bg-primary/10 ring-2 ring-primary/30' : ''
                         }`}
-                        style={{ height: '4rem' }}
+                        style={{ height: '1.5rem' }}
                         onDragOver={(e) => {
                           e.preventDefault();
                           if (draggedSession) {
@@ -379,9 +453,12 @@ export function AdvancedScheduleView({
                           />
                         )}
                         
-                        {/* Sessions existantes */}
+                        {/* Sessions existantes - afficher uniquement dans le premier slot */}
                         <div className="relative z-10 space-y-1">
-                          {slotSessions.map(session => renderSessionCard(session))}
+                          {slotSessions
+                            .filter(session => session.timeSlot.startTime === time) // Afficher seulement dans le slot de début
+                            .map(session => renderSessionCard(session))
+                          }
                         </div>
                         
                         {/* Aperçu de drop */}
@@ -394,7 +471,8 @@ export function AdvancedScheduleView({
                     );
                   })}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -524,6 +602,27 @@ export function AdvancedScheduleView({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Assistant IA flottant */}
+      <FloatingAIConflictDetector
+        sessions={sessions}
+        onResolveConflict={(sessionId, conflictType) => {
+          onConflictResolve(sessionId, conflictType);
+          addToast({
+            title: "Conflit résolu",
+            description: `Le conflit de type "${conflictType}" a été résolu.`,
+            variant: "default"
+          });
+        }}
+        onAutoResolve={() => {
+          // Logique de résolution automatique
+          addToast({
+            title: "Résolution automatique",
+            description: "L'IA a tenté de résoudre les conflits automatiquement.",
+            variant: "default"
+          });
+        }}
+      />
     </div>
   );
 }

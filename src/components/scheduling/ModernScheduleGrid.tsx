@@ -91,12 +91,38 @@ const DAYS = [
   { key: 'saturday', label: 'Samedi', shortLabel: 'SAM' }
 ];
 
-// Horaires standards pour les universités (07:30 à 18:30)
-const TIME_SLOTS = [
-  '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00',
-  '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00',
-  '17:30', '18:00', '18:30'
-];
+// Génération d'une grille horaire détaillée (07:30 à 18:30 par intervalles de 15 minutes)
+const generateTimeSlots = () => {
+  const slots = [];
+  let hour = 7;
+  let minute = 30;
+  
+  while (hour < 18 || (hour === 18 && minute <= 30)) {
+    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    slots.push(timeString);
+    
+    minute += 15;
+    if (minute >= 60) {
+      minute = 0;
+      hour++;
+    }
+  }
+  return slots;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+
+// Identifie les créneaux principaux (toutes les 2 heures)
+const isMainTimeSlot = (time: string): boolean => {
+  const [hour, minute] = time.split(':').map(Number);
+  return minute === 0 && hour % 2 === 0;
+};
+
+// Identifie les créneaux horaires (toutes les heures)
+const isHourSlot = (time: string): boolean => {
+  const [, minute] = time.split(':').map(Number);
+  return minute === 0;
+};
 
 export function ModernScheduleGrid({
   sessions,
@@ -150,14 +176,14 @@ export function ModernScheduleGrid({
     return hours * 60 + minutes;
   };
 
-  // Calculer la position d'une session dans la grille
+  // Calculer la position d'une session dans la grille (intervalles de 15 minutes)
   const getSessionPosition = (session: EnhancedScheduleSession) => {
     const startMinutes = timeToMinutes(session.startTime);
     const endMinutes = timeToMinutes(session.endTime);
     const firstSlotMinutes = timeToMinutes(TIME_SLOTS[0]); // 07:30 = 450 minutes
     
-    const startRow = Math.max(0, Math.floor((startMinutes - firstSlotMinutes) / 30));
-    const duration = Math.max(1, Math.ceil((endMinutes - startMinutes) / 30));
+    const startRow = Math.max(0, Math.floor((startMinutes - firstSlotMinutes) / 15));
+    const duration = Math.max(1, Math.ceil((endMinutes - startMinutes) / 15));
     
     return { startRow, duration };
   };
@@ -229,9 +255,9 @@ export function ModernScheduleGrid({
           ${isEditMode ? 'hover:scale-102 cursor-grab active:cursor-grabbing' : ''}
         `}
         style={{
-          top: `${startRow * 32 + 2}px`,
-          height: `${duration * 32 - 4}px`,
-          minHeight: '28px'
+          top: `${startRow * 16 + 1}px`,
+          height: `${duration * 16 - 2}px`,
+          minHeight: '14px'
         }}
         onClick={(e) => {
           e.stopPropagation();
@@ -247,17 +273,17 @@ export function ModernScheduleGrid({
         }}
         whileHover={{ scale: isEditMode ? 1.02 : 1.01 }}
       >
-        <div className="p-2 h-full flex flex-col justify-between">
+        <div className="p-1 h-full flex flex-col justify-between text-xs">
           <div className="flex-1 min-h-0">
-            <div className="flex items-center justify-between mb-1">
-              <Badge variant="secondary" className="text-xs font-bold px-1 py-0">
+            <div className="flex items-center justify-between mb-0.5">
+              <Badge variant="secondary" className="text-xs font-bold px-1 py-0 h-4">
                 {session.course.type}
               </Badge>
               {hasConflicts && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <AlertTriangle className="h-3 w-3 text-red-600 flex-shrink-0" />
+                      <AlertTriangle className="h-2.5 w-2.5 text-red-600 flex-shrink-0" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
                       <div className="space-y-1">
@@ -271,52 +297,56 @@ export function ModernScheduleGrid({
               )}
             </div>
 
-            <div className="text-xs font-semibold leading-tight mb-1 line-clamp-2">
-              {session.course.name}
+            {/* Horaire proéminent */}
+            <div className="font-mono text-xs font-bold text-center bg-white/60 rounded px-1 mb-0.5">
+              {session.startTime}-{session.endTime}
             </div>
 
-            <div className="text-xs space-y-0.5 text-gray-700">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs">
-                  {session.startTime}-{session.endTime}
-                </span>
+            {/* Nom du cours - adapté à la taille */}
+            {duration >= 8 && (
+              <div className="text-xs font-semibold leading-tight mb-1 line-clamp-2">
+                {session.course.name}
               </div>
-              
+            )}
+            
+            {/* Informations essentielles */}
+            <div className="text-xs space-y-0.5 text-gray-700">              
               <div className="flex items-center gap-1 truncate">
-                <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
+                <MapPin className="h-2 w-2 flex-shrink-0" />
                 <span className="truncate font-medium">{session.room.code}</span>
               </div>
               
-              {duration >= 3 && (
+              {duration >= 6 && (
                 <div className="flex items-center gap-1 truncate">
-                  <User className="h-2.5 w-2.5 flex-shrink-0" />
+                  <User className="h-2 w-2 flex-shrink-0" />
                   <span className="truncate">{session.course.teacher.name.split(' ').pop()}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {duration >= 4 && (
+          {/* Informations supplémentaires pour les longues sessions */}
+          {duration >= 12 && (
             <div className="text-xs text-gray-600 pt-1 border-t border-gray-300 text-center truncate">
               {session.course.curriculum.name}
             </div>
           )}
 
           {isEditMode && (
-            <div className="absolute top-1 right-1 flex gap-1">
+            <div className="absolute top-0.5 right-0.5 flex gap-0.5">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-5 w-5 p-0 bg-white/80 hover:bg-white"
+                className="h-4 w-4 p-0 bg-white/80 hover:bg-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   onSessionEdit(session);
                 }}
               >
-                <Edit className="h-3 w-3" />
+                <Edit className="h-2.5 w-2.5" />
               </Button>
-              <div className="h-5 w-5 bg-white/80 rounded flex items-center justify-center">
-                <GripVertical className="h-3 w-3 text-gray-500" />
+              <div className="h-4 w-4 bg-white/80 rounded flex items-center justify-center">
+                <GripVertical className="h-2.5 w-2.5 text-gray-500" />
               </div>
             </div>
           )}
@@ -413,19 +443,32 @@ export function ModernScheduleGrid({
                 ))}
               </div>
 
-              {/* Grille horaire */}
-              <div className="grid grid-cols-7" style={{ height: `${TIME_SLOTS.length * 32}px` }}>
+              {/* Grille horaire détaillée */}
+              <div className="grid grid-cols-7" style={{ height: `${TIME_SLOTS.length * 16}px` }}>
                 {/* Colonne des horaires */}
                 <div className="border-r-2 border-gray-200 bg-gray-50">
-                  {TIME_SLOTS.map((time, index) => (
-                    <div 
-                      key={time}
-                      className="h-8 flex items-center justify-center text-xs font-mono text-gray-600 border-b border-gray-100"
-                      style={{ backgroundColor: index % 2 === 0 ? '#f9fafb' : '#ffffff' }}
-                    >
-                      {time}
-                    </div>
-                  ))}
+                  {TIME_SLOTS.map((time, index) => {
+                    const isMain = isMainTimeSlot(time);
+                    const isHour = isHourSlot(time);
+                    
+                    return (
+                      <div 
+                        key={time}
+                        className={`
+                          h-4 flex items-center justify-center font-mono text-gray-600
+                          ${isMain ? 'border-b-2 border-gray-400 bg-gray-100 text-xs font-bold' :
+                            isHour ? 'border-b border-gray-300 bg-gray-75 text-xs' :
+                            'border-b border-gray-100 text-xs'}
+                        `}
+                        style={{ 
+                          backgroundColor: isMain ? '#f3f4f6' : isHour ? '#f9fafb' : '#ffffff',
+                          fontSize: isMain ? '11px' : isHour ? '10px' : '9px'
+                        }}
+                      >
+                        {isMain || isHour ? time : ''}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Colonnes des jours */}
@@ -437,7 +480,7 @@ export function ModernScheduleGrid({
                       if (draggedSession) {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const y = e.clientY - rect.top;
-                        const slotIndex = Math.floor(y / 32);
+                        const slotIndex = Math.floor(y / 16);
                         const targetTime = TIME_SLOTS[Math.max(0, Math.min(slotIndex, TIME_SLOTS.length - 1))];
                         handleDrop(e, day.key, targetTime);
                       }
@@ -447,17 +490,27 @@ export function ModernScheduleGrid({
                       e.dataTransfer.dropEffect = 'move';
                     }}
                   >
-                    {/* Lignes de fond pour les créneaux */}
-                    {TIME_SLOTS.map((_, index) => (
-                      <div
-                        key={index}
-                        className="absolute left-0 right-0 h-8 border-b border-gray-100"
-                        style={{ 
-                          top: `${index * 32}px`,
-                          backgroundColor: index % 2 === 0 ? '#fbfcfd' : '#ffffff'
-                        }}
-                      />
-                    ))}
+                    {/* Lignes de fond pour les créneaux détaillés */}
+                    {TIME_SLOTS.map((time, index) => {
+                      const isMain = isMainTimeSlot(time);
+                      const isHour = isHourSlot(time);
+                      
+                      return (
+                        <div
+                          key={index}
+                          className={`
+                            absolute left-0 right-0 h-4
+                            ${isMain ? 'border-b-2 border-gray-300' :
+                              isHour ? 'border-b border-gray-200' :
+                              'border-b border-gray-100'}
+                          `}
+                          style={{ 
+                            top: `${index * 16}px`,
+                            backgroundColor: isMain ? '#f8fafc' : isHour ? '#fbfcfd' : '#ffffff'
+                          }}
+                        />
+                      );
+                    })}
 
                     {/* Sessions du jour */}
                     {sessionsByDay[day.key]?.map(session => renderSession(session))}
@@ -485,7 +538,7 @@ export function ModernScheduleGrid({
         </CardContent>
       </Card>
 
-      {/* Assistant IA */}
+      {/* Assistant IA - Maintenant toujours flottant */}
       <AIConflictDetector
         conflicts={aiConflicts}
         isVisible={showAIDetector}
