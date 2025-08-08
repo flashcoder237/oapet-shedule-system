@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import AnimatedBackground from '@/components/ui/animated-background';
 import { MicroButton, MicroCard } from '@/components/ui/micro-interactions';
+import { scheduleService } from '@/lib/api/services/schedules';
 import { 
   Calendar, 
   Clock, 
@@ -61,20 +62,6 @@ import {
 
 // Import the API types
 import { ScheduleSession as ApiScheduleSession, Teacher, Course, Room, TimeSlot } from '@/types/api';
-import { scheduleService } from '@/lib/api/services/schedules';
-
-// Fonctions utilitaires
-const formatDate = (date: Date) => {
-  return date.toISOString().split('T')[0];
-};
-
-const getWeekStart = (date: Date) => {
-  const startOfWeek = new Date(date);
-  const day = startOfWeek.getDay();
-  const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-  startOfWeek.setDate(diff);
-  return formatDate(startOfWeek);
-};
 
 // Types
 interface Curriculum {
@@ -104,8 +91,8 @@ type FilterType = 'all' | 'CM' | 'TD' | 'TP' | 'EXAM';
 type ViewMode = 'week' | 'day' | 'month';
 type EditMode = 'view' | 'edit' | 'drag';
 
-// Composant Header flottant comme l'assistant IA
-function FloatingHeader({ 
+// Composant Header compact et flottant
+function CompactHeader({ 
   selectedClass,
   onClassChange,
   viewMode,
@@ -120,318 +107,202 @@ function FloatingHeader({
   hasChanges,
   curricula
 }: any) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (!isOpen) {
-    return (
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        className="fixed top-4 left-4 z-50"
-      >
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="rounded-full w-14 h-14 shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 p-0"
-        >
-          <Calendar className="h-6 w-6 text-white" />
-        </Button>
-      </motion.div>
-    );
-  }
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8, x: -100 }}
-      animate={{ opacity: 1, scale: 1, x: 0 }}
-      className="fixed top-4 left-4 z-50 w-96"
+      initial={{ y: 0 }}
+      animate={{ y: isCollapsed ? -60 : 0 }}
+      className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-border shadow-sm"
     >
-      <Card className="shadow-2xl border-2 border-blue-200">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-2 pt-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-lg">Emplois du temps</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setIsOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
+      {/* Barre principale ultra-compacte */}
+      <div className="h-14 px-4 flex items-center justify-between">
+        {/* Gauche - Titre et sélection classe */}
+        <div className="flex items-center gap-3">
+          <Calendar className="w-5 h-5 text-primary" />
+          <h1 className="text-lg font-bold text-primary hidden sm:block">Emplois du temps</h1>
+          
+          <Select value={selectedClass} onValueChange={onClassChange}>
+            <SelectTrigger className="w-48 h-8 text-sm">
+              <SelectValue placeholder="Classe" />
+            </SelectTrigger>
+            <SelectContent>
+              {curricula.map((c: Curriculum) => (
+                <SelectItem key={c.code} value={c.code}>
+                  <span className="font-medium">{c.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <CardContent className="p-4 space-y-4">
-          {/* Sélection de classe */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Classe</label>
-            <Select value={selectedClass} onValueChange={onClassChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sélectionner une classe" />
-              </SelectTrigger>
-              <SelectContent>
-                {curricula.map((c: Curriculum) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    <span className="font-medium">{c.name}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Centre - Navigation temporelle */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const newDate = new Date(selectedDate);
+              if (viewMode === 'week') {
+                newDate.setDate(newDate.getDate() - 7);
+              } else if (viewMode === 'day') {
+                newDate.setDate(newDate.getDate() - 1);
+              } else {
+                newDate.setMonth(newDate.getMonth() - 1);
+              }
+              onDateChange(newDate);
+            }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
 
-          {/* Navigation temporelle */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Date</label>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="p-2"
-                onClick={() => {
-                  const newDate = new Date(selectedDate);
-                  if (viewMode === 'week') {
-                    newDate.setDate(newDate.getDate() - 7);
-                  } else if (viewMode === 'day') {
-                    newDate.setDate(newDate.getDate() - 1);
-                  } else {
-                    newDate.setMonth(newDate.getMonth() - 1);
-                  }
-                  onDateChange(newDate);
-                }}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
+          <Input 
+            type="date" 
+            value={scheduleService.formatDate(selectedDate)}
+            onChange={(e) => onDateChange(new Date(e.target.value))}
+            className="h-8 w-32 text-sm"
+          />
 
-              <Input 
-                type="date" 
-                value={formatDate(selectedDate)}
-                onChange={(e) => onDateChange(new Date(e.target.value))}
-                className="flex-1"
-              />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const newDate = new Date(selectedDate);
+              if (viewMode === 'week') {
+                newDate.setDate(newDate.getDate() + 7);
+              } else if (viewMode === 'day') {
+                newDate.setDate(newDate.getDate() + 1);
+              } else {
+                newDate.setMonth(newDate.getMonth() + 1);
+              }
+              onDateChange(newDate);
+            }}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="p-2"
-                onClick={() => {
-                  const newDate = new Date(selectedDate);
-                  if (viewMode === 'week') {
-                    newDate.setDate(newDate.getDate() + 7);
-                  } else if (viewMode === 'day') {
-                    newDate.setDate(newDate.getDate() + 1);
-                  } else {
-                    newDate.setMonth(newDate.getMonth() + 1);
-                  }
-                  onDateChange(newDate);
-                }}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
+        {/* Droite - Actions et modes */}
+        <div className="flex items-center gap-2">
           {/* Mode de vue */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Vue</label>
-            <div className="flex bg-muted rounded-md p-1">
-              <Button
-                variant={viewMode === 'day' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onViewModeChange('day')}
-              >
-                <CalendarDays className="w-4 h-4 mr-2" />
-                Jour
-              </Button>
-              <Button
-                variant={viewMode === 'week' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onViewModeChange('week')}
-              >
-                <CalendarRange className="w-4 h-4 mr-2" />
-                Semaine
-              </Button>
-              <Button
-                variant={viewMode === 'month' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onViewModeChange('month')}
-              >
-                <Grid3x3 className="w-4 h-4 mr-2" />
-                Mois
-              </Button>
-            </div>
+          <div className="flex bg-muted rounded-md p-0.5">
+            <Button
+              variant={viewMode === 'day' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onViewModeChange('day')}
+            >
+              <CalendarDays className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={viewMode === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onViewModeChange('week')}
+            >
+              <CalendarRange className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={viewMode === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onViewModeChange('month')}
+            >
+              <Grid3x3 className="w-3 h-3" />
+            </Button>
           </div>
 
           {/* Mode édition */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Mode</label>
-            <div className="flex bg-muted rounded-md p-1">
-              <Button
-                variant={editMode === 'view' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onEditModeChange('view')}
-                title="Mode consultation"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Vue
-              </Button>
-              <Button
-                variant={editMode === 'edit' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onEditModeChange('edit')}
-                title="Mode édition"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Éditer
-              </Button>
-              <Button
-                variant={editMode === 'drag' ? 'default' : 'ghost'}
-                size="sm"
-                className="flex-1"
-                onClick={() => onEditModeChange('drag')}
-                title="Mode glisser-déposer"
-              >
-                <Move className="w-4 h-4 mr-2" />
-                Déplacer
-              </Button>
-            </div>
+          <div className="flex bg-muted rounded-md p-0.5">
+            <Button
+              variant={editMode === 'view' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onEditModeChange('view')}
+              title="Mode consultation"
+            >
+              <Eye className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={editMode === 'edit' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onEditModeChange('edit')}
+              title="Mode édition"
+            >
+              <Edit className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={editMode === 'drag' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onEditModeChange('drag')}
+              title="Mode glisser-déposer"
+            >
+              <Move className="w-3 h-3" />
+            </Button>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
-            {editMode !== 'view' && hasChanges && (
-              <Button
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                onClick={onSave}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Sauvegarder
-              </Button>
-            )}
-
+          {editMode !== 'view' && hasChanges && (
             <Button
-              variant="outline"
-              onClick={onExport}
-              title="Exporter"
+              size="sm"
+              className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700"
+              onClick={onSave}
             >
-              <Download className="w-4 h-4" />
+              <Save className="w-3 h-3 mr-1" />
+              Sauvegarder
             </Button>
+          )}
 
-            <Button
-              variant="outline"
-              onClick={onImport}
-              title="Importer"
-            >
-              <Upload className="w-4 h-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={onExport}
+            title="Exporter"
+          >
+            <Download className="w-3 h-3" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={onImport}
+            title="Importer"
+          >
+            <Upload className="w-3 h-3" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            <ChevronDown className={`w-3 h-3 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+          </Button>
+        </div>
+      </div>
     </motion.div>
   );
 }
 
-// Composant de filtres au-dessus du tableau
-function FiltersSection({ 
-  sessions, 
-  filteredSessions, 
-  onFilterChange,
-  activeFilter,
-  searchTerm,
-  onSearchChange 
-}: any) {
-  const [filter, setFilter] = useState<FilterType>('all');
-
-  const filterOptions = [
-    { value: 'all', label: 'Tous', count: sessions.length },
-    { value: 'CM', label: 'CM', count: sessions.filter((s: ScheduleSession) => s.session_type === 'CM').length },
-    { value: 'TD', label: 'TD', count: sessions.filter((s: ScheduleSession) => s.session_type === 'TD').length },
-    { value: 'TP', label: 'TP', count: sessions.filter((s: ScheduleSession) => s.session_type === 'TP').length },
-    { value: 'EXAM', label: 'Examens', count: sessions.filter((s: ScheduleSession) => s.session_type === 'EXAM').length }
-  ];
-
-  const handleFilterChange = (newFilter: FilterType) => {
-    setFilter(newFilter);
-    onFilterChange(newFilter);
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow-sm border border-border p-4 mb-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Filtres et recherche</h3>
-        <Badge variant="secondary">
-          {filteredSessions.length} session{filteredSessions.length > 1 ? 's' : ''}
-        </Badge>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Barre de recherche */}
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par cours, enseignant, salle..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {/* Filtres par type */}
-        <div className="flex gap-2">
-          {filterOptions.map(option => (
-            <Button
-              key={option.value}
-              variant={filter === option.value ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleFilterChange(option.value as FilterType)}
-              className="relative"
-            >
-              {option.label}
-              <Badge 
-                variant={filter === option.value ? 'secondary' : 'default'}
-                className="ml-2 text-xs"
-              >
-                {option.count}
-              </Badge>
-            </Button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Composant de stats flottantes comme l'assistant IA
-function FloatingStats({ sessions, conflicts }: any) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (!isOpen) {
+// Composant de stats flottantes
+function FloatingStats({ sessions, conflicts, onToggle, isVisible }: any) {
+  if (!isVisible) {
     return (
-      <motion.div
+      <motion.button
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        className="fixed top-20 right-4 z-50"
+        className="fixed top-20 right-4 z-30 bg-white rounded-full shadow-lg p-3"
+        onClick={onToggle}
       >
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="rounded-full w-14 h-14 shadow-lg bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 p-0"
-        >
-          <BarChart3 className="h-6 w-6 text-white" />
-          {conflicts.length > 0 && (
-            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-              {conflicts.length}
-            </div>
-          )}
-        </Button>
-      </motion.div>
+        <BarChart3 className="w-5 h-5 text-primary" />
+      </motion.button>
     );
   }
 
@@ -447,76 +318,58 @@ function FloatingStats({ sessions, conflicts }: any) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: 100 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="fixed top-20 right-4 z-50 w-80"
+      initial={{ opacity: 0, x: 100 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="fixed top-20 right-4 z-30 w-64 bg-white rounded-lg shadow-lg border border-border p-4"
     >
-      <Card className="shadow-2xl border-2 border-green-200">
-        <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 pb-2 pt-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-green-600" />
-              <CardTitle className="text-lg">Statistiques</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setIsOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-primary" />
+          Statistiques
+        </h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={onToggle}
+        >
+          <X className="w-3 h-3" />
+        </Button>
+      </div>
 
-        <CardContent className="p-4">
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-              <div className="text-xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-xs text-blue-800">Sessions</div>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-              <div className="text-xl font-bold text-green-600">{stats.CM}</div>
-              <div className="text-xs text-green-800">CM</div>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-              <div className="text-xl font-bold text-purple-600">{stats.TD}</div>
-              <div className="text-xs text-purple-800">TD</div>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">{stats.TP}</div>
-              <div className="text-xs text-orange-800">TP</div>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-r from-red-50 to-red-100 rounded-lg">
-              <div className="text-xl font-bold text-red-600">{stats.EXAM}</div>
-              <div className="text-xs text-red-800">Examens</div>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg">
-              <div className="text-xl font-bold text-yellow-600">{stats.conflicts}</div>
-              <div className="text-xs text-yellow-800">Conflits</div>
-            </div>
-          </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-primary">{stats.total}</div>
+          <div className="text-xs text-muted-foreground">Sessions</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-blue-600">{stats.CM}</div>
+          <div className="text-xs text-muted-foreground">CM</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-green-600">{stats.TD}</div>
+          <div className="text-xs text-muted-foreground">TD</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-purple-600">{stats.TP}</div>
+          <div className="text-xs text-muted-foreground">TP</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-red-600">{stats.EXAM}</div>
+          <div className="text-xs text-muted-foreground">Examens</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-orange-600">{stats.conflicts}</div>
+          <div className="text-xs text-muted-foreground">Conflits</div>
+        </div>
+      </div>
 
-          <div className="space-y-2 pt-3 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-600" />
-                <span className="text-sm text-gray-600">Total étudiants</span>
-              </div>
-              <span className="font-bold text-gray-900">{stats.totalStudents}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-gray-600" />
-                <span className="text-sm text-gray-600">Taux d'occupation</span>
-              </div>
-              <span className="font-bold text-gray-900">
-                {sessions.length > 0 ? Math.round((stats.totalStudents / sessions.length) * 100) / 100 : 0}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mt-3 pt-3 border-t">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Total étudiants</span>
+          <span className="font-bold">{stats.totalStudents}</span>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -687,11 +540,10 @@ export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weeklyData, setWeeklyData] = useState<any>(null);
   const [dailyData, setDailyData] = useState<any>(null);
+  const [showStats, setShowStats] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
   const [draggedSession, setDraggedSession] = useState<ScheduleSession | null>(null);
   const [dropTarget, setDropTarget] = useState<{ day: string; time: string } | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [searchTerm, setSearchTerm] = useState('');
   
   const { addToast } = useToast();
 
@@ -753,15 +605,15 @@ export default function SchedulePage() {
     
     setSessionsLoading(true);
     try {
-      // Pour la vue semaine, on charge les sessions de la date sélectionnée
-      const dateString = formatDate(selectedDate);
-      const data = await scheduleService.getScheduleSessions({
-        date: dateString
+      const weekStart = scheduleService.getWeekStart(selectedDate);
+      const data = await scheduleService.getWeeklySessions({
+        week_start: weekStart,
+        curriculum: selectedCurriculum
       });
       
       setWeeklyData(data);
-      setSessions(data.results || []);
-      setFilteredSessions(data.results || []);
+      setSessions(Object.values(data.sessions_by_day).flat());
+      setFilteredSessions(Object.values(data.sessions_by_day).flat());
       
     } catch (error) {
       console.error('Erreur lors du chargement des données hebdomadaires:', error);
@@ -778,14 +630,15 @@ export default function SchedulePage() {
     
     setSessionsLoading(true);
     try {
-      const dateString = formatDate(selectedDate);
-      const data = await scheduleService.getScheduleSessions({
-        date: dateString
+      const dateString = scheduleService.formatDate(selectedDate);
+      const data = await scheduleService.getDailySessions({
+        date: dateString,
+        curriculum: selectedCurriculum
       });
       
       setDailyData(data);
-      setSessions(data.results || []);
-      setFilteredSessions(data.results || []);
+      setSessions(data.sessions || []);
+      setFilteredSessions(data.sessions || []);
       
     } catch (error) {
       console.error('Erreur lors du chargement des données journalières:', error);
@@ -884,45 +737,6 @@ export default function SchedulePage() {
     });
   };
 
-  // Gestion des filtres et recherche
-  const handleFilterChange = (filter: FilterType) => {
-    setActiveFilter(filter);
-    applyFilters(filter, searchTerm);
-  };
-
-  const handleSearchChange = (term: string) => {
-    setSearchTerm(term);
-    applyFilters(activeFilter, term);
-  };
-
-  const applyFilters = (filter: FilterType, search: string) => {
-    let filtered = sessions;
-
-    // Filtre par type
-    if (filter !== 'all') {
-      filtered = filtered.filter(session => session.session_type === filter);
-    }
-
-    // Filtre par recherche
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(session => 
-        session.course_details?.name?.toLowerCase().includes(searchLower) ||
-        session.course_details?.code?.toLowerCase().includes(searchLower) ||
-        session.teacher_details?.user_details?.first_name?.toLowerCase().includes(searchLower) ||
-        session.teacher_details?.user_details?.last_name?.toLowerCase().includes(searchLower) ||
-        session.room_details?.code?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    setFilteredSessions(filtered);
-  };
-
-  // Appliquer les filtres quand les sessions changent
-  useEffect(() => {
-    applyFilters(activeFilter, searchTerm);
-  }, [sessions, activeFilter, searchTerm]);
-
   // Détection de conflits
   const detectConflicts = (sessions: ScheduleSession[]) => {
     const conflictsList: any[] = [];
@@ -1019,7 +833,7 @@ export default function SchedulePage() {
       { key: 'saturday', label: 'Samedi' }
     ];
 
-    if (!filteredSessions || filteredSessions.length === 0) {
+    if (!weeklyData || !weeklyData.sessions_by_day) {
       return <div className="text-center py-8 text-muted-foreground">Aucune donnée disponible</div>;
     }
 
@@ -1042,16 +856,9 @@ export default function SchedulePage() {
                 <tr key={time} className="border-b border-gray-100">
                   <td className="p-2 text-xs font-medium text-gray-600 bg-gray-50">{time}</td>
                   {days.map(day => {
-                    const daySessions = filteredSessions.filter((session: ScheduleSession) => {
-                      // Vérifier le jour de la semaine
-                      const sessionDay = session.time_slot_details?.day_of_week;
-                      const dayMatches = sessionDay?.toLowerCase() === day.key;
-                      
-                      // Vérifier l'heure
+                    const daySessions = (weeklyData.sessions_by_day[day.key] || []).filter((session: ScheduleSession) => {
                       const sessionTime = session.specific_start_time || session.time_slot_details?.start_time;
-                      const timeMatches = sessionTime?.startsWith(time.slice(0, 2));
-                      
-                      return dayMatches && timeMatches;
+                      return sessionTime?.startsWith(time.slice(0, 2));
                     });
 
                     return (
@@ -1204,8 +1011,8 @@ export default function SchedulePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header flottant */}
-      <FloatingHeader
+      {/* Header compact */}
+      <CompactHeader
         selectedClass={selectedCurriculum}
         onClassChange={setSelectedCurriculum}
         viewMode={viewMode}
@@ -1221,19 +1028,8 @@ export default function SchedulePage() {
         curricula={curricula}
       />
 
-      {/* Contenu principal */}
-      <div className="p-4">
-        {!sessionsLoading && selectedCurriculum && (
-          <FiltersSection
-            sessions={sessions}
-            filteredSessions={filteredSessions}
-            onFilterChange={handleFilterChange}
-            activeFilter={activeFilter}
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
-          />
-        )}
-        
+      {/* Contenu principal avec padding-top pour le header fixe */}
+      <div className="pt-16 p-4">
         {sessionsLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="text-center">
@@ -1262,6 +1058,8 @@ export default function SchedulePage() {
       <FloatingStats
         sessions={filteredSessions}
         conflicts={conflicts}
+        onToggle={() => setShowStats(!showStats)}
+        isVisible={showStats}
       />
 
       {/* Assistant IA Flottant pour la détection de conflits */}
