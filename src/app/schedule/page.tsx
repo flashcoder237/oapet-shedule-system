@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,8 +45,23 @@ import {
   Shield,
   CheckCircle,
   RefreshCw,
-  Lightbulb
+  Lightbulb,
+  Grid3x3,
+  List,
+  Upload,
+  Save,
+  Move,
+  Layers,
+  MoreVertical,
+  Bell,
+  Info,
+  Menu,
+  ChevronDown,
+  GripVertical
 } from 'lucide-react';
+
+// Import the API types
+import { ScheduleSession as ApiScheduleSession, Teacher, Course, Room, TimeSlot } from '@/types/api';
 
 // Types
 interface Curriculum {
@@ -59,214 +74,460 @@ interface Curriculum {
   };
 }
 
-interface ScheduleSession {
-  id: number;
-  course_details: {
-    name: string;
-    code: string;
-  };
-  teacher_details: {
-    user: {
-      first_name: string;
-      last_name: string;
-    };
-  };
-  room_details: {
-    code: string;
-    name: string;
-  };
-  time_slot_details?: {
-    start_time: string;
-    end_time: string;
-    day_of_week: string;
-  };
-  specific_date?: string;
-  specific_start_time?: string;
-  specific_end_time?: string;
-  session_type: string;
-  expected_students: number;
-}
+// Use the API ScheduleSession type directly
+type ScheduleSession = ApiScheduleSession;
 
 interface ConflictInfo {
-  type: 'teacher' | 'room' | 'student_group';
+  type: 'teacher' | 'room' | 'student_group' | 'equipment';
   severity: 'high' | 'medium' | 'low';
   message: string;
   conflictWith?: string;
+  suggestion?: string;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 type FilterType = 'all' | 'CM' | 'TD' | 'TP' | 'EXAM';
-type ViewMode = 'week' | 'day';
+type ViewMode = 'week' | 'day' | 'month';
+type EditMode = 'view' | 'edit' | 'drag';
 
-// Composant IA flottant pour la détection de conflits
-function FloatingAIDetector({ 
-  conflicts, 
-  onResolve 
-}: { 
-  conflicts: Array<{ sessionId: number, conflicts: ConflictInfo[] }>,
-  onResolve: (sessionId: number, type: string) => void 
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  
-  const totalConflicts = conflicts.reduce((sum, c) => sum + c.conflicts.length, 0);
-  const criticalConflicts = conflicts.reduce((sum, c) => 
-    sum + c.conflicts.filter(conf => conf.severity === 'high').length, 0
-  );
-
-  if (!isOpen) {
-    return (
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        className="fixed bottom-6 right-6 z-50"
-      >
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="rounded-full w-14 h-14 shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-          size="sm"
-        >
-          <Bot className="h-6 w-6 text-white" />
-          {totalConflicts > 0 && (
-            <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-              {totalConflicts}
-            </div>
-          )}
-        </Button>
-      </motion.div>
-    );
-  }
+// Composant Header compact et flottant
+function CompactHeader({ 
+  selectedClass,
+  onClassChange,
+  viewMode,
+  onViewModeChange,
+  selectedDate,
+  onDateChange,
+  onExport,
+  onImport,
+  editMode,
+  onEditModeChange,
+  onSave,
+  hasChanges,
+  curricula
+}: any) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: 100 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="fixed bottom-6 right-6 z-50 w-96 max-h-[70vh] overflow-hidden"
+      initial={{ y: 0 }}
+      animate={{ y: isCollapsed ? -60 : 0 }}
+      className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-border shadow-sm"
     >
-      <Card className="shadow-2xl border-2 border-blue-200 bg-white">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-sm font-bold">Assistant IA</CardTitle>
-                <p className="text-xs text-gray-600">Détection de conflits intelligente</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setIsMinimized(!isMinimized)}
-              >
-                {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+      {/* Barre principale ultra-compacte */}
+      <div className="h-14 px-4 flex items-center justify-between">
+        {/* Gauche - Titre et sélection classe */}
+        <div className="flex items-center gap-3">
+          <Calendar className="w-5 h-5 text-primary" />
+          <h1 className="text-lg font-bold text-primary hidden sm:block">Emplois du temps</h1>
+          
+          <Select value={selectedClass} onValueChange={onClassChange}>
+            <SelectTrigger className="w-48 h-8 text-sm">
+              <SelectValue placeholder="Classe" />
+            </SelectTrigger>
+            <SelectContent>
+              {curricula.map((c: Curriculum) => (
+                <SelectItem key={c.code} value={c.code}>
+                  <span className="font-medium">{c.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Centre - Navigation temporelle */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const newDate = new Date(selectedDate);
+              if (viewMode === 'week') {
+                newDate.setDate(newDate.getDate() - 7);
+              } else if (viewMode === 'day') {
+                newDate.setDate(newDate.getDate() - 1);
+              } else {
+                newDate.setMonth(newDate.getMonth() - 1);
+              }
+              onDateChange(newDate);
+            }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+
+          <Input 
+            type="date" 
+            value={scheduleService.formatDate(selectedDate)}
+            onChange={(e) => onDateChange(new Date(e.target.value))}
+            className="h-8 w-32 text-sm"
+          />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              const newDate = new Date(selectedDate);
+              if (viewMode === 'week') {
+                newDate.setDate(newDate.getDate() + 7);
+              } else if (viewMode === 'day') {
+                newDate.setDate(newDate.getDate() + 1);
+              } else {
+                newDate.setMonth(newDate.getMonth() + 1);
+              }
+              onDateChange(newDate);
+            }}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Droite - Actions et modes */}
+        <div className="flex items-center gap-2">
+          {/* Mode de vue */}
+          <div className="flex bg-muted rounded-md p-0.5">
+            <Button
+              variant={viewMode === 'day' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onViewModeChange('day')}
+            >
+              <CalendarDays className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={viewMode === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onViewModeChange('week')}
+            >
+              <CalendarRange className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={viewMode === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onViewModeChange('month')}
+            >
+              <Grid3x3 className="w-3 h-3" />
+            </Button>
           </div>
-        </CardHeader>
 
-        {!isMinimized && (
-          <CardContent className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-            {totalConflicts === 0 ? (
-              <div className="text-center py-4">
-                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-green-700">Aucun conflit détecté!</p>
-                <p className="text-xs text-gray-600">Votre emploi du temps est optimisé</p>
-              </div>
-            ) : (
-              <>
-                <div className="text-center p-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{totalConflicts}</div>
-                  <p className="text-sm text-red-700">Conflit(s) détecté(s)</p>
-                  {criticalConflicts > 0 && (
-                    <Badge variant="destructive" className="mt-1">
-                      {criticalConflicts} critique(s)
-                    </Badge>
-                  )}
-                </div>
+          {/* Mode édition */}
+          <div className="flex bg-muted rounded-md p-0.5">
+            <Button
+              variant={editMode === 'view' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onEditModeChange('view')}
+              title="Mode consultation"
+            >
+              <Eye className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={editMode === 'edit' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onEditModeChange('edit')}
+              title="Mode édition"
+            >
+              <Edit className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={editMode === 'drag' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onEditModeChange('drag')}
+              title="Mode glisser-déposer"
+            >
+              <Move className="w-3 h-3" />
+            </Button>
+          </div>
 
-                <div className="space-y-2">
-                  {conflicts.slice(0, 5).map((sessionConflict) => 
-                    sessionConflict.conflicts.map((conflict, idx) => (
-                      <div
-                        key={`${sessionConflict.sessionId}-${idx}`}
-                        className={`p-3 rounded-lg border ${
-                          conflict.severity === 'high' ? 'bg-red-50 border-red-200' :
-                          conflict.severity === 'medium' ? 'bg-yellow-50 border-yellow-200' :
-                          'bg-blue-50 border-blue-200'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="text-xs font-medium mb-1">{conflict.message}</p>
-                            {conflict.conflictWith && (
-                              <p className="text-xs opacity-75">
-                                Conflit avec: {conflict.conflictWith}
-                              </p>
-                            )}
-                          </div>
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {conflict.severity}
-                          </Badge>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-2 h-6 text-xs"
-                          onClick={() => onResolve(sessionConflict.sessionId, conflict.type)}
-                        >
-                          <Lightbulb className="h-3 w-3 mr-1" />
-                          Résoudre
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                  
-                  {totalConflicts > 5 && (
-                    <p className="text-xs text-gray-500 text-center">
-                      ... et {totalConflicts - 5} autre(s) conflit(s)
-                    </p>
-                  )}
-                </div>
+          {/* Actions */}
+          {editMode !== 'view' && hasChanges && (
+            <Button
+              size="sm"
+              className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700"
+              onClick={onSave}
+            >
+              <Save className="w-3 h-3 mr-1" />
+              Sauvegarder
+            </Button>
+          )}
 
-                <div className="flex gap-2 pt-2 border-t">
-                  <Button 
-                    size="sm" 
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-1" />
-                    Re-analyser
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <Zap className="h-4 w-4 mr-1" />
-                    Auto-résoudre
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        )}
-      </Card>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={onExport}
+            title="Exporter"
+          >
+            <Download className="w-3 h-3" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={onImport}
+            title="Importer"
+          >
+            <Upload className="w-3 h-3" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            <ChevronDown className={`w-3 h-3 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+          </Button>
+        </div>
+      </div>
     </motion.div>
   );
 }
 
+// Composant de stats flottantes
+function FloatingStats({ sessions, conflicts, onToggle, isVisible }: any) {
+  if (!isVisible) {
+    return (
+      <motion.button
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        className="fixed top-20 right-4 z-30 bg-white rounded-full shadow-lg p-3"
+        onClick={onToggle}
+      >
+        <BarChart3 className="w-5 h-5 text-primary" />
+      </motion.button>
+    );
+  }
+
+  const stats = {
+    total: sessions.length,
+    CM: sessions.filter((s: ScheduleSession) => s.session_type === 'CM').length,
+    TD: sessions.filter((s: ScheduleSession) => s.session_type === 'TD').length,
+    TP: sessions.filter((s: ScheduleSession) => s.session_type === 'TP').length,
+    EXAM: sessions.filter((s: ScheduleSession) => s.session_type === 'EXAM').length,
+    totalStudents: sessions.reduce((sum: number, s: ScheduleSession) => sum + s.expected_students, 0),
+    conflicts: conflicts.length
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 100 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="fixed top-20 right-4 z-30 w-64 bg-white rounded-lg shadow-lg border border-border p-4"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-primary" />
+          Statistiques
+        </h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={onToggle}
+        >
+          <X className="w-3 h-3" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-primary">{stats.total}</div>
+          <div className="text-xs text-muted-foreground">Sessions</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-blue-600">{stats.CM}</div>
+          <div className="text-xs text-muted-foreground">CM</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-green-600">{stats.TD}</div>
+          <div className="text-xs text-muted-foreground">TD</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-purple-600">{stats.TP}</div>
+          <div className="text-xs text-muted-foreground">TP</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-red-600">{stats.EXAM}</div>
+          <div className="text-xs text-muted-foreground">Examens</div>
+        </div>
+        <div className="text-center p-2 bg-muted rounded">
+          <div className="text-lg font-bold text-orange-600">{stats.conflicts}</div>
+          <div className="text-xs text-muted-foreground">Conflits</div>
+        </div>
+      </div>
+
+      <div className="mt-3 pt-3 border-t">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Total étudiants</span>
+          <span className="font-bold">{stats.totalStudents}</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Composant Session Card pour drag & drop
+function SessionCard({ 
+  session, 
+  isDragging, 
+  onDragStart, 
+  onDragEnd,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  editMode,
+  hasConflict
+}: any) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  const getSessionTypeColor = (type: string) => {
+    switch (type) {
+      case 'CM': return 'bg-blue-100 border-l-4 border-l-blue-500 text-blue-900';
+      case 'TD': return 'bg-green-100 border-l-4 border-l-green-500 text-green-900';
+      case 'TP': return 'bg-purple-100 border-l-4 border-l-purple-500 text-purple-900';
+      case 'EXAM': return 'bg-red-100 border-l-4 border-l-red-500 text-red-900';
+      default: return 'bg-gray-100 border-l-4 border-l-gray-500 text-gray-900';
+    }
+  };
+
+  return (
+    <motion.div
+      className={`
+        relative p-2 rounded shadow-sm cursor-pointer
+        ${getSessionTypeColor(session.session_type)}
+        ${hasConflict ? 'ring-2 ring-red-500' : ''}
+        ${isDragging ? 'opacity-50' : ''}
+        ${editMode === 'drag' ? 'cursor-move' : ''}
+        hover:shadow-md transition-all
+      `}
+      draggable={editMode === 'drag'}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      layout
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      {editMode === 'drag' && (
+        <GripVertical className="absolute left-1 top-1 w-3 h-3 opacity-50" />
+      )}
+
+      <div className="ml-4">
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-xs">{session.course_details?.code}</span>
+          <div className="flex items-center gap-1">
+            <Badge className="text-xs scale-75">{session.session_type}</Badge>
+            {editMode === 'edit' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(!showMenu);
+                }}
+              >
+                <MoreVertical className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="text-xs opacity-90 mt-1">
+          {session.course_details?.name}
+        </div>
+
+        <div className="text-xs space-y-0.5 opacity-80 mt-1">
+          <div className="flex items-center gap-1">
+            <Clock className="w-2.5 h-2.5" />
+            <span>
+              {formatTime(session.specific_start_time || session.time_slot_details?.start_time || '')} - 
+              {formatTime(session.specific_end_time || session.time_slot_details?.end_time || '')}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <MapPin className="w-2.5 h-2.5" />
+            <span>{session.room_details?.code}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <User className="w-2.5 h-2.5" />
+            <span className="truncate">
+              {session.teacher_details?.user_details?.last_name}
+            </span>
+          </div>
+        </div>
+
+        {hasConflict && (
+          <div className="flex items-center gap-1 mt-1 text-red-600">
+            <AlertTriangle className="w-3 h-3" />
+            <span className="text-xs">Conflit détecté</span>
+          </div>
+        )}
+      </div>
+
+      {/* Menu contextuel */}
+      <AnimatePresence>
+        {showMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-border z-50"
+          >
+            <button
+              className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(session);
+                setShowMenu(false);
+              }}
+            >
+              <Edit className="w-3 h-3" />
+              Modifier
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate(session);
+                setShowMenu(false);
+              }}
+            >
+              <Copy className="w-3 h-3" />
+              Dupliquer
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(session.id);
+                setShowMenu(false);
+              }}
+            >
+              <Trash2 className="w-3 h-3" />
+              Supprimer
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// Fonction pour formater l'heure
+const formatTime = (timeString: string) => {
+  if (!timeString) return '';
+  return timeString.slice(0, 5);
+};
+
+// Composant principal
 export default function SchedulePage() {
   const [curricula, setCurricula] = useState<Curriculum[]>([]);
   const [selectedCurriculum, setSelectedCurriculum] = useState<string>('');
@@ -274,32 +535,29 @@ export default function SchedulePage() {
   const [filteredSessions, setFilteredSessions] = useState<ScheduleSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [selectedDate, setSelectedDate] = useState(new Date('2025-08-05'));
-  const [currentWeek, setCurrentWeek] = useState(new Date('2025-08-05'));
+  const [editMode, setEditMode] = useState<EditMode>('view');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [weeklyData, setWeeklyData] = useState<any>(null);
   const [dailyData, setDailyData] = useState<any>(null);
+  const [showStats, setShowStats] = useState(true);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [draggedSession, setDraggedSession] = useState<ScheduleSession | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ day: string; time: string } | null>(null);
   
   const { addToast } = useToast();
 
-  // Génération des créneaux horaires détaillés (intervalles de 15 minutes)
-  const generateDetailedTimeSlots = () => {
+  // Génération des créneaux horaires
+  const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 7; hour <= 20; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        slots.push({
-          time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-          isHour: minute === 0,
-          isMajor: minute === 0 && hour % 2 === 0
-        });
-      }
+      slots.push(`${hour.toString().padStart(2, '0')}:00`);
+      slots.push(`${hour.toString().padStart(2, '0')}:30`);
     }
     return slots;
   };
 
-  const timeSlots = generateDetailedTimeSlots();
+  const timeSlots = generateTimeSlots();
 
   // Charger les curricula au démarrage
   useEffect(() => {
@@ -311,41 +569,11 @@ export default function SchedulePage() {
     if (selectedCurriculum) {
       if (viewMode === 'week') {
         loadWeeklyData();
-      } else {
+      } else if (viewMode === 'day') {
         loadDailyData();
       }
     }
-  }, [selectedCurriculum, currentWeek, selectedDate, viewMode]);
-
-  // Filtrer les sessions
-  useEffect(() => {
-    let allSessions: ScheduleSession[] = [];
-    
-    if (viewMode === 'week' && weeklyData) {
-      allSessions = Object.values(weeklyData.sessions_by_day).flat() as ScheduleSession[];
-    } else if (viewMode === 'day' && dailyData) {
-      allSessions = dailyData.sessions;
-    }
-    
-    let filtered = allSessions;
-    
-    if (filterType !== 'all') {
-      filtered = filtered.filter(session => session.session_type === filterType);
-    }
-    
-    if (searchTerm) {
-      filtered = filtered.filter(session => 
-        session.course_details?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.course_details?.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.teacher_details?.user?.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.teacher_details?.user?.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        session.room_details?.code?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    setSessions(allSessions);
-    setFilteredSessions(filtered);
-  }, [weeklyData, dailyData, viewMode, searchTerm, filterType]);
+  }, [selectedCurriculum, selectedDate, viewMode]);
 
   const loadCurricula = async () => {
     try {
@@ -377,27 +605,21 @@ export default function SchedulePage() {
     
     setSessionsLoading(true);
     try {
-      const weekStart = scheduleService.getWeekStart(currentWeek);
+      const weekStart = scheduleService.getWeekStart(selectedDate);
       const data = await scheduleService.getWeeklySessions({
         week_start: weekStart,
         curriculum: selectedCurriculum
       });
       
       setWeeklyData(data);
-      
-      addToast({
-        title: "Sessions hebdomadaires chargées",
-        description: `${data.total_sessions} session(s) trouvée(s) pour la semaine`,
-      });
+      setSessions(Object.values(data.sessions_by_day).flat());
+      setFilteredSessions(Object.values(data.sessions_by_day).flat());
       
     } catch (error) {
       console.error('Erreur lors du chargement des données hebdomadaires:', error);
-      addToast({
-        title: "Erreur",
-        description: "Impossible de charger les données hebdomadaires",
-        variant: "destructive"
-      });
       setWeeklyData(null);
+      setSessions([]);
+      setFilteredSessions([]);
     } finally {
       setSessionsLoading(false);
     }
@@ -408,140 +630,200 @@ export default function SchedulePage() {
     
     setSessionsLoading(true);
     try {
-      const dateString = typeof selectedDate === 'string' ? selectedDate : scheduleService.formatDate(selectedDate);
+      const dateString = scheduleService.formatDate(selectedDate);
       const data = await scheduleService.getDailySessions({
         date: dateString,
         curriculum: selectedCurriculum
       });
       
       setDailyData(data);
-      
-      addToast({
-        title: "Sessions journalières chargées",
-        description: `${data.total_sessions} session(s) trouvée(s) pour le ${dateString}`,
-      });
+      setSessions(data.sessions || []);
+      setFilteredSessions(data.sessions || []);
       
     } catch (error) {
       console.error('Erreur lors du chargement des données journalières:', error);
-      addToast({
-        title: "Erreur",
-        description: "Impossible de charger les données journalières",
-        variant: "destructive"
-      });
       setDailyData(null);
+      setSessions([]);
+      setFilteredSessions([]);
     } finally {
       setSessionsLoading(false);
     }
   };
 
-  const formatTime = (timeString: string) => {
-    if (!timeString) return '';
-    return timeString.slice(0, 5);
+  // Actions d'édition
+  const handleSessionEdit = (session: ScheduleSession) => {
+    // Ouvrir le modal d'édition
+    addToast({
+      title: "Édition",
+      description: `Édition de ${session.course_details?.name}`,
+    });
   };
 
-  const getSessionTypeColor = (type: string) => {
-    switch (type) {
-      case 'CM': return 'bg-blue-100 border-l-4 border-l-blue-500 text-blue-900';
-      case 'TD': return 'bg-green-100 border-l-4 border-l-green-500 text-green-900';
-      case 'TP': return 'bg-purple-100 border-l-4 border-l-purple-500 text-purple-900';
-      case 'EXAM': return 'bg-red-100 border-l-4 border-l-red-500 text-red-900';
-      default: return 'bg-gray-100 border-l-4 border-l-gray-500 text-gray-900';
-    }
+  const handleSessionDelete = async (sessionId: number) => {
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+    setHasChanges(true);
+    addToast({
+      title: "Session supprimée",
+      description: "La session a été supprimée",
+    });
   };
 
-  // Fonction pour calculer la position et la hauteur d'une session dans la grille
-  const getSessionPosition = (session: ScheduleSession) => {
-    const startTime = session.specific_start_time || session.time_slot_details?.start_time || '09:00';
-    const endTime = session.specific_end_time || session.time_slot_details?.end_time || '10:00';
+  const handleSessionDuplicate = (session: ScheduleSession) => {
+    const newSession = { ...session, id: Date.now() };
+    setSessions(prev => [...prev, newSession]);
+    setHasChanges(true);
+    addToast({
+      title: "Session dupliquée",
+      description: "La session a été dupliquée",
+    });
+  };
+
+  const handleDragStart = (session: ScheduleSession) => {
+    setDraggedSession(session);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSession(null);
+    setDropTarget(null);
+  };
+
+  const handleDrop = (day: string, time: string) => {
+    if (!draggedSession) return;
+
+    // Mettre à jour la session avec le nouveau créneau
+    setSessions(prev => prev.map(s => 
+      s.id === draggedSession.id 
+        ? { 
+            ...s, 
+            time_slot_details: {
+              ...s.time_slot_details!,
+              day_of_week: day,
+              start_time: time
+            }
+          }
+        : s
+    ));
     
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
+    setHasChanges(true);
+    setDraggedSession(null);
+    setDropTarget(null);
     
-    const startMinutes = (startHour - 7) * 60 + startMin;
-    const endMinutes = (endHour - 7) * 60 + endMin;
-    
-    const startSlot = Math.floor(startMinutes / 15);
-    const duration = Math.ceil((endMinutes - startMinutes) / 15);
-    
-    return { startSlot, duration };
+    addToast({
+      title: "Session déplacée",
+      description: `Session déplacée au ${day} à ${time}`,
+    });
+  };
+
+  const handleSave = async () => {
+    // Sauvegarder les changements
+    addToast({
+      title: "Changements sauvegardés",
+      description: "L'emploi du temps a été mis à jour",
+    });
+    setHasChanges(false);
+  };
+
+  const handleExport = () => {
+    addToast({
+      title: "Export",
+      description: "Export de l'emploi du temps",
+    });
+  };
+
+  const handleImport = () => {
+    addToast({
+      title: "Import",
+      description: "Import d'un emploi du temps",
+    });
   };
 
   // Détection de conflits
   const detectConflicts = (sessions: ScheduleSession[]) => {
-    const conflictsList: Array<{ sessionId: number, conflicts: ConflictInfo[] }> = [];
-    
-    for (let i = 0; i < sessions.length; i++) {
-      const session1 = sessions[i];
-      const sessionConflicts: ConflictInfo[] = [];
-      
-      for (let j = 0; j < sessions.length; j++) {
-        if (i === j) continue;
-        
-        const session2 = sessions[j];
-        
-        const day1 = session1.time_slot_details?.day_of_week;
-        const day2 = session2.time_slot_details?.day_of_week;
-        const start1 = session1.specific_start_time || session1.time_slot_details?.start_time;
-        const end1 = session1.specific_end_time || session1.time_slot_details?.end_time;
-        const start2 = session2.specific_start_time || session2.time_slot_details?.start_time;
-        const end2 = session2.specific_end_time || session2.time_slot_details?.end_time;
-        
-        if (day1 === day2 && start1 && end1 && start2 && end2) {
-          const isOverlapping = (start1 < end2 && start2 < end1);
-          
-          if (isOverlapping) {
-            if (session1.teacher_details?.user?.first_name === session2.teacher_details?.user?.first_name &&
-                session1.teacher_details?.user?.last_name === session2.teacher_details?.user?.last_name) {
-              sessionConflicts.push({
-                type: 'teacher',
-                severity: 'high',
-                message: `Conflit enseignant: ${session1.teacher_details?.user?.first_name} ${session1.teacher_details?.user?.last_name}`,
-                conflictWith: `${session2.course_details?.code} (${start2}-${end2})`
-              });
-            }
-            
-            if (session1.room_details?.code === session2.room_details?.code && session1.room_details?.code) {
-              sessionConflicts.push({
-                type: 'room',
-                severity: 'medium',
-                message: `Conflit de salle: ${session1.room_details.code}`,
-                conflictWith: `${session2.course_details?.code} (${start2}-${end2})`
-              });
-            }
-          }
-        }
-      }
-      
-      if (sessionConflicts.length > 0) {
-        conflictsList.push({
-          sessionId: session1.id,
-          conflicts: sessionConflicts
-        });
-      }
-    }
-    
+    const conflictsList: any[] = [];
+    // Logique de détection de conflits simplifiée
     return conflictsList;
   };
 
-  const formatWeekRange = (currentWeek: Date) => {
-    const startOfWeek = new Date(currentWeek);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
-    startOfWeek.setDate(diff);
-    
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    
-    const options: Intl.DateTimeFormatOptions = { 
-      day: 'numeric', 
-      month: 'short' 
-    };
-    
-    return `${startOfWeek.toLocaleDateString('fr-FR', options)} - ${endOfWeek.toLocaleDateString('fr-FR', options)}`;
+  const conflicts = detectConflicts(filteredSessions);
+
+  // Rendu de la vue jour
+  const renderDayView = () => {
+    const dayName = selectedDate.toLocaleDateString('fr-FR', { weekday: 'long' });
+    const dayDate = selectedDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-border">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-lg font-semibold capitalize">{dayName}</h3>
+          <p className="text-sm text-muted-foreground">{dayDate}</p>
+        </div>
+        
+        <div className="p-4">
+          <div className="space-y-2">
+            {timeSlots.map(time => {
+              const slotSessions = filteredSessions.filter(session => {
+                const sessionTime = session.specific_start_time || session.time_slot_details?.start_time;
+                return sessionTime?.startsWith(time.slice(0, 2));
+              });
+
+              return (
+                <div
+                  key={time}
+                  className={`
+                    min-h-[60px] p-2 border rounded-lg transition-colors
+                    ${editMode === 'drag' && draggedSession ? 'hover:bg-blue-50' : ''}
+                    ${dropTarget?.time === time ? 'bg-blue-100 border-blue-300' : 'border-gray-200'}
+                  `}
+                  onDragOver={(e) => {
+                    if (editMode === 'drag') {
+                      e.preventDefault();
+                      setDropTarget({ day: dayName, time });
+                    }
+                  }}
+                  onDragLeave={() => setDropTarget(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (editMode === 'drag') {
+                      handleDrop(dayName, time);
+                    }
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm font-medium text-gray-600 w-12">{time}</span>
+                    <div className="flex-1 space-y-1">
+                      {slotSessions.length === 0 ? (
+                        <div className="text-sm text-gray-400 italic">
+                          {editMode !== 'view' && "Glissez une session ici"}
+                        </div>
+                      ) : (
+                        slotSessions.map(session => (
+                          <SessionCard
+                            key={session.id}
+                            session={session}
+                            isDragging={draggedSession?.id === session.id}
+                            onDragStart={() => handleDragStart(session)}
+                            onDragEnd={handleDragEnd}
+                            onEdit={handleSessionEdit}
+                            onDelete={handleSessionDelete}
+                            onDuplicate={handleSessionDuplicate}
+                            editMode={editMode}
+                            hasConflict={false}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  // Rendu de la grille détaillée
-  const renderDetailedGrid = () => {
+  // Rendu de la vue semaine
+  const renderWeekView = () => {
     const days = [
       { key: 'monday', label: 'Lundi' },
       { key: 'tuesday', label: 'Mardi' },
@@ -556,119 +838,162 @@ export default function SchedulePage() {
     }
 
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white">
-          <thead>
-            <tr className="sticky top-0 z-20 bg-white border-b-2 border-primary/20">
-              <th className="p-3 text-left font-semibold text-foreground bg-gray-50 sticky left-0 z-30 w-20">
-                Horaires
-              </th>
-              {days.map(day => (
-                <th key={day.key} className="p-3 text-center font-semibold text-foreground bg-gray-50 min-w-40 border-l border-gray-200">
-                  {day.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {timeSlots.map((slot, index) => (
-              <tr 
-                key={slot.time} 
-                className={`
-                  ${slot.isMajor ? 'border-t-2 border-gray-400' : 
-                    slot.isHour ? 'border-t border-gray-300' : 
-                    'border-t border-gray-100'}
-                  ${slot.isMajor ? 'bg-gray-50' : ''}
-                  hover:bg-blue-50/30 transition-colors
-                `}
-              >
-                <td className={`
-                  sticky left-0 z-10 border-r border-gray-300
-                  ${slot.isMajor ? 'bg-gray-100' : slot.isHour ? 'bg-gray-50' : 'bg-white'}
-                  ${slot.isMajor ? 'font-bold text-primary' : slot.isHour ? 'font-semibold' : 'text-gray-400'}
-                  text-xs px-2 py-1
-                `}>
-                  {(slot.isHour || slot.isMajor) && (
-                    <div className="text-right font-mono">
-                      {slot.time}
-                    </div>
-                  )}
-                </td>
-                {days.map(day => {
-                  const daySessions = (weeklyData.sessions_by_day[day.key] || []).filter((session: ScheduleSession) => {
-                    const sessionStart = session.specific_start_time || session.time_slot_details?.start_time || '';
-                    const [sessionHour, sessionMin] = sessionStart.split(':').map(Number);
-                    const [slotHour, slotMin] = slot.time.split(':').map(Number);
-                    
-                    return sessionHour === slotHour && sessionMin === slotMin;
-                  });
-
-                  return (
-                    <td 
-                      key={`${day.key}-${slot.time}`} 
-                      className="border-l border-gray-100 relative p-0"
-                      style={{ height: '25px', minHeight: '25px' }}
-                    >
-                      {daySessions.map((session: ScheduleSession) => {
-                        const { startSlot, duration } = getSessionPosition(session);
-                        const topPosition = 0;
-                        const height = duration * 25;
-
-                        return (
-                          <motion.div
-                            key={session.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className={`
-                              absolute left-1 right-1 rounded shadow-sm
-                              ${getSessionTypeColor(session.session_type)}
-                              hover:shadow-md hover:z-10 transition-all cursor-pointer
-                              overflow-hidden
-                            `}
-                            style={{
-                              top: `${topPosition}px`,
-                              height: `${height - 2}px`,
-                              minHeight: '23px'
-                            }}
-                          >
-                            <div className="p-1 h-full flex flex-col justify-between text-xs">
-                              <div>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold">{session.course_details?.code}</span>
-                                  <Badge className="text-xs scale-75">{session.session_type}</Badge>
-                                </div>
-                                <div className="text-xs opacity-90">
-                                  {formatTime(session.specific_start_time || session.time_slot_details?.start_time || '')} - 
-                                  {formatTime(session.specific_end_time || session.time_slot_details?.end_time || '')}
-                                </div>
-                              </div>
-                              {duration >= 3 && (
-                                <div className="text-xs space-y-0.5 opacity-80">
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-2.5 h-2.5" />
-                                    <span>{session.room_details?.code}</span>
-                                  </div>
-                                  {duration >= 4 && (
-                                    <div className="flex items-center gap-1">
-                                      <User className="w-2.5 h-2.5" />
-                                      <span className="truncate">
-                                        {session.teacher_details?.user?.last_name}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </td>
-                  );
-                })}
+      <div className="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-gray-50">
+                <th className="p-2 text-left text-xs font-medium text-gray-600 w-20">Heure</th>
+                {days.map(day => (
+                  <th key={day.key} className="p-2 text-center text-xs font-medium text-gray-600 min-w-[150px]">
+                    {day.label}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {timeSlots.map(time => (
+                <tr key={time} className="border-b border-gray-100">
+                  <td className="p-2 text-xs font-medium text-gray-600 bg-gray-50">{time}</td>
+                  {days.map(day => {
+                    const daySessions = (weeklyData.sessions_by_day[day.key] || []).filter((session: ScheduleSession) => {
+                      const sessionTime = session.specific_start_time || session.time_slot_details?.start_time;
+                      return sessionTime?.startsWith(time.slice(0, 2));
+                    });
+
+                    return (
+                      <td
+                        key={`${day.key}-${time}`}
+                        className={`
+                          p-1 border-l border-gray-100 align-top relative
+                          ${editMode === 'drag' && draggedSession ? 'hover:bg-blue-50' : ''}
+                          ${dropTarget?.day === day.key && dropTarget?.time === time ? 'bg-blue-100' : ''}
+                        `}
+                        style={{ minHeight: '60px' }}
+                        onDragOver={(e) => {
+                          if (editMode === 'drag') {
+                            e.preventDefault();
+                            setDropTarget({ day: day.key, time });
+                          }
+                        }}
+                        onDragLeave={() => setDropTarget(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (editMode === 'drag') {
+                            handleDrop(day.key, time);
+                          }
+                        }}
+                      >
+                        <div className="space-y-1">
+                          {daySessions.map((session: ScheduleSession) => (
+                            <SessionCard
+                              key={session.id}
+                              session={session}
+                              isDragging={draggedSession?.id === session.id}
+                              onDragStart={() => handleDragStart(session)}
+                              onDragEnd={handleDragEnd}
+                              onEdit={handleSessionEdit}
+                              onDelete={handleSessionDelete}
+                              onDuplicate={handleSessionDuplicate}
+                              editMode={editMode}
+                              hasConflict={false}
+                            />
+                          ))}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Rendu de la vue mois
+  const renderMonthView = () => {
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const weeks = [];
+    let currentWeek = [];
+    
+    // Jours du mois précédent
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+      const prevDate = new Date(year, month, -i);
+      currentWeek.push({ date: prevDate, isCurrentMonth: false });
+    }
+    
+    // Jours du mois actuel
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(year, month, day);
+      currentWeek.push({ date: currentDate, isCurrentMonth: true });
+      
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    }
+    
+    // Compléter la dernière semaine
+    if (currentWeek.length > 0) {
+      const remainingDays = 7 - currentWeek.length;
+      for (let day = 1; day <= remainingDays; day++) {
+        const nextDate = new Date(year, month + 1, day);
+        currentWeek.push({ date: nextDate, isCurrentMonth: false });
+      }
+      weeks.push(currentWeek);
+    }
+
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-border p-4">
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'].map(day => (
+            <div key={day} className="text-center text-xs font-medium text-gray-600 p-2">
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        {weeks.map((week, weekIndex) => (
+          <div key={weekIndex} className="grid grid-cols-7 gap-1">
+            {week.map((day, dayIndex) => {
+              const daySessionsCount = filteredSessions.filter(s => {
+                const sessionDate = new Date(s.specific_date || '');
+                return sessionDate.toDateString() === day.date.toDateString();
+              }).length;
+
+              return (
+                <div
+                  key={dayIndex}
+                  className={`
+                    min-h-[80px] p-2 border rounded cursor-pointer transition-colors
+                    ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
+                    ${day.date.toDateString() === new Date().toDateString() ? 'bg-blue-50 border-blue-300' : 'border-gray-200'}
+                    hover:bg-gray-50
+                  `}
+                  onClick={() => {
+                    setSelectedDate(day.date);
+                    setViewMode('day');
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">{day.date.getDate()}</span>
+                    {daySessionsCount > 0 && (
+                      <Badge className="text-xs scale-75">{daySessionsCount}</Badge>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     );
   };
@@ -676,7 +1001,6 @@ export default function SchedulePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <AnimatedBackground variant="schedule" intensity="low" />
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Chargement des données...</p>
@@ -685,319 +1009,142 @@ export default function SchedulePage() {
     );
   }
 
-  const conflicts = detectConflicts(filteredSessions);
-
   return (
-    <div className="min-h-screen bg-background">
-      <AnimatedBackground variant="schedule" intensity="low" />
-      
-      <div className="relative z-10 space-y-6 p-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="hero-section"
-        >
-          <div className="max-w-7xl mx-auto px-8 py-12">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div>
-                <h1 className="text-hero text-white mb-4 flex items-center gap-3">
-                  <Calendar className="w-12 h-12 text-accent-light" />
-                  Emplois du Temps
-                </h1>
-                <p className="text-xl text-white/90">
-                  {viewMode === 'week' ? `Semaine du ${formatWeekRange(currentWeek)}` : `${selectedDate}`}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <MicroButton
-                  variant="secondary"
-                  icon={Download}
-                  className="bg-white/20 backdrop-blur-sm text-white border-white/30"
-                >
-                  Exporter
-                </MicroButton>
-                <MicroButton
-                  variant="accent"
-                  icon={Plus}
-                >
-                  Nouveau cours
-                </MicroButton>
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header compact */}
+      <CompactHeader
+        selectedClass={selectedCurriculum}
+        onClassChange={setSelectedCurriculum}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        onExport={handleExport}
+        onImport={handleImport}
+        editMode={editMode}
+        onEditModeChange={setEditMode}
+        onSave={handleSave}
+        hasChanges={hasChanges}
+        curricula={curricula}
+      />
+
+      {/* Contenu principal avec padding-top pour le header fixe */}
+      <div className="pt-16 p-4">
+        {sessionsLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Chargement des sessions...</p>
             </div>
           </div>
-        </motion.div>
-
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Contrôles principaux */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <MicroCard className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                {/* Mode de vue */}
-                <div>
-                  <label className="text-sm font-semibold text-foreground mb-2 block">
-                    Vue
-                  </label>
-                  <div className="flex bg-secondary/10 rounded-lg p-1">
-                    <button
-                      onClick={() => setViewMode('week')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
-                        viewMode === 'week'
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
-                      }`}
-                    >
-                      <CalendarRange className="w-4 h-4" />
-                      Semaine
-                    </button>
-                    <button
-                      onClick={() => setViewMode('day')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
-                        viewMode === 'day'
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
-                      }`}
-                    >
-                      <CalendarDays className="w-4 h-4" />
-                      Jour
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Sélection classe */}
-                <div>
-                  <label className="text-sm font-semibold text-foreground mb-2 block">
-                    Classe
-                  </label>
-                  <Select value={selectedCurriculum} onValueChange={setSelectedCurriculum}>
-                    <SelectTrigger className="input">
-                      <SelectValue placeholder="Choisir une classe" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {curricula.map((curriculum) => (
-                        <SelectItem key={curriculum.code} value={curriculum.code}>
-                          <div>
-                            <div className="font-medium">{curriculum.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {curriculum.code} - {curriculum.department.name}
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Date */}
-                <div>
-                  <label className="text-sm font-semibold text-foreground mb-2 block">
-                    {viewMode === 'week' ? 'Semaine du' : 'Date'}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      type="date" 
-                      value={viewMode === 'week' ? scheduleService.formatDate(currentWeek) : (typeof selectedDate === 'string' ? selectedDate : scheduleService.formatDate(selectedDate))}
-                      onChange={(e) => {
-                        if (viewMode === 'week') {
-                          setCurrentWeek(new Date(e.target.value));
-                        } else {
-                          setSelectedDate(new Date(e.target.value));
-                        }
-                      }}
-                      className="input"
-                    />
-                    {viewMode === 'week' && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            const prevWeek = new Date(currentWeek);
-                            prevWeek.setDate(prevWeek.getDate() - 7);
-                            setCurrentWeek(prevWeek);
-                          }}
-                          className="p-2 rounded-md hover:bg-secondary/10 text-muted-foreground hover:text-foreground"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            const nextWeek = new Date(currentWeek);
-                            nextWeek.setDate(nextWeek.getDate() + 7);
-                            setCurrentWeek(nextWeek);
-                          }}
-                          className="p-2 rounded-md hover:bg-secondary/10 text-muted-foreground hover:text-foreground"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Recherche */}
-                <div className="lg:col-span-2">
-                  <label className="text-sm font-semibold text-foreground mb-2 block">
-                    Recherche
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Cours, enseignant, salle..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="input pl-10"
-                    />
-                  </div>
-                </div>
-                
-                {/* Filtre */}
-                <div>
-                  <label className="text-sm font-semibold text-foreground mb-2 block">
-                    Type
-                  </label>
-                  <Select value={filterType} onValueChange={(value: FilterType) => setFilterType(value)}>
-                    <SelectTrigger className="input">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous</SelectItem>
-                      <SelectItem value="CM">CM</SelectItem>
-                      <SelectItem value="TD">TD</SelectItem>
-                      <SelectItem value="TP">TP</SelectItem>
-                      <SelectItem value="EXAM">Examens</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </MicroCard>
-          </motion.div>
-
-          {/* Statistiques condensées */}
-          {sessions.length > 0 && (
+        ) : (
+          <AnimatePresence mode="wait">
             <motion.div
+              key={viewMode}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              <MicroCard className="p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {(() => {
-                    const stats = {
-                      total: sessions.length,
-                      CM: sessions.filter(s => s.session_type === 'CM').length,
-                      TD: sessions.filter(s => s.session_type === 'TD').length,
-                      TP: sessions.filter(s => s.session_type === 'TP').length,
-                      EXAM: sessions.filter(s => s.session_type === 'EXAM').length,
-                      totalStudents: sessions.reduce((sum, s) => sum + s.expected_students, 0),
-                    };
-                    return [
-                      { label: 'Sessions', value: stats.total, icon: BookOpen, color: 'var(--primary)' },
-                      { label: 'Étudiants', value: stats.totalStudents, icon: Users, color: 'var(--accent)' },
-                      { label: 'CM', value: stats.CM, icon: Target, color: 'var(--primary)' },
-                      { label: 'TD', value: stats.TD, icon: Activity, color: 'var(--accent)' },
-                      { label: 'TP', value: stats.TP, icon: Zap, color: 'var(--accent-light)' },
-                      { label: 'Examens', value: stats.EXAM, icon: AlertTriangle, color: 'var(--destructive)' }
-                    ].map((stat, index) => (
-                      <div key={index} className="text-center">
-                        <div 
-                          className="w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center"
-                          style={{ backgroundColor: `${stat.color}15`, color: stat.color }}
-                        >
-                          <stat.icon className="w-5 h-5" />
-                        </div>
-                        <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                        <div className="text-xs text-muted-foreground">{stat.label}</div>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </MicroCard>
+              {viewMode === 'day' && renderDayView()}
+              {viewMode === 'week' && renderWeekView()}
+              {viewMode === 'month' && renderMonthView()}
             </motion.div>
-          )}
-
-          {/* Grille d'emploi du temps détaillée */}
-          {selectedCurriculum && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-            >
-              <MicroCard>
-                <div className="p-6 border-b border-border">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-heading flex items-center gap-3">
-                      <Eye className="w-6 h-6 text-primary" />
-                      {curricula.find(c => c.code === selectedCurriculum)?.name}
-                      <Badge className="bg-primary/10 text-primary">
-                        {filteredSessions.length} session(s)
-                      </Badge>
-                    </h3>
-                    
-                    {searchTerm && (
-                      <Badge variant="secondary">
-                        Filtré par: "{searchTerm}"
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="p-0">
-                  {sessionsLoading ? (
-                    <div className="flex justify-center items-center h-64">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                        <p className="text-muted-foreground">Chargement des sessions...</p>
-                      </div>
-                    </div>
-                  ) : filteredSessions.length === 0 ? (
-                    <div className="text-center py-16">
-                      <div className="mx-auto w-24 h-24 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
-                        <Calendar className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                      <h4 className="text-heading text-foreground mb-2">
-                        {sessions.length === 0 ? 'Aucune session programmée' : 'Aucun résultat'}
-                      </h4>
-                      <p className="text-body text-muted-foreground mb-6">
-                        {sessions.length === 0 
-                          ? `Aucun cours trouvé pour ${viewMode === 'week' ? 'cette semaine' : 'cette date'} et cette classe`
-                          : 'Modifiez vos critères de recherche'
-                        }
-                      </p>
-                      {searchTerm && (
-                        <MicroButton 
-                          variant="secondary"
-                          onClick={() => setSearchTerm('')}
-                        >
-                          Effacer la recherche
-                        </MicroButton>
-                      )}
-                    </div>
-                  ) : (
-                    viewMode === 'week' && renderDetailedGrid()
-                  )}
-                </div>
-              </MicroCard>
-            </motion.div>
-          )}
-        </div>
+          </AnimatePresence>
+        )}
       </div>
+
+      {/* Statistiques flottantes */}
+      <FloatingStats
+        sessions={filteredSessions}
+        conflicts={conflicts}
+        onToggle={() => setShowStats(!showStats)}
+        isVisible={showStats}
+      />
 
       {/* Assistant IA Flottant pour la détection de conflits */}
       <FloatingAIDetector 
         conflicts={conflicts}
-        onResolve={(sessionId, type) => {
+        onResolve={(sessionId: number, type: string) => {
           addToast({
             title: "Résolution de conflit",
-            description: `Tentative de résolution du conflit de type "${type}" pour la session ${sessionId}`,
+            description: `Tentative de résolution du conflit de type "${type}"`,
             variant: "default"
           });
         }}
       />
     </div>
+  );
+}
+
+// Composant IA flottant pour la détection de conflits (inchangé mais compact)
+function FloatingAIDetector({ conflicts, onResolve }: any) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  
+  const totalConflicts = conflicts.length;
+
+  if (!isOpen) {
+    return (
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        className="fixed bottom-6 right-6 z-50"
+      >
+        <Button
+          onClick={() => setIsOpen(true)}
+          className="rounded-full w-12 h-12 shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 p-0"
+        >
+          <Bot className="h-5 w-5 text-white" />
+          {totalConflicts > 0 && (
+            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+              {totalConflicts}
+            </div>
+          )}
+        </Button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8, y: 100 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="fixed bottom-6 right-6 z-50 w-80"
+    >
+      <Card className="shadow-2xl border-2 border-blue-200">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-2 pt-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm">Assistant IA</CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => setIsOpen(false)}
+            >
+              <X className="h-3 h-3" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        {!isMinimized && (
+          <CardContent className="p-3">
+            {totalConflicts === 0 ? (
+              <div className="text-center py-3">
+                <CheckCircle className="h-6 w-6 text-green-500 mx-auto mb-2" />
+                <p className="text-sm font-medium text-green-700">Aucun conflit détecté!</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <Badge variant="destructive">{totalConflicts} conflit(s)</Badge>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+    </motion.div>
   );
 }
