@@ -853,7 +853,7 @@ export default function SchedulePage() {
   const [dailyData, setDailyData] = useState<any>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [draggedSession, setDraggedSession] = useState<ScheduleSession | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ day: string; time: string } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ day: string; time: string; y?: number } | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -914,11 +914,14 @@ export default function SchedulePage() {
 
   // Fonction pour détecter les conflits via le backend
   const detectConflictsFromBackend = async () => {
-    if (!weeklyData || !weeklyData.results || weeklyData.results.length === 0) return [];
+    if (!weeklyData || !weeklyData.sessions_by_day) return [];
     
     try {
       // Trouver un schedule ID à partir des sessions
-      const firstSession = weeklyData.results[0];
+      const allSessions = Object.values(weeklyData.sessions_by_day).flat();
+      if (allSessions.length === 0) return [];
+      
+      const firstSession = allSessions[0] as any;
       if (!firstSession.schedule) return [];
       
       const response = await fetch(`${API_BASE_URL}/schedules/schedules/${firstSession.schedule}/detect_conflicts/`, {
@@ -949,7 +952,8 @@ export default function SchedulePage() {
     setSessionsLoading(true);
     try {
       const weekStart = scheduleService.getWeekStart(selectedDate);
-      const data = await scheduleService.getWeeklySessions({
+      // Utiliser l'API backend pour récupérer toute la semaine
+      const data = await scheduleService.getWeeklySessionsFromAPI({
         week_start: weekStart,
         curriculum: selectedCurriculum
       });
@@ -963,10 +967,12 @@ export default function SchedulePage() {
       setBackendConflicts(conflicts);
       
       // Debug: afficher les données reçues
-      if (data.results && data.results.length > 0) {
-        console.log('Sample session data:', data.results[0]);
-        console.log('Days in data:', data.results.map((s: any) => s.time_slot_details?.day_of_week).filter((d: any) => d));
+      const allSessions = Object.values(data.sessions_by_day).flat();
+      if (allSessions.length > 0) {
+        console.log('Sample session data:', allSessions[0]);
+        console.log('Days in data:', allSessions.map((s: any) => s.time_slot_details?.day_of_week).filter((d: any) => d));
         console.log('Backend conflicts:', conflicts);
+        console.log('Total sessions loaded:', allSessions.length);
       }
       
     } catch (error) {
@@ -1047,22 +1053,131 @@ export default function SchedulePage() {
     setDropTarget(null);
   };
 
-  const handleDrop = (day: string, time: string) => {
+  // Fonction pour calculer l'heure d'accrochage basée sur la position Y
+  const getSnapTime = (mouseY: number, containerTop: number) => {
+    const relativeY = mouseY - containerTop;
+    const startHour = 7;
+    const snapInterval = 15; // 15 minutes
+    
+    // Calculer le créneau le plus proche (en multiples de 15 minutes)
+    // Chaque pixel = 1 minute, donc relativeY = minutes depuis le début
+    const totalMinutes = Math.max(0, relativeY);
+    const snapMinutes = Math.round(totalMinutes / snapInterval) * snapInterval;
+    
+    const hour = startHour + Math.floor(snapMinutes / 60);
+    const minute = snapMinutes % 60;
+    
+    // S'assurer que l'heure est dans la plage valide (7h-21h)
+    if (hour < 7) return "07:00";
+    if (hour >= 21) return "20:45";
+    
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  };
+
+  // Fonction pour vérifier les chevauchements
+  const checkForOverlap = (newDay: string, newStartTime: string, newEndTime: string, excludeSessionId: number) => {
+    const allSessions = Object.values(weeklyData?.sessions_by_day || {}).flat() as ScheduleSession[];
+    
+    return allSessions.some(session => {
+      if (session.id === excludeSessionId) return false; // Exclure la session qu'on déplace
+      
+      const sessionDay = session.time_slot_details?.day_of_week;
+      const sessionStart = session.specific_start_time || session.time_slot_details?.start_time;
+      const sessionEnd = session.specific_end_time || session.time_slot_details?.end_time;
+      
+      if (sessionDay !== newDay || !sessionStart || !sessionEnd) return false;
+      
+      // Convertir les heures en minutes pour comparaison
+      const parseTime = (timeStr: string) => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
+      const newStart = parseTime(newStartTime);
+      const newEnd = parseTime(newEndTime);
+      const existingStart = parseTime(sessionStart);
+      const existingEnd = parseTime(sessionEnd);
+      
+      // Vérifier le chevauchement
+      return (newStart < existingEnd && newEnd > existingStart);
+    });
+  };
+
+  const handleDrop = (day: string, time: string, mouseY?: number, containerTop?: number) => {
     if (!draggedSession) return;
 
-    // Mettre à jour la session avec le nouveau créneau
+    // Utiliser la position précise si disponible, sinon utiliser l'heure par défaut
+    let dropTime = time;
+    if (mouseY !== undefined && containerTop !== undefined) {
+      dropTime = getSnapTime(mouseY, containerTop);
+    }
+
+    // Calculer l'heure de fin basée sur la durée de la session originale
+    const originalDuration = getSessionDurationMinutes(draggedSession);
+    const dropStartMinutes = (() => {
+      const [hours, minutes] = dropTime.split(':').map(Number);
+      return hours * 60 + minutes;
+    })();
+    const dropEndMinutes = dropStartMinutes + originalDuration;
+    const dropEndHours = Math.floor(dropEndMinutes / 60);
+    const dropEndMins = dropEndMinutes % 60;
+    const dropEndTime = `${dropEndHours.toString().padStart(2, '0')}:${dropEndMins.toString().padStart(2, '0')}`;
+
+    // Vérifier les chevauchements
+    if (checkForOverlap(day, dropTime, dropEndTime, draggedSession.id)) {
+      addToast({
+        title: "Déplacement impossible",
+        description: "Ce créneau chevauche avec une autre session",
+        variant: "destructive"
+      });
+      setDraggedSession(null);
+      setDropTarget(null);
+      return;
+    }
+
+    // Créer la session mise à jour
+    const updatedSession = {
+      ...draggedSession,
+      time_slot_details: {
+        ...draggedSession.time_slot_details!,
+        day_of_week: day,
+        start_time: dropTime
+      },
+      specific_start_time: dropTime,
+      specific_end_time: dropEndTime
+    };
+
+    // Mettre à jour toutes les structures de données
     setSessions(prev => prev.map(s => 
-      s.id === draggedSession.id 
-        ? { 
-            ...s, 
-            time_slot_details: {
-              ...s.time_slot_details!,
-              day_of_week: day,
-              start_time: time
-            }
-          }
-        : s
+      s.id === draggedSession.id ? updatedSession : s
     ));
+
+    setFilteredSessions(prev => prev.map(s => 
+      s.id === draggedSession.id ? updatedSession : s
+    ));
+
+    // Mettre à jour weeklyData.sessions_by_day pour l'affichage immédiat
+    setWeeklyData(prev => {
+      if (!prev) return prev;
+      
+      const newSessionsByDay = { ...prev.sessions_by_day };
+      
+      // Retirer la session de son ancien jour
+      Object.keys(newSessionsByDay).forEach(dayKey => {
+        newSessionsByDay[dayKey] = newSessionsByDay[dayKey].filter(s => s.id !== draggedSession.id);
+      });
+      
+      // Ajouter la session au nouveau jour
+      if (!newSessionsByDay[day]) {
+        newSessionsByDay[day] = [];
+      }
+      newSessionsByDay[day].push(updatedSession);
+      
+      return {
+        ...prev,
+        sessions_by_day: newSessionsByDay
+      };
+    });
     
     setHasChanges(true);
     setDraggedSession(null);
@@ -1070,7 +1185,7 @@ export default function SchedulePage() {
     
     addToast({
       title: "Session déplacée",
-      description: `Session déplacée au ${day} à ${time}`,
+      description: `Session déplacée au ${day} à ${dropTime}`,
     });
   };
 
@@ -1405,17 +1520,23 @@ export default function SchedulePage() {
               </div>
             ))}
 
-            {/* Colonne des heures */}
+            {/* Colonne des heures avec demi-heures */}
             <div className="relative bg-gray-50 border-r" style={{ height: `${totalMinutes}px` }}>
-              {Array.from({ length: endHour - startHour + 1 }, (_, i) => {
-                const hour = startHour + i;
+              {Array.from({ length: (endHour - startHour) * 2 }, (_, i) => {
+                const isFullHour = i % 2 === 0;
+                const hour = startHour + Math.floor(i / 2);
+                const minute = isFullHour ? 0 : 30;
                 return (
                   <div
-                    key={hour}
-                    className="absolute left-0 right-0 text-xs font-medium text-gray-600 p-2 border-t"
-                    style={{ top: `${i * 60}px`, height: '60px' }}
+                    key={i}
+                    className={`absolute left-0 right-0 text-xs p-2 border-t ${
+                      isFullHour 
+                        ? 'font-medium text-gray-700 bg-gray-50' 
+                        : 'font-normal text-gray-500 bg-gray-25'
+                    }`}
+                    style={{ top: `${i * 30}px`, height: '30px' }}
                   >
-                    {hour.toString().padStart(2, '0')}:00
+                    {hour.toString().padStart(2, '0')}:{minute.toString().padStart(2, '0')}
                   </div>
                 );
               })}
@@ -1430,25 +1551,54 @@ export default function SchedulePage() {
                 onDragOver={(e) => {
                   if (editMode === 'drag') {
                     e.preventDefault();
-                    setDropTarget({ day: day.key, time: '08:00' });
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const relativeY = e.clientY - rect.top;
+                    const snapTime = getSnapTime(e.clientY, rect.top);
+                    setDropTarget({ day: day.key, time: snapTime, y: relativeY });
                   }
                 }}
                 onDragLeave={() => setDropTarget(null)}
                 onDrop={(e) => {
                   e.preventDefault();
                   if (editMode === 'drag') {
-                    handleDrop(day.key, '08:00');
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    handleDrop(day.key, '08:00', e.clientY, rect.top);
                   }
                 }}
               >
-                {/* Lignes horizontales pour chaque heure */}
-                {Array.from({ length: endHour - startHour + 1 }, (_, i) => (
+                {/* Lignes horizontales - grille détaillée */}
+                {Array.from({ length: (endHour - startHour) * 4 }, (_, i) => {
+                  const isHour = i % 4 === 0;
+                  const isHalfHour = i % 2 === 0;
+                  return (
+                    <div
+                      key={i}
+                      className={`absolute left-0 right-0 border-t ${
+                        isHour 
+                          ? 'border-gray-300' // Ligne d'heure plus marquée
+                          : isHalfHour 
+                            ? 'border-gray-200' // Ligne de demi-heure
+                            : 'border-gray-100' // Ligne de quart d'heure plus légère
+                      }`}
+                      style={{ top: `${i * 15}px` }} // Ligne toutes les 15 minutes
+                    />
+                  );
+                })}
+
+                {/* Indicateur de drop position */}
+                {editMode === 'drag' && draggedSession && dropTarget?.day === day.key && dropTarget.y !== undefined && (
                   <div
-                    key={i}
-                    className="absolute left-0 right-0 border-t border-gray-100"
-                    style={{ top: `${i * 60}px` }}
-                  />
-                ))}
+                    className="absolute left-0 right-0 z-20 pointer-events-none"
+                    style={{ 
+                      top: `${Math.round(dropTarget.y / 15) * 15}px`, // Snap à la grille de 15px
+                      height: '2px'
+                    }}
+                  >
+                    <div className="h-full bg-blue-500 rounded-full shadow-lg opacity-80"></div>
+                    <div className="absolute -left-2 -top-1 w-4 h-4 bg-blue-500 rounded-full shadow-lg opacity-80"></div>
+                    <div className="absolute -right-2 -top-1 w-4 h-4 bg-blue-500 rounded-full shadow-lg opacity-80"></div>
+                  </div>
+                )}
 
                 {/* Sessions positionnées selon leur heure et durée réelles */}
                 {(weeklyData.sessions_by_day[day.key] || []).map((session: ScheduleSession) => {
