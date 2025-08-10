@@ -853,9 +853,20 @@ export default function SchedulePage() {
   const [dailyData, setDailyData] = useState<any>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [draggedSession, setDraggedSession] = useState<ScheduleSession | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ day: string; time: string; y?: number } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ day: string; time: string; y?: number; isValid?: boolean } | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showSessionForm, setShowSessionForm] = useState(false);
+  const [editingSession, setEditingSession] = useState<ScheduleSession | null>(null);
+  const [formData, setFormData] = useState<any>({
+    day: '',
+    startTime: '',
+    endTime: '',
+    course: '',
+    teacher: '',
+    room: '',
+    sessionType: 'CM'
+  });
   
   const { addToast } = useToast();
 
@@ -1018,29 +1029,43 @@ export default function SchedulePage() {
 
   // Actions d'édition
   const handleSessionEdit = (session: ScheduleSession) => {
-    // Ouvrir le modal d'édition
-    addToast({
-      title: "Édition",
-      description: `Édition de ${session.course_details?.name}`,
-    });
+    handleEditSession(session); // Utiliser le handler complet défini plus haut
   };
 
   const handleSessionDelete = async (sessionId: number) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-    setHasChanges(true);
-    addToast({
-      title: "Session supprimée",
-      description: "La session a été supprimée",
-    });
+    await handleDeleteSession(sessionId); // Utiliser le handler complet défini plus haut
   };
 
   const handleSessionDuplicate = (session: ScheduleSession) => {
-    const newSession = { ...session, id: Date.now() };
+    const newSession = { 
+      ...session, 
+      id: Date.now(), 
+      specific_start_time: session.specific_start_time,
+      specific_end_time: session.specific_end_time
+    };
+    
+    // Ajouter la session dupliquée à toutes les structures de données
     setSessions(prev => [...prev, newSession]);
+    setFilteredSessions(prev => [...prev, newSession]);
+    
+    // Ajouter dans weeklyData
+    const sessionDay = session.time_slot_details?.day_of_week;
+    if (sessionDay) {
+      setWeeklyData((prev: any) => {
+        if (!prev) return prev;
+        const newSessionsByDay = { ...prev.sessions_by_day };
+        if (!newSessionsByDay[sessionDay]) {
+          newSessionsByDay[sessionDay] = [];
+        }
+        newSessionsByDay[sessionDay].push(newSession);
+        return { ...prev, sessions_by_day: newSessionsByDay };
+      });
+    }
+    
     setHasChanges(true);
     addToast({
       title: "Session dupliquée",
-      description: "La session a été dupliquée",
+      description: "La session a été dupliquée avec succès",
     });
   };
 
@@ -1157,14 +1182,14 @@ export default function SchedulePage() {
     ));
 
     // Mettre à jour weeklyData.sessions_by_day pour l'affichage immédiat
-    setWeeklyData(prev => {
+    setWeeklyData((prev: any) => {
       if (!prev) return prev;
       
       const newSessionsByDay = { ...prev.sessions_by_day };
       
       // Retirer la session de son ancien jour
       Object.keys(newSessionsByDay).forEach(dayKey => {
-        newSessionsByDay[dayKey] = newSessionsByDay[dayKey].filter(s => s.id !== draggedSession.id);
+        newSessionsByDay[dayKey] = newSessionsByDay[dayKey].filter((s: any) => s.id !== draggedSession.id);
       });
       
       // Ajouter la session au nouveau jour
@@ -1196,6 +1221,132 @@ export default function SchedulePage() {
       description: "L'emploi du temps a été mis à jour",
     });
     setHasChanges(false);
+  };
+
+  // Gestionnaires pour le formulaire d'édition
+  const handleCreateSession = (day: string, time: string) => {
+    if (editMode !== 'edit') return;
+    
+    setFormData({
+      day,
+      startTime: time,
+      endTime: '', // L'utilisateur devra spécifier
+      course: '',
+      teacher: '',
+      room: '',
+      sessionType: 'CM'
+    });
+    setEditingSession(null);
+    setShowSessionForm(true);
+  };
+
+  const handleEditSession = (session: ScheduleSession) => {
+    setFormData({
+      day: session.time_slot_details?.day_of_week || '',
+      startTime: session.specific_start_time || session.time_slot_details?.start_time || '',
+      endTime: session.specific_end_time || session.time_slot_details?.end_time || '',
+      course: session.course_details?.id || session.course || '',
+      teacher: session.teacher_details?.id || session.teacher || '',
+      room: session.room_details?.id || session.room || '',
+      sessionType: session.session_type
+    });
+    setEditingSession(session);
+    setShowSessionForm(true);
+  };
+
+  const handleDeleteSession = async (sessionId: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) return;
+    
+    // Supprimer de toutes les structures de données
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+    setFilteredSessions(prev => prev.filter(s => s.id !== sessionId));
+    
+    setWeeklyData((prev: any) => {
+      if (!prev) return prev;
+      
+      const newSessionsByDay = { ...prev.sessions_by_day };
+      Object.keys(newSessionsByDay).forEach(dayKey => {
+        newSessionsByDay[dayKey] = newSessionsByDay[dayKey].filter((s: any) => s.id !== sessionId);
+      });
+      
+      return { ...prev, sessions_by_day: newSessionsByDay };
+    });
+    
+    setHasChanges(true);
+    addToast({
+      title: "Session supprimée",
+      description: "La session a été supprimée avec succès",
+    });
+  };
+
+  const handleSaveSession = () => {
+    // Créer ou mettre à jour la session
+    const sessionData = {
+      id: editingSession?.id || Date.now(), // ID temporaire pour les nouvelles sessions
+      time_slot_details: {
+        day_of_week: formData.day,
+        start_time: formData.startTime,
+        end_time: formData.endTime
+      },
+      specific_start_time: formData.startTime,
+      specific_end_time: formData.endTime,
+      course: formData.course,
+      teacher: formData.teacher,
+      room: formData.room,
+      session_type: formData.sessionType,
+      course_details: { name: 'Nouveau cours' }, // Placeholder
+      teacher_details: { user_details: { full_name: 'Enseignant' } }, // Placeholder
+      room_details: { code: 'Salle', name: 'Salle' }, // Placeholder
+      expected_students: 30,
+      is_cancelled: false,
+      notes: ''
+    };
+
+    if (editingSession) {
+      // Modifier session existante
+      setSessions(prev => prev.map(s => s.id === editingSession.id ? sessionData as any : s));
+      setFilteredSessions(prev => prev.map(s => s.id === editingSession.id ? sessionData as any : s));
+      
+      // Mettre à jour dans weeklyData
+      setWeeklyData((prev: any) => {
+        if (!prev) return prev;
+        const newSessionsByDay = { ...prev.sessions_by_day };
+        Object.keys(newSessionsByDay).forEach(dayKey => {
+          newSessionsByDay[dayKey] = newSessionsByDay[dayKey].map((s: any) => 
+            s.id === editingSession.id ? sessionData : s
+          );
+        });
+        return { ...prev, sessions_by_day: newSessionsByDay };
+      });
+      
+      addToast({
+        title: "Session modifiée",
+        description: "La session a été mise à jour avec succès",
+      });
+    } else {
+      // Créer nouvelle session
+      setSessions(prev => [...prev, sessionData as any]);
+      setFilteredSessions(prev => [...prev, sessionData as any]);
+      
+      // Ajouter dans weeklyData
+      setWeeklyData((prev: any) => {
+        if (!prev) return prev;
+        const newSessionsByDay = { ...prev.sessions_by_day };
+        if (!newSessionsByDay[formData.day]) {
+          newSessionsByDay[formData.day] = [];
+        }
+        newSessionsByDay[formData.day].push(sessionData);
+        return { ...prev, sessions_by_day: newSessionsByDay };
+      });
+      
+      addToast({
+        title: "Session créée",
+        description: "Nouvelle session ajoutée avec succès",
+      });
+    }
+    
+    setHasChanges(true);
+    setShowSessionForm(false);
   };
 
   const handleExport = () => {
@@ -1546,15 +1697,39 @@ export default function SchedulePage() {
             {days.map(day => (
               <div
                 key={day.key}
-                className="relative border-l border-gray-200"
+                className={`relative border-l border-gray-200 ${
+                  editMode === 'edit' ? 'cursor-pointer hover:bg-blue-50 border-blue-300' : ''
+                }`}
                 style={{ height: `${totalMinutes}px` }}
+                onClick={(e) => {
+                  if (editMode === 'edit') {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickTime = getSnapTime(e.clientY, rect.top);
+                    handleCreateSession(day.key, clickTime);
+                  }
+                }}
                 onDragOver={(e) => {
-                  if (editMode === 'drag') {
+                  if (editMode === 'drag' && draggedSession) {
                     e.preventDefault();
                     const rect = e.currentTarget.getBoundingClientRect();
                     const relativeY = e.clientY - rect.top;
                     const snapTime = getSnapTime(e.clientY, rect.top);
-                    setDropTarget({ day: day.key, time: snapTime, y: relativeY });
+                    
+                    // Calculer l'heure de fin pour vérifier les chevauchements
+                    const duration = getSessionDurationMinutes(draggedSession);
+                    const startMinutes = (() => {
+                      const [hours, minutes] = snapTime.split(':').map(Number);
+                      return hours * 60 + minutes;
+                    })();
+                    const endMinutes = startMinutes + duration;
+                    const endHours = Math.floor(endMinutes / 60);
+                    const endMins = endMinutes % 60;
+                    const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+                    
+                    // Vérifier si la position est valide
+                    const isValid = !checkForOverlap(day.key, snapTime, endTime, draggedSession.id);
+                    
+                    setDropTarget({ day: day.key, time: snapTime, y: relativeY, isValid });
                   }
                 }}
                 onDragLeave={() => setDropTarget(null)}
@@ -1591,12 +1766,38 @@ export default function SchedulePage() {
                     className="absolute left-0 right-0 z-20 pointer-events-none"
                     style={{ 
                       top: `${Math.round(dropTarget.y / 15) * 15}px`, // Snap à la grille de 15px
-                      height: '2px'
+                      height: `${getSessionHeightPixels(draggedSession)}px`
                     }}
                   >
-                    <div className="h-full bg-blue-500 rounded-full shadow-lg opacity-80"></div>
-                    <div className="absolute -left-2 -top-1 w-4 h-4 bg-blue-500 rounded-full shadow-lg opacity-80"></div>
-                    <div className="absolute -right-2 -top-1 w-4 h-4 bg-blue-500 rounded-full shadow-lg opacity-80"></div>
+                    {/* Zone de prévisualisation de la session */}
+                    <div 
+                      className={`w-full h-full rounded border-2 border-dashed ${
+                        dropTarget.isValid 
+                          ? 'bg-green-100 border-green-400' 
+                          : 'bg-red-100 border-red-400'
+                      } opacity-70`}
+                    >
+                      <div className={`text-xs p-1 font-medium ${
+                        dropTarget.isValid ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {dropTarget.isValid ? '✓ Position valide' : '✗ Chevauchement'}
+                      </div>
+                    </div>
+                    
+                    {/* Ligne indicatrice de position */}
+                    <div 
+                      className={`absolute left-0 right-0 h-0.5 rounded-full shadow-lg ${
+                        dropTarget.isValid ? 'bg-green-500' : 'bg-red-500'
+                      }`}
+                      style={{ top: '0px' }}
+                    >
+                      <div className={`absolute -left-2 -top-1.5 w-4 h-4 rounded-full shadow-lg ${
+                        dropTarget.isValid ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                      <div className={`absolute -right-2 -top-1.5 w-4 h-4 rounded-full shadow-lg ${
+                        dropTarget.isValid ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                    </div>
                   </div>
                 )}
 
@@ -1798,6 +1999,146 @@ export default function SchedulePage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Message d'aide pour le mode édition */}
+        {editMode === 'edit' && (
+          <div className="mb-4">
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardContent className="pt-4">
+                <div className="flex items-center text-blue-700 text-sm">
+                  <Edit className="w-4 h-4 mr-2" />
+                  <span>
+                    <strong>Mode édition actif :</strong> Cliquez sur une case vide pour créer une session, 
+                    ou sur une session existante pour la modifier.
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Formulaire d'édition de session */}
+        {showSessionForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+            >
+              <div className="p-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  {editingSession ? 'Modifier la session' : 'Nouvelle session'}
+                </h3>
+                
+                <div className="space-y-4">
+                  {/* Jour */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Jour</label>
+                    <Select value={formData.day} onValueChange={(value) => setFormData({...formData, day: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un jour" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monday">Lundi</SelectItem>
+                        <SelectItem value="tuesday">Mardi</SelectItem>
+                        <SelectItem value="wednesday">Mercredi</SelectItem>
+                        <SelectItem value="thursday">Jeudi</SelectItem>
+                        <SelectItem value="friday">Vendredi</SelectItem>
+                        <SelectItem value="saturday">Samedi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Horaires */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Heure début</label>
+                      <Input 
+                        type="time" 
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Heure fin</label>
+                      <Input 
+                        type="time" 
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Type de session */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Type</label>
+                    <Select value={formData.sessionType} onValueChange={(value) => setFormData({...formData, sessionType: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CM">Cours Magistral</SelectItem>
+                        <SelectItem value="TD">Travaux Dirigés</SelectItem>
+                        <SelectItem value="TP">Travaux Pratiques</SelectItem>
+                        <SelectItem value="CONF">Conférence</SelectItem>
+                        <SelectItem value="EXAM">Examen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Cours */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Cours</label>
+                    <Input 
+                      placeholder="Nom du cours"
+                      value={formData.course}
+                      onChange={(e) => setFormData({...formData, course: e.target.value})}
+                    />
+                  </div>
+
+                  {/* Enseignant */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Enseignant</label>
+                    <Input 
+                      placeholder="Nom de l'enseignant"
+                      value={formData.teacher}
+                      onChange={(e) => setFormData({...formData, teacher: e.target.value})}
+                    />
+                  </div>
+
+                  {/* Salle */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Salle</label>
+                    <Input 
+                      placeholder="Salle (ex: A101)"
+                      value={formData.room}
+                      onChange={(e) => setFormData({...formData, room: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-6">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setShowSessionForm(false)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={handleSaveSession}
+                    disabled={!formData.day || !formData.startTime || !formData.endTime}
+                  >
+                    {editingSession ? 'Modifier' : 'Créer'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
           </div>
         )}
         
