@@ -4,16 +4,104 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Building, Users, BookOpen, User, Mail, Phone, MoreVertical } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useDepartments } from '@/hooks/useCourses';
+import { useDepartments, useTeachers } from '@/hooks/useCourses';
+import { departmentService } from '@/lib/api/services/departments';
+import DepartmentModal from '@/components/modals/DepartmentModal';
+import type { Department } from '@/types/api';
+import type { CreateDepartmentData, UpdateDepartmentData } from '@/lib/api/services/departments';
+import { useToast } from '@/components/ui/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading';
 
 export default function DepartmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [departmentsData, setDepartmentsData] = useState<Department[]>([]);
+  const [globalStats, setGlobalStats] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  const { departments, loading, error, refetch } = useDepartments(searchTerm);
+  const { departments, loading: departmentsLoading, error: departmentsError } = useDepartments();
+  const { teachers } = useTeachers();
+  const { addToast } = useToast();
 
-  if (loading) {
+  // Chargement des données
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const [departmentsData, statsData] = await Promise.all([
+          departmentService.getDepartments({ search: searchTerm }).catch(() => ({ results: [], count: 0 })),
+          departmentService.getDepartmentsGlobalStats().catch(() => null)
+        ]);
+        
+        setDepartmentsData(departmentsData.results || departments || []);
+        setGlobalStats(statsData);
+      } catch (error) {
+        console.error('Erreur lors du chargement des départements:', error);
+        setError('Erreur lors du chargement des données');
+        // Fallback to hook data if available
+        if (departments && departments.length > 0) {
+          setDepartmentsData(departments);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDepartments();
+  }, [searchTerm, departments]);
+
+  const handleAddDepartment = () => {
+    setSelectedDepartment(null);
+    setShowDepartmentModal(true);
+  };
+
+  const handleEditDepartment = (department: Department) => {
+    setSelectedDepartment(department);
+    setShowDepartmentModal(true);
+  };
+
+  const handleSaveDepartment = async (departmentData: CreateDepartmentData | UpdateDepartmentData) => {
+    try {
+      if (selectedDepartment) {
+        // Update existing department
+        const updatedDepartment = await departmentService.updateDepartment(selectedDepartment.id!, departmentData as UpdateDepartmentData);
+        setDepartmentsData(prev => prev.map(dept => dept.id === selectedDepartment.id ? updatedDepartment : dept));
+      } else {
+        // Create new department
+        const newDepartment = await departmentService.createDepartment(departmentData as CreateDepartmentData);
+        setDepartmentsData(prev => [...prev, newDepartment]);
+      }
+      setShowDepartmentModal(false);
+    } catch (error) {
+      throw error; // Re-throw to be handled by the modal
+    }
+  };
+
+  const handleDeleteDepartment = async (departmentId: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce département ?')) return;
+    
+    try {
+      await departmentService.deleteDepartment(departmentId);
+      setDepartmentsData(prev => prev.filter(dept => dept.id !== departmentId));
+      addToast({
+        title: "Succès",
+        description: "Département supprimé avec succès",
+      });
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      addToast({
+        title: "Erreur",
+        description: "Impossible de supprimer le département",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="lg" />
@@ -26,16 +114,17 @@ export default function DepartmentsPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <p className="text-red-600 mb-4">Erreur lors du chargement des départements</p>
-          <Button onClick={refetch}>Réessayer</Button>
+          <Button onClick={() => window.location.reload()}>Réessayer</Button>
         </div>
       </div>
     );
   }
 
-  // Toutes les données viennent maintenant du backend
-  const filteredDepartments = departments.filter(dept => 
+  // Filtrage des départements
+  const filteredDepartments = departmentsData.filter(dept => 
     dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dept.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    dept.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    dept.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
 
@@ -47,7 +136,7 @@ export default function DepartmentsPage() {
           <h1 className="text-3xl font-bold text-foreground">Gestion des Départements</h1>
           <p className="text-muted-foreground mt-1">Gérez les départements et leurs responsables</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-primary hover:bg-primary/90">
+        <Button onClick={handleAddDepartment} className="bg-primary hover:bg-primary/90">
           <Plus className="mr-2 h-4 w-4" />
           Créer un département
         </Button>
@@ -62,7 +151,7 @@ export default function DepartmentsPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Départements</p>
-              <h3 className="text-2xl font-bold">{departments.length}</h3>
+              <h3 className="text-2xl font-bold">{departmentsData.length}</h3>
             </div>
           </div>
         </Card>
@@ -244,23 +333,14 @@ export default function DepartmentsPage() {
         </Card>
       )}
 
-      {/* Modal de création */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Créer un nouveau département</h2>
-            <p className="text-muted-foreground mb-4">Formulaire de création de département à implémenter</p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                Annuler
-              </Button>
-              <Button className="bg-primary hover:bg-primary/90">
-                Créer
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Department Modal */}
+      <DepartmentModal
+        isOpen={showDepartmentModal}
+        onClose={() => setShowDepartmentModal(false)}
+        department={selectedDepartment}
+        onSave={handleSaveDepartment}
+        teachers={teachers}
+      />
     </div>
   );
 }

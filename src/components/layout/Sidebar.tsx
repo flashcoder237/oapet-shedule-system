@@ -17,7 +17,8 @@ import {
   ChevronRight,
   GraduationCap,
   Activity,
-  BarChart3
+  BarChart3,
+  Brain
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -67,6 +68,12 @@ export default function Sidebar() {
       href: '/departments', 
       icon: Building,
       description: 'Structure organisationnelle'
+    },
+    { 
+      name: 'Intelligence Artificielle', 
+      href: '/ai', 
+      icon: Brain,
+      description: 'Outils IA et analyses'
     },
     { 
       name: 'Paramètres', 

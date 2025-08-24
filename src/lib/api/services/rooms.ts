@@ -10,8 +10,8 @@ import type {
 export const roomService = {
   // Salles
   async getRooms(params?: {
-    building?: number;
-    room_type?: number;
+    building?: string;
+    room_type?: string;
     min_capacity?: number;
     max_capacity?: number;
     has_projector?: boolean;
@@ -76,6 +76,10 @@ export const roomService = {
 
   // Statistiques des salles
   async getRoomsStats(): Promise<any> {
+    return apiClient.get(`${API_ENDPOINTS.ROOMS}stats/`);
+  },
+
+  async getRoomStats(): Promise<any> {
     return apiClient.get(`${API_ENDPOINTS.ROOMS}stats/`);
   },
 

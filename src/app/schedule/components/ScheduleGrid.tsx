@@ -188,6 +188,52 @@ export function ScheduleGrid({
     );
   };
 
+  // Fonction pour détecter les chevauchements locaux et organiser les sessions
+  const getSessionsWithOverlapLayout = (daySessions: ScheduleSession[]) => {
+    const sessionsWithLayout: Array<ScheduleSession & { 
+      overlapIndex: number, 
+      overlapTotal: number,
+      hasVisualConflict: boolean 
+    }> = [];
+    
+    daySessions.forEach((session, index) => {
+      // Trouver toutes les sessions qui chevauchent avec celle-ci
+      const overlappingSessions = daySessions.filter((otherSession, otherIndex) => {
+        if (otherIndex === index) return false;
+        
+        const sessionStart = session.specific_start_time;
+        const sessionEnd = session.specific_end_time;
+        const otherStart = otherSession.specific_start_time;
+        const otherEnd = otherSession.specific_end_time;
+        
+        if (!sessionStart || !sessionEnd || !otherStart || !otherEnd) return false;
+        
+        const [sessionStartH, sessionStartM] = sessionStart.split(':').map(Number);
+        const [sessionEndH, sessionEndM] = sessionEnd.split(':').map(Number);
+        const [otherStartH, otherStartM] = otherStart.split(':').map(Number);
+        const [otherEndH, otherEndM] = otherEnd.split(':').map(Number);
+        const sessionStartMinutes = sessionStartH * 60 + sessionStartM;
+        const sessionEndMinutes = sessionEndH * 60 + sessionEndM;
+        const otherStartMinutes = otherStartH * 60 + otherStartM;
+        const otherEndMinutes = otherEndH * 60 + otherEndM;
+        
+        return (sessionStartMinutes < otherEndMinutes && sessionEndMinutes > otherStartMinutes);
+      });
+      
+      const overlapTotal = overlappingSessions.length + 1;
+      const overlapIndex = overlappingSessions.filter((_, otherIndex) => otherIndex < index).length;
+      
+      sessionsWithLayout.push({
+        ...session,
+        overlapIndex,
+        overlapTotal,
+        hasVisualConflict: overlappingSessions.length > 0
+      });
+    });
+    
+    return sessionsWithLayout;
+  };
+
   const handleDragOver = (e: React.DragEvent, day: string, containerRef?: React.RefObject<HTMLDivElement | null>) => {
     e.preventDefault();
     if ((editMode === 'edit' || editMode === 'drag') && draggedSession && containerRef?.current) {
@@ -547,43 +593,62 @@ export function ScheduleGrid({
                     </div>
                   )}
 
-                  {/* Sessions positionnées selon leur heure et durée réelles */}
-                  {sessions.filter(session => {
-                    if (session.specific_date) {
-                      const date = new Date(session.specific_date);
-                      const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-                      return dayNames[date.getDay()] === dayKey;
-                    }
-                    return false;
-                  }).map((session) => {
-                    const topPosition = getSessionTopPosition(session);
-                    const height = getSessionHeightPixels(session);
+                  {/* Sessions positionnées selon leur heure et durée réelles avec gestion des chevauchements */}
+                  {(() => {
+                    const daySessions = sessions.filter(session => {
+                      if (session.specific_date) {
+                        const date = new Date(session.specific_date);
+                        const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+                        return dayNames[date.getDay()] === dayKey;
+                      }
+                      return false;
+                    });
                     
-                    if (topPosition < 0 || topPosition >= totalMinutes) return null;
+                    const sessionsWithLayout = getSessionsWithOverlapLayout(daySessions);
+                    
+                    return sessionsWithLayout.map((session) => {
+                      const topPosition = getSessionTopPosition(session);
+                      const height = getSessionHeightPixels(session);
+                      
+                      if (topPosition < 0 || topPosition >= totalMinutes) return null;
 
-                    return (
-                      <div
-                        key={session.id}
-                        className="absolute left-1 right-1 z-10"
-                        style={{
-                          top: `${topPosition}px`,
-                          height: `${height}px`
-                        }}
-                      >
-                        <SessionCard
-                          session={session}
-                          isDragging={draggedSession?.id === session.id}
-                          onDragStart={(e) => handleDragStart(e, session)}
-                          onDragEnd={handleDragEnd}
-                          onEdit={onSessionEdit}
-                          onDelete={onSessionDelete}
-                          onDuplicate={onSessionDuplicate}
-                          editMode={editMode}
-                          hasConflict={hasConflict(session)}
-                        />
-                      </div>
-                    );
-                  })}
+                      // Calcul de la largeur et position horizontale pour les chevauchements
+                      const widthPercent = session.overlapTotal > 1 ? 100 / session.overlapTotal : 100;
+                      const leftPercent = session.overlapTotal > 1 ? (session.overlapIndex * widthPercent) : 0;
+
+                      return (
+                        <div
+                          key={session.id}
+                          className={`absolute z-10 ${session.hasVisualConflict ? 'ring-2 ring-red-400 ring-opacity-60' : ''}`}
+                          style={{
+                            top: `${topPosition}px`,
+                            height: `${height}px`,
+                            left: `${4 + leftPercent * 0.92}%`, // 4% marge + largeur ajustée
+                            width: `${widthPercent * 0.92}%`, // 92% de largeur totale pour garder des marges
+                            zIndex: session.hasVisualConflict ? 15 : 10
+                          }}
+                        >
+                          <SessionCard
+                            session={session}
+                            isDragging={draggedSession?.id === session.id}
+                            onDragStart={(e) => handleDragStart(e, session)}
+                            onDragEnd={handleDragEnd}
+                            onEdit={onSessionEdit}
+                            onDelete={onSessionDelete}
+                            onDuplicate={onSessionDuplicate}
+                            editMode={editMode}
+                            hasConflict={hasConflict(session) || session.hasVisualConflict}
+                          />
+                          {/* Indicateur de conflit visuel */}
+                          {session.hasVisualConflict && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white text-white text-xs flex items-center justify-center font-bold">
+                              !
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               );
             })}

@@ -59,14 +59,19 @@ export function SessionCard({
     }
   };
 
+  const getConflictOverlay = () => {
+    if (!hasConflict) return '';
+    return 'ring-2 ring-red-500 ring-opacity-60 bg-red-50 bg-opacity-50';
+  };
+
   return (
     <div
       className={`
         relative p-2 rounded-lg shadow-sm cursor-pointer w-full h-full border-l-4
         ${getSessionTypeColor(session.session_type)}
-        ${hasConflict ? 'ring-2 ring-red-500' : ''}
-        ${isDragging ? 'opacity-50 rotate-2' : ''}
-        ${editMode === 'edit' || editMode === 'drag' ? 'cursor-move hover:shadow-lg' : ''}
+        ${getConflictOverlay()}
+        ${isDragging ? 'opacity-50 rotate-2 scale-105' : ''}
+        ${editMode === 'edit' || editMode === 'drag' ? 'cursor-move hover:shadow-lg hover:scale-102' : ''}
         transition-all duration-200
       `}
       draggable={editMode === 'edit' || editMode === 'drag'}
@@ -107,9 +112,9 @@ export function SessionCard({
         </div>
 
         {hasConflict && (
-          <div className="flex items-center gap-1 mt-1 text-red-600">
+          <div className="flex items-center gap-1 mt-1 text-red-600 bg-red-100 px-1 py-0.5 rounded animate-pulse">
             <AlertTriangle className="w-3 h-3" />
-            <span className="text-xs">Conflit</span>
+            <span className="text-xs font-medium">Conflit!</span>
           </div>
         )}
       </div>

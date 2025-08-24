@@ -577,16 +577,16 @@ export default function SchedulePage() {
           </>
         )}
 
-        {/* Boutons d'actions en mode édition */}
+        {/* Boutons d'actions en mode édition/drag */}
         <AnimatePresence>
-          {editMode === 'edit' && (
+          {(editMode === 'edit' || editMode === 'drag') && (
             <>
-              {/* Bouton d'ajout de session */}
+              {/* Bouton d'ajout de session - repositionné */}
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
-                className="fixed bottom-40 left-6 z-50"
+                className="fixed bottom-32 right-6 z-50"
               >
                 <Button
                   onClick={() => {
@@ -600,13 +600,13 @@ export default function SchedulePage() {
                 </Button>
               </motion.div>
 
-              {/* Bouton de gestion des ressources */}
+              {/* Bouton de gestion des ressources - repositionné */}
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ delay: 0.1 }}
-                className="fixed bottom-24 left-6 z-50"
+                className="fixed bottom-16 right-6 z-50"
               >
                 <Button
                   onClick={() => setShowManagementPanel(true)}
@@ -616,6 +616,43 @@ export default function SchedulePage() {
                   <Settings2 className="h-6 w-6 text-white" />
                 </Button>
               </motion.div>
+
+              {/* Indicateur de mode drag/edit */}
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ delay: 0.2 }}
+                className="fixed top-32 right-6 z-40"
+              >
+                <div className={`px-3 py-2 rounded-lg shadow-lg text-white text-sm font-medium ${
+                  editMode === 'edit' 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
+                    : 'bg-gradient-to-r from-green-500 to-teal-600'
+                }`}>
+                  {editMode === 'edit' ? '✏️ Mode Édition' : '🖱️ Mode Drag'}
+                </div>
+              </motion.div>
+
+              {/* Instructions de drag & drop */}
+              {editMode === 'drag' && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="fixed top-48 right-6 z-40 max-w-xs"
+                >
+                  <div className="bg-white rounded-lg shadow-lg border p-3 text-xs">
+                    <div className="font-medium text-gray-800 mb-1">💡 Instructions</div>
+                    <div className="text-gray-600 space-y-1">
+                      <div>• Cliquez et glissez un cours</div>
+                      <div>• 🟢 Vert = Position valide</div>
+                      <div>• 🔴 Rouge = Conflit détecté</div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </>
           )}
         </AnimatePresence>

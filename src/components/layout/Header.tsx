@@ -55,7 +55,7 @@ export default function Header() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "sticky top-0 z-50 backdrop-blur-lg",
+        "sticky top-0 backdrop-blur-lg",
         "bg-card/80 border-b border-border",
         "px-6 py-4"
       )}
