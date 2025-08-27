@@ -24,6 +24,7 @@ export default function Header() {
     if (pathname.startsWith('/schedule')) return 'Emplois du temps';
     if (pathname.startsWith('/users')) return 'Utilisateurs';
     if (pathname.startsWith('/departments')) return 'Départements';
+    if (pathname.startsWith('/ai')) return 'Intelligence Artificielle';
     if (pathname.startsWith('/settings')) return 'Paramètres';
     return 'Système de gestion des emplois du temps';
   };
@@ -173,7 +174,7 @@ export default function Header() {
                   className={cn(
                     "absolute right-0 mt-2 w-56",
                     "bg-card border border-border rounded-xl shadow-xl",
-                    "backdrop-blur-lg z-50"
+                    "backdrop-blur-lg z-40"
                   )}
                 >
                   {/* User info header */}
