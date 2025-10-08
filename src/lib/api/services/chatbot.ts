@@ -56,24 +56,21 @@ export const chatbotService = {
    * Envoie un message au chatbot
    */
   async sendMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
-    const response = await apiClient.post<SendMessageResponse>('/chatbot/send/', data);
-    return response.data;
+    return await apiClient.post<SendMessageResponse>('/chatbot/send/', data);
   },
 
   /**
    * Récupère toutes les conversations de l'utilisateur
    */
   async getConversations(): Promise<Conversation[]> {
-    const response = await apiClient.get<Conversation[]>('/chatbot/conversations/');
-    return response.data;
+    return await apiClient.get<Conversation[]>('/chatbot/conversations/');
   },
 
   /**
    * Récupère une conversation spécifique
    */
   async getConversation(id: number): Promise<Conversation> {
-    const response = await apiClient.get<Conversation>(`/chatbot/conversations/${id}/`);
-    return response.data;
+    return await apiClient.get<Conversation>(`/chatbot/conversations/${id}/`);
   },
 
   /**
@@ -81,8 +78,7 @@ export const chatbotService = {
    */
   async getActiveConversation(): Promise<Conversation | null> {
     try {
-      const response = await apiClient.get<Conversation>('/chatbot/active/');
-      return response.data;
+      return await apiClient.get<Conversation>('/chatbot/active/');
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;
@@ -95,10 +91,9 @@ export const chatbotService = {
    * Crée une nouvelle conversation
    */
   async createConversation(title?: string): Promise<Conversation> {
-    const response = await apiClient.post<Conversation>('/chatbot/conversations/', {
+    return await apiClient.post<Conversation>('/chatbot/conversations/', {
       title: title || `Conversation du ${new Date().toLocaleDateString('fr-FR')}`,
     });
-    return response.data;
   },
 
   /**
@@ -133,8 +128,7 @@ export const chatbotService = {
    * Récupère les statistiques du chatbot
    */
   async getAnalytics(): Promise<ChatbotAnalytics> {
-    const response = await apiClient.get<ChatbotAnalytics>('/chatbot/analytics/');
-    return response.data;
+    return await apiClient.get<ChatbotAnalytics>('/chatbot/analytics/');
   },
 
   /**

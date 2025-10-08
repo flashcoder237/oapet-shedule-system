@@ -8,7 +8,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { cn } from '@/lib/utils';
-import EnhancedChatbotWidget from '@/components/chatbot/EnhancedChatbotWidget';
+import FloatingMenu from './FloatingMenu';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -52,13 +52,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
 
-      {/* Floating Elements Container */}
-      <div className="fixed bottom-0 right-0 z-50 p-6 flex flex-col-reverse items-end gap-4 pointer-events-none">
-        {/* All floating elements - each with pointer-events-auto */}
-        <div className="pointer-events-auto">
-          <EnhancedChatbotWidget />
-        </div>
-      </div>
+      {/* Unified Floating Menu */}
+      <FloatingMenu />
     </div>
   );
 }

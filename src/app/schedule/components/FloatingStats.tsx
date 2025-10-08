@@ -20,7 +20,7 @@ export function FloatingStats({ sessions, conflicts }: FloatingStatsProps) {
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        className="fixed bottom-40 right-6 z-50"
+        className="fixed bottom-28 left-6 z-40"
       >
         <Button
           onClick={() => setIsOpen(true)}
@@ -49,9 +49,9 @@ export function FloatingStats({ sessions, conflicts }: FloatingStatsProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: 100 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="fixed bottom-40 right-6 z-50 w-80"
+      initial={{ opacity: 0, scale: 0.8, x: -100, y: 20 }}
+      animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+      className="fixed bottom-28 left-6 z-40 w-80"
     >
       <Card className="shadow-2xl border-2 border-green-200">
         <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 pb-2 pt-3">

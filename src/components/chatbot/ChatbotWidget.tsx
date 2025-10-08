@@ -18,7 +18,7 @@ export default function ChatbotWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   // Charger la conversation active au montage
   useEffect(() => {
@@ -95,9 +95,9 @@ export default function ChatbotWidget() {
       ]);
     } catch (error: any) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      toast({
+      addToast({
         title: 'Erreur',
-        description: 'Impossible d\'envoyer le message. Veuillez réessayer.',
+        description: 'Impossible d\'envoyer le message. Veuillez reessayer.',
         variant: 'destructive',
       });
 
@@ -118,14 +118,14 @@ export default function ChatbotWidget() {
       }
       setMessages([]);
       setConversationId(null);
-      toast({
-        title: 'Historique supprimé',
-        description: 'L\'historique des conversations a été supprimé.',
+      addToast({
+        title: 'Historique supprime',
+        description: 'L historique des conversations a ete supprime.',
       });
     } catch (error) {
-      toast({
+      addToast({
         title: 'Erreur',
-        description: 'Impossible de supprimer l\'historique.',
+        description: 'Impossible de supprimer l historique.',
         variant: 'destructive',
       });
     }

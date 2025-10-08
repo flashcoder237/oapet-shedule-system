@@ -19,7 +19,7 @@ export default function MessageFeedback({ messageId, initialRating }: MessageFee
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   const handleRating = async (newRating: number) => {
     if (rating === newRating) return; // Déjà noté
@@ -29,9 +29,9 @@ export default function MessageFeedback({ messageId, initialRating }: MessageFee
 
     try {
       await chatbotService.sendFeedback(messageId, newRating, comment);
-      toast({
+      addToast({
         title: 'Merci pour votre feedback !',
-        description: 'Votre avis nous aide à améliorer le chatbot.',
+        description: 'Votre avis nous aide a ameliorer le chatbot.',
       });
 
       // Afficher le champ commentaire pour les notes basses
@@ -40,9 +40,9 @@ export default function MessageFeedback({ messageId, initialRating }: MessageFee
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi du feedback:', error);
-      toast({
+      addToast({
         title: 'Erreur',
-        description: 'Impossible d\'envoyer votre feedback.',
+        description: 'Impossible d envoyer votre feedback.',
         variant: 'destructive',
       });
       setRating(null);
@@ -57,15 +57,15 @@ export default function MessageFeedback({ messageId, initialRating }: MessageFee
     setIsSubmitting(true);
     try {
       await chatbotService.sendFeedback(messageId, rating, comment);
-      toast({
-        title: 'Commentaire envoyé',
-        description: 'Merci pour votre retour détaillé !',
+      addToast({
+        title: 'Commentaire envoye',
+        description: 'Merci pour votre retour detaille !',
       });
       setShowComment(false);
     } catch (error) {
-      toast({
+      addToast({
         title: 'Erreur',
-        description: 'Impossible d\'envoyer le commentaire.',
+        description: 'Impossible d envoyer le commentaire.',
         variant: 'destructive',
       });
     } finally {

@@ -21,7 +21,7 @@ export default function ConversationHistory({
 }: ConversationHistoryProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   useEffect(() => {
     loadConversations();
@@ -34,9 +34,9 @@ export default function ConversationHistory({
       setConversations(data);
     } catch (error) {
       console.error('Erreur lors du chargement des conversations:', error);
-      toast({
+      addToast({
         title: 'Erreur',
-        description: 'Impossible de charger l\'historique.',
+        description: 'Impossible de charger l historique.',
         variant: 'destructive',
       });
     } finally {
@@ -52,12 +52,12 @@ export default function ConversationHistory({
     try {
       await chatbotService.deleteConversation(id);
       setConversations((prev) => prev.filter((c) => c.id !== id));
-      toast({
-        title: 'Conversation supprimée',
-        description: 'La conversation a été supprimée avec succès.',
+      addToast({
+        title: 'Conversation supprimee',
+        description: 'La conversation a ete supprimee avec succes.',
       });
     } catch (error) {
-      toast({
+      addToast({
         title: 'Erreur',
         description: 'Impossible de supprimer la conversation.',
         variant: 'destructive',
@@ -132,9 +132,9 @@ export default function ConversationHistory({
                   <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {conversation.title}
                   </h4>
-                  {conversation.last_message_preview && (
+                  {conversation.last_message && (
                     <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-1">
-                      {conversation.last_message_preview.content}
+                      {conversation.last_message.content}
                     </p>
                   )}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-500">

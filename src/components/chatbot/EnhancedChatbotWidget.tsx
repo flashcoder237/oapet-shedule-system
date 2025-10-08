@@ -27,8 +27,12 @@ import ChatbotAnalytics from './ChatbotAnalytics';
 
 type ViewMode = 'chat' | 'history' | 'analytics';
 
-export default function EnhancedChatbotWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+interface EnhancedChatbotWidgetProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function EnhancedChatbotWidget({ isOpen, onClose }: EnhancedChatbotWidgetProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -37,7 +41,7 @@ export default function EnhancedChatbotWidget() {
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   // Suggestions par défaut
   const defaultSuggestions = [
@@ -127,9 +131,9 @@ export default function EnhancedChatbotWidget() {
       }
     } catch (error: any) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      toast({
+      addToast({
         title: 'Erreur',
-        description: 'Impossible d\'envoyer le message. Veuillez réessayer.',
+        description: 'Impossible d envoyer le message. Veuillez reessayer.',
         variant: 'destructive',
       });
 
@@ -156,7 +160,7 @@ export default function EnhancedChatbotWidget() {
         setViewMode('chat');
         setShowSuggestions(false);
       } catch (error) {
-        toast({
+        addToast({
           title: 'Erreur',
           description: 'Impossible de charger la conversation.',
           variant: 'destructive',
@@ -175,14 +179,14 @@ export default function EnhancedChatbotWidget() {
       setMessages([]);
       setConversationId(null);
       loadActiveConversation();
-      toast({
-        title: 'Historique supprimé',
-        description: 'L\'historique a été supprimé avec succès.',
+      addToast({
+        title: 'Historique supprime',
+        description: 'L historique a ete supprime avec succes.',
       });
     } catch (error) {
-      toast({
+      addToast({
         title: 'Erreur',
-        description: 'Impossible de supprimer l\'historique.',
+        description: 'Impossible de supprimer l historique.',
         variant: 'destructive',
       });
     }
@@ -328,46 +332,14 @@ export default function EnhancedChatbotWidget() {
   };
 
   return (
-    <>
-      {/* Bouton flottant */}
-      <motion.button
-        className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <AnimatePresence mode="wait">
-          {isOpen ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-            >
-              <X className="w-6 h-6" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-            >
-              <MessageCircle className="w-6 h-6" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
-
-      {/* Fenêtre du chatbot */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="absolute bottom-20 right-0 w-[450px] h-[650px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
-          >
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          className="w-[450px] h-[650px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+        >
             {/* En-tête */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4">
               <div className="flex items-center justify-between mb-3">
@@ -428,9 +400,8 @@ export default function EnhancedChatbotWidget() {
             <div className="flex-1 flex flex-col overflow-hidden">
               {renderContent()}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

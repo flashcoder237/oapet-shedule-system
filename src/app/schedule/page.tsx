@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import AnimatedBackground from '@/components/ui/animated-background';
-import { Plus, Settings2 } from 'lucide-react';
+import { Plus, Settings2, X } from 'lucide-react';
 
 // Import des composants créés
 import {
@@ -16,13 +16,17 @@ import {
   FloatingAIDetector,
   SessionForm,
   ScheduleGrid,
-  ManagementPanel
+  ManagementPanel,
+  UnifiedFloatingMenu
 } from './components';
 
 // Import des services API
 import { scheduleService } from '@/lib/api/services/schedules';
 import { courseService } from '@/lib/api/services/courses';
 import { roomService } from '@/lib/api/services/rooms';
+
+// Import du générateur IA
+import { AIScheduleGenerator } from '@/components/scheduling/AIScheduleGenerator';
 
 // Import des types
 import { 
@@ -88,7 +92,8 @@ export default function SchedulePage() {
   const [showSessionForm, setShowSessionForm] = useState(false);
   const [editingSession, setEditingSession] = useState<ScheduleSession | null>(null);
   const [showManagementPanel, setShowManagementPanel] = useState(false);
-  
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+
   const { addToast } = useToast();
 
   // Génération d'une grille très fine (intervalles de 5 minutes) sur horaires réduits
@@ -478,6 +483,10 @@ export default function SchedulePage() {
     }
   };
 
+  const handleGenerateSchedule = () => {
+    setShowAIGenerator(true);
+  };
+
   // Effects
   useEffect(() => {
     loadCurricula();
@@ -657,8 +666,8 @@ export default function SchedulePage() {
           )}
         </AnimatePresence>
 
-        {/* Composants flottants */}
-        <FloatingHeader
+        {/* Menu flottant unifié */}
+        <UnifiedFloatingMenu
           selectedClass={selectedCurriculum}
           onClassChange={setSelectedCurriculum}
           viewMode={viewMode}
@@ -673,20 +682,9 @@ export default function SchedulePage() {
           hasChanges={hasChanges}
           curricula={curricula}
           conflicts={backendConflicts}
-          addToast={addToast}
-        />
-
-        <FloatingStats
           sessions={filteredSessions}
-          conflicts={backendConflicts}
-        />
-
-        <FloatingAIDetector
-          conflicts={backendConflicts}
-          onResolve={(conflict) => {
-            // TODO: Implémenter la résolution de conflits
-            console.log('Résoudre conflit:', conflict);
-          }}
+          addToast={addToast}
+          onGenerateSchedule={handleGenerateSchedule}
         />
 
         {/* Formulaire de session */}
@@ -710,6 +708,35 @@ export default function SchedulePage() {
           onDataUpdate={loadAuxiliaryData}
           addToast={addToast}
         />
+
+        {/* Générateur IA d'emploi du temps */}
+        {showAIGenerator && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Generateur IA d'Emploi du Temps
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAIGenerator(false)}
+                  className="rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+                <AIScheduleGenerator
+                  onScheduleGenerated={() => {
+                    setShowAIGenerator(false);
+                    loadSessions();
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

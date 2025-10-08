@@ -6,3 +6,4 @@ export { FloatingAIDetector } from './FloatingAIDetector';
 export { SessionForm } from './SessionForm';
 export { ScheduleGrid } from './ScheduleGrid';
 export { ManagementPanel } from './ManagementPanel';
+export { UnifiedFloatingMenu } from './UnifiedFloatingMenu';

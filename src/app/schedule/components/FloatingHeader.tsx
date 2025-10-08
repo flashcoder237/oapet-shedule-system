@@ -85,7 +85,7 @@ export function FloatingHeader({
         animate={{ scale: 1, opacity: 1 }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        className="fixed bottom-24 right-6 z-50"
+        className="fixed bottom-6 left-6 z-40"
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
       >
@@ -106,12 +106,12 @@ export function FloatingHeader({
         
         {/* Tooltip animé */}
         <motion.div
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : 10 }}
-          className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap pointer-events-none"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : -10 }}
+          className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap pointer-events-none"
         >
-          Ouvrir les contrôles
-          <div className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-gray-900 border-t-2 border-b-2 border-t-transparent border-b-transparent"></div>
+          Ouvrir les controles
+          <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-r-4 border-r-gray-900 border-t-2 border-b-2 border-t-transparent border-b-transparent"></div>
         </motion.div>
       </motion.div>
     );
@@ -119,11 +119,11 @@ export function FloatingHeader({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8, x: 100, y: 20 }}
+      initial={{ opacity: 0, scale: 0.8, x: -100, y: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-      exit={{ opacity: 0, scale: 0.8, x: 100, y: 20 }}
+      exit={{ opacity: 0, scale: 0.8, x: -100, y: 20 }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="fixed bottom-24 right-6 z-50 w-96"
+      className="fixed bottom-6 left-6 z-40 w-96"
     >
       <Card className="shadow-2xl border-2 border-blue-200/50 backdrop-blur-sm bg-white/95">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-2 pt-3 relative overflow-hidden">

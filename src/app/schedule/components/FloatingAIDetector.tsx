@@ -23,7 +23,7 @@ export function FloatingAIDetector({ conflicts, onResolve }: FloatingAIDetectorP
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        className="fixed bottom-6 right-6 z-50"
+        className="fixed bottom-28 right-6 z-40"
       >
         <Button
           onClick={() => setIsOpen(true)}
@@ -44,7 +44,7 @@ export function FloatingAIDetector({ conflicts, onResolve }: FloatingAIDetectorP
     <motion.div
       initial={{ opacity: 0, scale: 0.8, y: 100 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="fixed bottom-6 right-6 z-50 w-80"
+      className="fixed bottom-28 right-6 z-40 w-80"
     >
       <Card className="shadow-2xl border-2 border-blue-200">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-2 pt-3">
