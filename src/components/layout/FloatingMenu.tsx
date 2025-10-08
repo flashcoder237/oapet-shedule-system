@@ -45,7 +45,18 @@ export default function FloatingMenu() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <motion.div
+      drag
+      dragMomentum={false}
+      dragElastic={0.1}
+      dragConstraints={{
+        top: -window.innerHeight + 200,
+        bottom: 0,
+        left: -window.innerWidth + 200,
+        right: 0
+      }}
+      className="fixed bottom-6 right-6 z-50 cursor-move"
+    >
       <div className="absolute bottom-20 right-0 mb-4">
         {activeWidget === 'chatbot' && (
           <EnhancedChatbotWidget
@@ -181,6 +192,6 @@ export default function FloatingMenu() {
           </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

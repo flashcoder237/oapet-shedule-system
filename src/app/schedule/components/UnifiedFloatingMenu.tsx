@@ -106,11 +106,20 @@ export function UnifiedFloatingMenu({
   if (!isOpen) {
     return (
       <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.1}
+        dragConstraints={{
+          top: -window.innerHeight + 200,
+          bottom: 0,
+          left: -window.innerWidth + 200,
+          right: 0
+        }}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-28 right-6 z-50"
+        className="fixed bottom-28 right-6 z-50 cursor-move"
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
       >
@@ -149,11 +158,20 @@ export function UnifiedFloatingMenu({
 
   return (
     <motion.div
+      drag
+      dragMomentum={false}
+      dragElastic={0.1}
+      dragConstraints={{
+        top: -window.innerHeight + 200,
+        bottom: 0,
+        left: -window.innerWidth + 200,
+        right: 0
+      }}
       initial={{ opacity: 0, scale: 0.8, x: 100, y: 20 }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.8, x: 100, y: 20 }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="fixed bottom-28 right-6 z-50 w-[450px]"
+      className="fixed bottom-28 right-6 z-50 w-[450px] cursor-move"
     >
       <Card className="shadow-2xl border-2 border-blue-200/50 backdrop-blur-sm bg-white/95 max-h-[80vh] overflow-hidden flex flex-col">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-3 pt-3">
