@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useDepartments, useTeachers } from '@/hooks/useCourses';
 import { departmentService } from '@/lib/api/services/departments';
 import DepartmentModal from '@/components/modals/DepartmentModal';
+import { ImportExport } from '@/components/ui/ImportExport';
 import type { Department } from '@/types/api';
 import type { CreateDepartmentData, UpdateDepartmentData } from '@/lib/api/services/departments';
 import { useToast } from '@/components/ui/use-toast';
@@ -136,10 +137,20 @@ export default function DepartmentsPage() {
           <h1 className="text-3xl font-bold text-foreground">Gestion des Départements</h1>
           <p className="text-muted-foreground mt-1">Gérez les départements et leurs responsables</p>
         </div>
-        <Button onClick={handleAddDepartment} className="bg-primary hover:bg-primary/90">
-          <Plus className="mr-2 h-4 w-4" />
-          Créer un département
-        </Button>
+        <div className="flex gap-2">
+          <ImportExport
+            exportEndpoint="/courses/departments/export/"
+            importEndpoint="/courses/departments/import_data/"
+            resourceName="departments"
+            onImportSuccess={() => window.location.reload()}
+            size="default"
+            variant="outline"
+          />
+          <Button onClick={handleAddDepartment} className="bg-primary hover:bg-primary/90">
+            <Plus className="mr-2 h-4 w-4" />
+            Créer un département
+          </Button>
+        </div>
       </div>
 
       {/* Statistiques globales */}

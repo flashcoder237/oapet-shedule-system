@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useTeachers, useDepartments } from '@/hooks/useCourses';
 import { userService } from '@/lib/api/services/users';
 import UserModal from '@/components/modals/UserModal';
+import { ImportExport } from '@/components/ui/ImportExport';
 import type { CreateUserData, UpdateUserData } from '@/lib/api/services/users';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
@@ -199,10 +200,20 @@ export default function UsersPage() {
             {filteredUsers.length} utilisateur(s) trouvé(s)
           </p>
         </div>
-        <Button onClick={handleAddUser}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nouvel utilisateur
-        </Button>
+        <div className="flex gap-2">
+          <ImportExport
+            exportEndpoint="/courses/teachers/export/"
+            importEndpoint="/courses/teachers/import_data/"
+            resourceName="teachers"
+            onImportSuccess={() => window.location.reload()}
+            size="default"
+            variant="outline"
+          />
+          <Button onClick={handleAddUser}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvel utilisateur
+          </Button>
+        </div>
       </div>
 
       {/* Filtres et recherche */}

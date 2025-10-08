@@ -10,12 +10,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { courseService } from '@/lib/api/services/courses';
 import CourseModal from '@/components/modals/CourseModal';
 import CourseCardWithAI from '@/components/courses/CourseCardWithAI';
-import ExportModal from '@/components/export/ExportModal';
-import { 
-  ParallaxCard, 
-  AnimatedProgress, 
+import { ImportExport } from '@/components/ui/ImportExport';
+import {
+  ParallaxCard,
+  AnimatedProgress,
   NotificationBadge,
-  MagneticButton 
+  MagneticButton
 } from '@/components/ui/interactive-elements';
 import type { Course, CourseStats } from '@/types/api';
 
@@ -24,7 +24,6 @@ export default function CoursesPage() {
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [showCourseModal, setShowCourseModal] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -213,12 +212,14 @@ export default function CoursesPage() {
           <p className="text-secondary mt-1">Gérez les cours, professeurs et planifications</p>
         </div>
         <div className="flex gap-2">
-          <MagneticButton
-            onClick={() => setShowExportModal(true)}
-            className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/80 transition-colors"
-          >
-            Exporter
-          </MagneticButton>
+          <ImportExport
+            exportEndpoint="/courses/courses/export/"
+            importEndpoint="/courses/courses/import_data/"
+            resourceName="courses"
+            onImportSuccess={() => window.location.reload()}
+            size="default"
+            variant="outline"
+          />
           <Button onClick={handleAddCourse}>
             <Plus className="mr-2 h-4 w-4" />
             Ajouter un cours
@@ -338,13 +339,6 @@ export default function CoursesPage() {
         onClose={() => setShowCourseModal(false)}
         course={selectedCourse}
         onSave={handleSaveCourse}
-      />
-
-      <ExportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        data={filteredCourses}
-        type="courses"
       />
     </motion.div>
   );

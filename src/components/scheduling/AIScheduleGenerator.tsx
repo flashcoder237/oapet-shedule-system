@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { mlService } from '@/lib/api/services/ml';
+import { apiClient } from '@/lib/api/client';
 
 interface GenerationConstraints {
   preferredTimeSlots: string[];
@@ -65,13 +66,13 @@ interface ScheduleMetrics {
 }
 
 interface AIScheduleGeneratorProps {
-  selectedClass: string;
-  onScheduleGenerated: (scheduleId: string) => void;
-  onPreview: (schedule: any) => void;
+  selectedClass?: string;
+  onScheduleGenerated?: (scheduleId?: string) => void;
+  onPreview?: (schedule: any) => void;
 }
 
 export function AIScheduleGenerator({
-  selectedClass,
+  selectedClass = '',
   onScheduleGenerated,
   onPreview
 }: AIScheduleGeneratorProps) {
@@ -120,35 +121,23 @@ export function AIScheduleGenerator({
     setIsGenerating(true);
 
     try {
-      const response = await fetch('/api/schedules/generate_for_period/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          period_type: periodType,
-          academic_period_id: academicPeriodId,
-          start_date: customStartDate,
-          end_date: customEndDate,
-          curriculum_ids: selectedCurriculums,
-        }),
+      const data = await apiClient.post<{ message?: string; schedule_ids?: number[]; total_sessions?: number }>('/schedules/schedules/generate_for_period/', {
+        period_type: periodType,
+        academic_period_id: academicPeriodId,
+        start_date: customStartDate,
+        end_date: customEndDate,
+        curriculum_ids: selectedCurriculums,
       });
 
-      const data = await response.json();
+      addToast({
+        title: "Generation reussie",
+        description: data?.message || `${data?.total_sessions || 0} sessions generees avec succes`,
+      });
+      setShowPeriodGenerator(false);
 
-      if (response.ok) {
-        addToast({
-          title: "Génération réussie",
-          description: data.message,
-        });
-        setShowPeriodGenerator(false);
-        // Recharger la liste des emplois du temps
-      } else {
-        addToast({
-          title: "Erreur",
-          description: data.error || "Impossible de générer les emplois du temps",
-          variant: "destructive"
-        });
+      // Appeler le callback pour recharger
+      if (onScheduleGenerated) {
+        onScheduleGenerated();
       }
     } catch (error) {
       addToast({
@@ -215,11 +204,11 @@ export function AIScheduleGenerator({
   };
 
   const handleAcceptSchedule = () => {
-    if (generationResult) {
+    if (generationResult && onScheduleGenerated) {
       onScheduleGenerated(generationResult.scheduleId);
       addToast({
-        title: "Emploi du temps accepté",
-        description: "L'emploi du temps a été sauvegardé",
+        title: "Emploi du temps accepte",
+        description: "L'emploi du temps a ete sauvegarde",
         variant: "default"
       });
     }
@@ -670,15 +659,17 @@ export function AIScheduleGenerator({
 
               {/* Actions */}
               <div className="flex items-center gap-3 pt-4 border-t border-border">
-                <Button
-                  onClick={() => onPreview(generationResult)}
-                  variant="outline"
-                  className="flex-1"
-                >
+                {onPreview && (
+                  <Button
+                    onClick={() => onPreview(generationResult)}
+                    variant="outline"
+                    className="flex-1"
+                  >
                   <Eye className="w-4 h-4 mr-1" />
-                  Aperçu
+                  Apercu
                 </Button>
-                
+                )}
+
                 <Button
                   onClick={handleAcceptSchedule}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"

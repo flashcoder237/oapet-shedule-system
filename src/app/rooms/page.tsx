@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PageLoading, CardSkeleton, LoadingSpinner } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
 import { roomService } from '@/lib/api/services/rooms';
+import { ImportExport } from '@/components/ui/ImportExport';
 import type { Room, RoomStats } from '@/types/api';
 import RoomOccupancyStats from '@/components/rooms/RoomOccupancyStats';
 import RoomModal from '@/components/modals/RoomModal';
@@ -117,8 +118,16 @@ export default function RoomsPage() {
           <h1 className="text-3xl font-bold text-primary">Gestion des Salles</h1>
           <p className="text-secondary mt-1">Gérez les salles de cours et leurs disponibilités</p>
         </div>
-        
+
         <div className="flex gap-3">
+          <ImportExport
+            exportEndpoint="/rooms/rooms/export/"
+            importEndpoint="/rooms/rooms/import_data/"
+            resourceName="rooms"
+            onImportSuccess={() => window.location.reload()}
+            size="sm"
+            variant="outline"
+          />
           <Button variant="outline" size="sm">
             <Filter className="w-4 h-4 mr-2" />
             Filtres

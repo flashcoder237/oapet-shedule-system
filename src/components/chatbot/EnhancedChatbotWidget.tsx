@@ -335,10 +335,19 @@ export default function EnhancedChatbotWidget({ isOpen, onClose }: EnhancedChatb
     <AnimatePresence>
       {isOpen && (
         <motion.div
+          drag
+          dragMomentum={false}
+          dragElastic={0.1}
+          dragConstraints={{
+            top: -window.innerHeight + 200,
+            bottom: 0,
+            left: -window.innerWidth + 200,
+            right: 0
+          }}
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          className="w-[450px] h-[650px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+          className="w-[450px] h-[650px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700 cursor-move"
         >
             {/* En-tête */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4">
