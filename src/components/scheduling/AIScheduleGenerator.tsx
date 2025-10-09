@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bot, 
@@ -65,6 +65,16 @@ interface ScheduleMetrics {
   roomUtilization: number;
 }
 
+interface Curriculum {
+  id: number;
+  name: string;
+  code: string;
+  level: string;
+  department: {
+    name: string;
+  };
+}
+
 interface AIScheduleGeneratorProps {
   selectedClass?: string;
   onScheduleGenerated?: (scheduleId?: string) => void;
@@ -78,15 +88,21 @@ export function AIScheduleGenerator({
 }: AIScheduleGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [showPeriodGenerator, setShowPeriodGenerator] = useState(false);
   const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
 
   // États pour la génération par période
   const [periodType, setPeriodType] = useState<'semester' | 'year' | 'custom'>('semester');
-  const [academicPeriodId, setAcademicPeriodId] = useState('');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-  const [selectedCurriculums, setSelectedCurriculums] = useState<string[]>([]);
+  const [academicYear, setAcademicYear] = useState('2024-2025');
+  const [semester, setSemester] = useState('S1');
+  const [startDate, setStartDate] = useState('2024-10-01');
+  const [endDate, setEndDate] = useState('2025-02-28');
+
+  // Gestion des classes disponibles
+  const [availableClasses, setAvailableClasses] = useState<Curriculum[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(selectedClass ? [selectedClass] : []);
+
+  const curriculumIds = selectedClasses;
   const [constraints, setConstraints] = useState<GenerationConstraints>({
     preferredTimeSlots: ['09:00-17:00'],
     avoidTimeSlots: ['12:00-13:00'],
@@ -99,20 +115,81 @@ export function AIScheduleGenerator({
 
   const { addToast } = useToast();
 
+  // Calculer automatiquement les dates selon le semestre
+  useEffect(() => {
+    const year = parseInt(academicYear.split('-')[0]);
+
+    if (semester === 'S1') {
+      // Semestre 1: Octobre à Février
+      setStartDate(`${year}-10-01`);
+      setEndDate(`${year + 1}-02-28`);
+    } else if (semester === 'S2') {
+      // Semestre 2: Mars à Juillet
+      setStartDate(`${year + 1}-03-01`);
+      setEndDate(`${year + 1}-07-31`);
+    } else {
+      // Annuel: Octobre à Juillet
+      setStartDate(`${year}-10-01`);
+      setEndDate(`${year + 1}-07-31`);
+    }
+  }, [academicYear, semester]);
+
+  // Charger les classes disponibles au montage du composant
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (selectedClass) {
+        // Si une classe est déjà sélectionnée, pas besoin de charger
+        return;
+      }
+
+      setLoadingClasses(true);
+      try {
+        const data = await apiClient.get<any>('/courses/curricula/');
+        console.log('Classes chargées:', data);
+
+        // L'API peut retourner un tableau ou un objet avec results
+        if (Array.isArray(data)) {
+          setAvailableClasses(data as Curriculum[]);
+        } else if (data && Array.isArray(data.results)) {
+          setAvailableClasses(data.results as Curriculum[]);
+        } else if (data && typeof data === 'object') {
+          // Peut-être que les données sont dans une autre propriété
+          const values = Object.values(data).filter(item => item && typeof item === 'object') as Curriculum[];
+          setAvailableClasses(values);
+        } else {
+          console.error('Format de données inattendu:', data);
+          setAvailableClasses([]);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des classes:', error);
+        addToast({
+          title: "Erreur",
+          description: "Impossible de charger les classes",
+          variant: "destructive"
+        });
+        setAvailableClasses([]);
+      } finally {
+        setLoadingClasses(false);
+      }
+    };
+
+    loadClasses();
+  }, [selectedClass]);
+
   const handleGenerateForPeriod = async () => {
-    if (!academicPeriodId || selectedCurriculums.length === 0) {
+    if (curriculumIds.length === 0) {
       addToast({
         title: "Erreur",
-        description: "Veuillez sélectionner une période et au moins un cursus",
+        description: "Veuillez sélectionner au moins une classe",
         variant: "destructive"
       });
       return;
     }
 
-    if (periodType === 'custom' && (!customStartDate || !customEndDate)) {
+    if (!academicYear) {
       addToast({
         title: "Erreur",
-        description: "Veuillez spécifier les dates de début et de fin",
+        description: "Veuillez spécifier l'année académique",
         variant: "destructive"
       });
       return;
@@ -122,11 +199,12 @@ export function AIScheduleGenerator({
 
     try {
       const data = await apiClient.post<{ message?: string; schedule_ids?: number[]; total_sessions?: number }>('/schedules/schedules/generate_for_period/', {
-        period_type: periodType,
-        academic_period_id: academicPeriodId,
-        start_date: customStartDate,
-        end_date: customEndDate,
-        curriculum_ids: selectedCurriculums,
+        period_type: 'semester',
+        academic_year: academicYear,
+        semester: semester,
+        start_date: startDate,
+        end_date: endDate,
+        curriculum_ids: curriculumIds,
       });
 
       addToast({
@@ -228,6 +306,245 @@ export function AIScheduleGenerator({
     }
   };
 
+  // Charger les infos de la classe sélectionnée si besoin
+  const [selectedClassInfo, setSelectedClassInfo] = useState<Curriculum | null>(null);
+
+  useEffect(() => {
+    const loadSelectedClass = async () => {
+      if (selectedClass && !selectedClassInfo) {
+        try {
+          // Vérifier si c'est un ID numérique ou un code
+          const isNumericId = /^\d+$/.test(selectedClass);
+
+          if (isNumericId) {
+            // Si c'est un ID, charger directement
+            const data = await apiClient.get<Curriculum>(`/courses/curricula/${selectedClass}/`);
+            setSelectedClassInfo(data);
+          } else {
+            // Si c'est un code, charger la liste et trouver le curriculum
+            const allCurricula = await apiClient.get<any>('/courses/curricula/');
+            const curricula = Array.isArray(allCurricula) ? allCurricula : allCurricula.results || [];
+            const found = curricula.find((c: Curriculum) => c.code === selectedClass || c.id.toString() === selectedClass);
+
+            if (found) {
+              setSelectedClassInfo(found);
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement de la classe:', error);
+          // Ne pas afficher d'erreur à l'utilisateur, juste continuer sans info
+        }
+      }
+    };
+    loadSelectedClass();
+  }, [selectedClass]);
+
+  // Si une classe est sélectionnée, afficher uniquement le formulaire simplifié
+  if (selectedClass) {
+    return (
+      <Card className="border-2 border-primary/20">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Génération IA d'Emploi du Temps</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Génération intelligente avec optimisation et respect des préférences
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6 pt-6">
+          {/* Info classe */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-sm font-medium mb-2">
+              <BookOpen className="w-4 h-4 text-primary" />
+              Classe sélectionnée
+            </div>
+            {selectedClassInfo ? (
+              <div>
+                <p className="font-semibold text-base">{selectedClassInfo.code} - {selectedClassInfo.name}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {selectedClassInfo.level} • {selectedClassInfo.department.name}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                L'emploi du temps sera généré pour la classe actuellement sélectionnée
+              </p>
+            )}
+          </div>
+
+          {/* Année et semestre */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                Année Académique
+              </label>
+              <Select value={academicYear} onValueChange={setAcademicYear}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2024-2025">2024-2025</SelectItem>
+                  <SelectItem value="2025-2026">2025-2026</SelectItem>
+                  <SelectItem value="2026-2027">2026-2027</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                Semestre
+              </label>
+              <Select value={semester} onValueChange={setSemester}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="S1">Semestre 1 (Oct-Fév)</SelectItem>
+                  <SelectItem value="S2">Semestre 2 (Mar-Juil)</SelectItem>
+                  <SelectItem value="ANNUEL">Année Complète (Oct-Juil)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Paramètres avancés */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+            className="w-full"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            {showAdvancedSettings ? 'Masquer' : 'Afficher'} les paramètres avancés
+          </Button>
+
+          <AnimatePresence>
+            {showAdvancedSettings && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-muted/30 rounded-lg p-4 space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Heures max/jour
+                    </label>
+                    <Input
+                      type="number"
+                      min="4"
+                      max="12"
+                      value={constraints.maxHoursPerDay}
+                      onChange={(e) => setConstraints(prev => ({
+                        ...prev,
+                        maxHoursPerDay: parseInt(e.target.value)
+                      }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Pause déjeuner
+                    </label>
+                    <Select
+                      value={constraints.lunchBreakDuration.toString()}
+                      onValueChange={(value) => setConstraints(prev => ({
+                        ...prev,
+                        lunchBreakDuration: parseInt(value)
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="30">30 min</SelectItem>
+                        <SelectItem value="60">1h</SelectItem>
+                        <SelectItem value="90">1h30</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={constraints.prioritizeTeacherPreferences}
+                      onChange={(e) => setConstraints(prev => ({
+                        ...prev,
+                        prioritizeTeacherPreferences: e.target.checked
+                      }))}
+                      className="rounded"
+                    />
+                    <span className="text-sm">Priorité aux préférences enseignants</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={constraints.balanceWorkload}
+                      onChange={(e) => setConstraints(prev => ({
+                        ...prev,
+                        balanceWorkload: e.target.checked
+                      }))}
+                      className="rounded"
+                    />
+                    <span className="text-sm">Équilibrer la charge</span>
+                  </label>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Info génération */}
+          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 space-y-2">
+            <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              L'IA va générer automatiquement
+            </h4>
+            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1 ml-6">
+              <li className="list-disc">Emploi du temps complet du semestre</li>
+              <li className="list-disc">Affectation optimale des salles</li>
+              <li className="list-disc">Respect des préférences enseignants</li>
+              <li className="list-disc">Évitement des conflits</li>
+              <li className="list-disc">Équilibrage de la charge</li>
+            </ul>
+          </div>
+
+          {/* Bouton génération */}
+          <Button
+            onClick={handleGenerateForPeriod}
+            disabled={isGenerating}
+            className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                Génération IA en cours...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 mr-2" />
+                Générer avec l'IA
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-muted-foreground text-center">
+            L'IA optimise automatiquement en respectant toutes les contraintes
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
       <CardHeader className="pb-4">
@@ -246,16 +563,8 @@ export function AIScheduleGenerator({
               </p>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPeriodGenerator(!showPeriodGenerator)}
-            >
-              <Calendar className="w-4 h-4 mr-1" />
-              {showPeriodGenerator ? 'Masquer' : 'Générer par période'}
-            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -269,15 +578,8 @@ export function AIScheduleGenerator({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Générateur par période */}
-        <AnimatePresence>
-          {showPeriodGenerator && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg p-6 space-y-4 border-2 border-blue-200 dark:border-blue-800"
-            >
+        {/* Formulaire de génération */}
+        <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg p-6 space-y-4 border-2 border-blue-200 dark:border-blue-800">
               <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
                 Génération par période
@@ -300,58 +602,117 @@ export function AIScheduleGenerator({
                 </Select>
               </div>
 
-              {/* Période académique */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Période académique
-                </label>
-                <Input
-                  type="text"
-                  placeholder="ID de la période académique"
-                  value={academicPeriodId}
-                  onChange={(e) => setAcademicPeriodId(e.target.value)}
-                />
+              {/* Année académique et Semestre */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Année académique
+                  </label>
+                  <Select
+                    value={academicYear}
+                    onValueChange={setAcademicYear}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner l'année" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2024-2025">2024-2025</SelectItem>
+                      <SelectItem value="2025-2026">2025-2026</SelectItem>
+                      <SelectItem value="2026-2027">2026-2027</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Semestre
+                  </label>
+                  <Select
+                    value={semester}
+                    onValueChange={setSemester}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner le semestre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="S1">Semestre 1 (Oct-Fév)</SelectItem>
+                      <SelectItem value="S2">Semestre 2 (Mar-Juil)</SelectItem>
+                      <SelectItem value="ANNUEL">Année Complète (Oct-Juil)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {/* Dates personnalisées */}
-              {periodType === 'custom' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Date de début
-                    </label>
-                    <Input
-                      type="date"
-                      value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Date de fin
-                    </label>
-                    <Input
-                      type="date"
-                      value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
-                    />
-                  </div>
+              {/* Dates (affichées pour toutes les périodes) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Date de début *
+                  </label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                  />
                 </div>
-              )}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Date de fin *
+                  </label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-              {/* Cursus */}
+              {/* Sélection des classes */}
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">
-                  Cursus (IDs séparés par des virgules)
+                  Classes à générer
                 </label>
-                <Input
-                  type="text"
-                  placeholder="1, 2, 3"
-                  onChange={(e) => {
-                    const ids = e.target.value.split(',').map(id => id.trim()).filter(id => id);
-                    setSelectedCurriculums(ids);
-                  }}
-                />
+                {loadingClasses ? (
+                  <div className="text-sm text-muted-foreground">Chargement des classes...</div>
+                ) : availableClasses.length === 0 ? (
+                  <div className="text-sm text-amber-600">
+                    Aucune classe disponible. Créez-en une d'abord.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3 bg-muted/30">
+                    {availableClasses.map((classe) => (
+                      <label
+                        key={classe.id}
+                        className="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClasses.includes(classe.id.toString())}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedClasses([...selectedClasses, classe.id.toString()]);
+                            } else {
+                              setSelectedClasses(selectedClasses.filter(id => id !== classe.id.toString()));
+                            }
+                          }}
+                          className="mt-1 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{classe.code} - {classe.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {classe.level} • {classe.department.name}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {selectedClasses.length > 0 && (
+                  <div className="text-sm text-muted-foreground mt-2">
+                    {selectedClasses.length} classe{selectedClasses.length > 1 ? 's' : ''} sélectionnée{selectedClasses.length > 1 ? 's' : ''}
+                  </div>
+                )}
               </div>
 
               {/* Bouton de génération */}
@@ -372,9 +733,7 @@ export function AIScheduleGenerator({
                   </>
                 )}
               </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
 
         {/* Paramètres avancés */}
         <AnimatePresence>

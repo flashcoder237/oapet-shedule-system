@@ -4,21 +4,22 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { 
-  Home, 
-  LayoutDashboard, 
-  BookOpen, 
-  MapPin, 
-  Calendar, 
-  Users, 
-  Building, 
+import {
+  Home,
+  LayoutDashboard,
+  BookOpen,
+  MapPin,
+  Calendar,
+  Users,
+  Building,
   Settings,
   ChevronLeft,
   ChevronRight,
   GraduationCap,
   Activity,
   BarChart3,
-  Brain
+  Brain,
+  UserCog
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -45,15 +46,21 @@ export default function Sidebar() {
       icon: BookOpen,
       description: 'Gestion des cours'
     },
-    { 
-      name: 'Emplois du temps', 
-      href: '/schedule', 
+    {
+      name: 'Emplois du temps',
+      href: '/schedule',
       icon: Calendar,
       description: 'Planning et horaires'
     },
-    { 
-      name: 'Salles', 
-      href: '/rooms', 
+    {
+      name: 'Préférences Enseignants',
+      href: '/teachers/preferences',
+      icon: UserCog,
+      description: 'Disponibilités et contraintes'
+    },
+    {
+      name: 'Salles',
+      href: '/rooms',
       icon: MapPin,
       description: 'Gestion des espaces'
     },

@@ -728,6 +728,7 @@ export default function SchedulePage() {
               </div>
               <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
                 <AIScheduleGenerator
+                  selectedClass={selectedCurriculum}
                   onScheduleGenerated={() => {
                     setShowAIGenerator(false);
                     loadSessions();
