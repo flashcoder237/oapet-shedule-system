@@ -100,6 +100,18 @@ export function ScheduleGrid({
     return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
   };
 
+  // Fonction helper pour les couleurs des types de session
+  function getSessionTypeColor(sessionType: string) {
+    switch (sessionType) {
+      case 'CM': return 'bg-blue-100 text-blue-800 border-l-2 border-blue-500';
+      case 'TD': return 'bg-green-100 text-green-800 border-l-2 border-green-500';
+      case 'TP': return 'bg-yellow-100 text-yellow-800 border-l-2 border-yellow-500';
+      case 'EXAM': return 'bg-red-100 text-red-800 border-l-2 border-red-500';
+      case 'CONF': return 'bg-purple-100 text-purple-800 border-l-2 border-purple-500';
+      default: return 'bg-gray-100 text-gray-800 border-l-2 border-gray-500';
+    }
+  }
+
   const getSessionsForSlot = (day: string, timeSlot: string) => {
     // Debug simplifié - seulement une fois par rendu
     if (sessions.length > 0 && timeSlot === '08:00' && day === 'lundi') {
@@ -757,18 +769,6 @@ export function ScheduleGrid({
       </div>
     );
   }
-  
-  // Fonction helper pour les couleurs
-  const getSessionTypeColor = (sessionType: string) => {
-    switch (sessionType) {
-      case 'CM': return 'bg-blue-100 text-blue-800 border-l-2 border-blue-500';
-      case 'TD': return 'bg-green-100 text-green-800 border-l-2 border-green-500';
-      case 'TP': return 'bg-yellow-100 text-yellow-800 border-l-2 border-yellow-500';
-      case 'EXAM': return 'bg-red-100 text-red-800 border-l-2 border-red-500';
-      case 'CONF': return 'bg-purple-100 text-purple-800 border-l-2 border-purple-500';
-      default: return 'bg-gray-100 text-gray-800 border-l-2 border-gray-500';
-    }
-  };
 
   return null;
 }

@@ -69,6 +69,7 @@ import UltraStableDragDropScheduler from '@/components/scheduling/UltraStableDra
 import AIInsightsPanel from '@/components/dashboard/AIInsightsPanel';
 import { useAuth } from '@/lib/auth/context';
 import { courseService } from '@/lib/api/services/courses';
+import scheduleService from '@/services/scheduleService';
 import type { DashboardStats } from '@/types/api';
 
 interface DashboardModule {
@@ -108,6 +109,8 @@ export default function Dashboard() {
     activeSchedules: 12,
     weeklyEvents: 156
   });
+  const [scheduleItems, setScheduleItems] = useState<any[]>([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
   const { user } = useAuth();
 
   const dashboardModules: DashboardModule[] = [
@@ -221,6 +224,46 @@ export default function Dashboard() {
     // Simulation du chargement des nouvelles données
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsLoading(false);
+  };
+
+  const handleWeekChange = async (weekStart: Date, weekEnd: Date) => {
+    setLoadingSchedule(true);
+    try {
+      // Format de la date pour l'API (YYYY-MM-DD)
+      const weekStartStr = weekStart.toISOString().split('T')[0];
+
+      console.log('Chargement des sessions pour la semaine du', weekStartStr);
+
+      // Charger les sessions de la semaine depuis l'API
+      const data = await scheduleService.getWeeklySessions({
+        week_start: weekStartStr
+      });
+
+      console.log('Sessions reçues:', data);
+
+      // Transformer les données de l'API en format ScheduleItem
+      const items = (data.sessions || []).map((session: any) => ({
+        id: session.id?.toString() || Math.random().toString(),
+        title: session.course?.name || session.course_name || 'Sans titre',
+        description: session.course?.description || '',
+        type: 'course' as const,
+        startTime: session.specific_start_time || session.time_slot?.start_time || '08:00',
+        endTime: session.specific_end_time || session.time_slot?.end_time || '10:00',
+        date: new Date(session.specific_date || session.date),
+        professor: session.teacher?.name || session.teacher_name,
+        room: session.room?.name || session.room_name,
+        color: '#3B82F6',
+        priority: 'medium' as const,
+        status: 'confirmed' as const
+      }));
+
+      setScheduleItems(items);
+    } catch (error) {
+      console.error('Erreur lors du chargement des sessions:', error);
+      setScheduleItems([]);
+    } finally {
+      setLoadingSchedule(false);
+    }
   };
 
   const getModuleSizeClass = (size: DashboardModule['size']) => {
@@ -436,7 +479,12 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-        {activeModule === 'scheduler' && <ModuleComponent />}
+        {activeModule === 'scheduler' && (
+          <ModuleComponent
+            items={scheduleItems}
+            onWeekChange={handleWeekChange}
+          />
+        )}
       </motion.div>
     );
   };

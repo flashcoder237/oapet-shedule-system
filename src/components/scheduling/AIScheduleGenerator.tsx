@@ -211,7 +211,6 @@ export function AIScheduleGenerator({
         title: "Generation reussie",
         description: data?.message || `${data?.total_sessions || 0} sessions generees avec succes`,
       });
-      setShowPeriodGenerator(false);
 
       // Appeler le callback pour recharger
       if (onScheduleGenerated) {

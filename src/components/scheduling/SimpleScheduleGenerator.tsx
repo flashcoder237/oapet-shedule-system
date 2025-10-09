@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { apiClient } from '@/lib/api/client';
+import { apiClient, ApiResponse } from '@/lib/api/client';
 
 interface Curriculum {
   id: number;
@@ -94,7 +94,7 @@ export function SimpleScheduleGenerator({ onScheduleGenerated }: SimpleScheduleG
     setIsGenerating(true);
 
     try {
-      const response = await apiClient.post('/schedules/schedules/generate_for_period/', {
+      const response = await apiClient.post<ApiResponse>('/schedules/schedules/generate_for_period/', {
         period_type: 'semester',
         academic_year: academicYear,
         semester: semester,

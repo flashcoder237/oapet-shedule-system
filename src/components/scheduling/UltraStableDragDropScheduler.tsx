@@ -40,6 +40,7 @@ interface UltraStableDragDropSchedulerProps {
   onItemAdd?: (item: Partial<ScheduleItem>) => void;
   onItemDelete?: (itemId: string) => void;
   onConflictDetected?: (conflicts: string[]) => void;
+  onWeekChange?: (weekStart: Date, weekEnd: Date) => void;
   readOnly?: boolean;
   showConflicts?: boolean;
   enableAutoScheduling?: boolean;
@@ -52,6 +53,7 @@ export default function UltraStableDragDropScheduler({
   onItemAdd,
   onItemDelete,
   onConflictDetected,
+  onWeekChange,
   readOnly = false,
   showConflicts = true,
   enableAutoScheduling = true,
@@ -139,21 +141,30 @@ export default function UltraStableDragDropScheduler({
   // Notification des conflits sans boucle infinie
   React.useEffect(() => {
     const conflictsString = conflicts.sort().join(',');
-    
+
     // Notifier seulement si les conflits ont réellement changé
     if (conflictsString !== lastConflictsStringRef.current) {
       lastConflictsStringRef.current = conflictsString;
-      
+
       // Utiliser setTimeout pour éviter les mises à jour synchrones
       const timeoutId = setTimeout(() => {
         if (onConflictDetectedRef.current) {
           onConflictDetectedRef.current(conflicts);
         }
       }, 0);
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [conflicts]);
+
+  // Notification du changement de semaine
+  React.useEffect(() => {
+    if (onWeekChange && weekDates.length > 0) {
+      const weekStart = weekDates[0];
+      const weekEnd = weekDates[weekDates.length - 1];
+      onWeekChange(weekStart, weekEnd);
+    }
+  }, [weekDates, onWeekChange]);
 
   // Gestionnaires d'événements stables
   const handleDragStart = useCallback((itemId: string) => {
