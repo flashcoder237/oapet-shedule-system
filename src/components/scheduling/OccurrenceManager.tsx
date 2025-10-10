@@ -14,7 +14,8 @@ import {
   User,
   CalendarDays,
 } from 'lucide-react';
-import axios from 'axios';
+import { occurrenceService } from '@/lib/api/services/occurrences';
+import type { SessionOccurrence } from '@/types/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,26 +36,6 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { LoadingSpinner } from '@/components/ui/loading';
-
-interface SessionOccurrence {
-  id: number;
-  session_template: number;
-  actual_date: string;
-  start_time: string;
-  end_time: string;
-  room: any;
-  teacher: any;
-  status: string;
-  course_code: string;
-  course_name: string;
-  room_code: string;
-  teacher_name: string;
-  is_cancelled: boolean;
-  is_room_modified: boolean;
-  is_teacher_modified: boolean;
-  is_time_modified: boolean;
-  cancellation_reason?: string;
-}
 
 interface OccurrenceManagerProps {
   scheduleId?: number;
@@ -99,14 +80,12 @@ const OccurrenceManager: React.FC<OccurrenceManagerProps> = ({
   const loadOccurrences = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-
-      if (scheduleId) params.append('schedule', scheduleId.toString());
-      if (dateFrom) params.append('date_from', dateFrom);
-      if (dateTo) params.append('date_to', dateTo);
-
-      const response = await axios.get(`/api/schedules/occurrences/?${params.toString()}`);
-      setOccurrences(response.data.results || response.data);
+      const response = await occurrenceService.getOccurrences({
+        schedule: scheduleId,
+        date_from: dateFrom,
+        date_to: dateTo,
+      });
+      setOccurrences(response.results || []);
     } catch (err: any) {
       setError('Erreur lors du chargement des occurrences');
       console.error(err);
@@ -151,10 +130,10 @@ const OccurrenceManager: React.FC<OccurrenceManagerProps> = ({
 
     try {
       setLoading(true);
-      await axios.patch(`/api/schedules/occurrences/${selectedOccurrence.id}/`, {
-        room: modifyData.room ? parseInt(modifyData.room) : null,
-        teacher: modifyData.teacher ? parseInt(modifyData.teacher) : null,
-        notes: modifyData.notes,
+      await occurrenceService.modifyOccurrence(selectedOccurrence.id, {
+        room: modifyData.room ? parseInt(modifyData.room) : undefined,
+        teacher: modifyData.teacher ? parseInt(modifyData.teacher) : undefined,
+        notes: modifyData.notes || undefined,
       });
 
       setSuccess('Séance modifiée avec succès');
@@ -172,7 +151,7 @@ const OccurrenceManager: React.FC<OccurrenceManagerProps> = ({
 
     try {
       setLoading(true);
-      await axios.post(`/api/schedules/occurrences/${selectedOccurrence.id}/cancel/`, {
+      await occurrenceService.cancelOccurrence(selectedOccurrence.id, {
         reason: cancellationReason,
         notify_students: true,
         notify_teacher: true,
@@ -194,7 +173,7 @@ const OccurrenceManager: React.FC<OccurrenceManagerProps> = ({
 
     try {
       setLoading(true);
-      await axios.post(`/api/schedules/occurrences/${selectedOccurrence.id}/reschedule/`, {
+      await occurrenceService.rescheduleOccurrence(selectedOccurrence.id, {
         new_date: rescheduleData.new_date,
         new_start_time: rescheduleData.new_start_time,
         new_end_time: rescheduleData.new_end_time,

@@ -73,7 +73,15 @@ export const occurrenceService = {
     };
     total: number;
   }> {
-    return apiClient.get(`${API_ENDPOINTS.OCCURRENCES}weekly/`, params);
+    // L'API attend 'date' et non 'week_start'
+    const apiParams = {
+      ...params,
+      date: params.week_start || params.date,
+    };
+    // Supprimer week_start car l'API ne le reconnaît pas
+    delete apiParams.week_start;
+
+    return apiClient.get(`${API_ENDPOINTS.OCCURRENCES}weekly/`, apiParams);
   },
 
   /**

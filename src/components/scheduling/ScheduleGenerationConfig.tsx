@@ -13,7 +13,7 @@ import {
   X,
   AlertTriangle,
 } from 'lucide-react';
-import axios from 'axios';
+import { generationService } from '@/lib/api/services/generation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,9 +84,9 @@ const ScheduleGenerationConfig: React.FC<ScheduleGenerationConfigProps> = ({
   const loadConfig = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/schedules/generation-configs/?schedule=${scheduleId}`);
-      if (response.data.results && response.data.results.length > 0) {
-        setConfig(response.data.results[0]);
+      const response = await generationService.getConfigs({ schedule: scheduleId });
+      if (response.results && response.results.length > 0) {
+        setConfig(response.results[0]);
       }
     } catch (err: any) {
       console.error('Erreur lors du chargement de la config:', err);
@@ -102,10 +102,11 @@ const ScheduleGenerationConfig: React.FC<ScheduleGenerationConfigProps> = ({
       setSuccess(null);
 
       if (config.id) {
-        await axios.put(`/api/schedules/generation-configs/${config.id}/`, config);
+        await generationService.updateConfig(config.id, config);
         setSuccess('Configuration mise à jour avec succès');
       } else {
-        await axios.post('/api/schedules/generation-configs/', config);
+        const newConfig = await generationService.createConfig(config);
+        setConfig(newConfig); // Update with the returned config (includes ID)
         setSuccess('Configuration créée avec succès');
       }
 
@@ -125,17 +126,17 @@ const ScheduleGenerationConfig: React.FC<ScheduleGenerationConfigProps> = ({
       setError(null);
       setGenerationResult(null);
 
-      const response = await axios.post('/api/schedules/generation/generate/', {
+      const response = await generationService.generateSchedule({
         schedule_id: scheduleId,
         preview_mode: previewMode,
         force_regenerate: false,
         preserve_modifications: true,
       });
 
-      setGenerationResult(response.data);
+      setGenerationResult(response);
 
-      if (!previewMode && response.data.success) {
-        setSuccess(`${response.data.occurrences_created} occurrences générées avec succès !`);
+      if (!previewMode && response.success) {
+        setSuccess(`${response.occurrences_created} occurrences générées avec succès !`);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de la génération');
