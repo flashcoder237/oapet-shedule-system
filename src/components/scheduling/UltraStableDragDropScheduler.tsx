@@ -261,28 +261,33 @@ export default function UltraStableDragDropScheduler({
     if (!date) return null;
 
     const slotItems = items.filter(item => {
-      const itemDate = new Date(item.date);
+      // item.date devrait déjà être un objet Date
+      const itemDate = item.date instanceof Date ? item.date : new Date(item.date);
       const itemHour = parseInt(item.startTime.split(':')[0]);
-      const itemMinutes = parseInt(item.startTime.split(':')[1] || '0');
-      
-      // Vérifier si c'est le même jour
-      const sameDay = itemDate.toDateString() === date.toDateString();
-      
-      // Logique de correspondance des heures améliorée
-      let hourMatches = false;
-      
-      if (hour === 8 && itemHour === 8) {
-        hourMatches = true; // 8h00
-      } else if (hour === 10 && itemHour === 10 && itemMinutes === 30) {
-        hourMatches = true; // 10h30
-      } else if (hour === 14 && itemHour === 14) {
-        hourMatches = true; // 14h00
-      } else if (hour === 16 && itemHour === 16 && itemMinutes === 30) {
-        hourMatches = true; // 16h30
-      } else if (hour === 19 && itemHour === 19) {
-        hourMatches = true; // 19h00
+
+      // Normaliser les dates pour comparer uniquement jour/mois/année (ignorer l'heure)
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      const slotDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+      const sameDay = itemDateOnly.getTime() === slotDateOnly.getTime();
+      const hourMatches = itemHour === hour;
+
+      // Debug pour comprendre le problème
+      if (day === 0 && hour === 8 && items.length > 0) {
+        console.log('🔍 Debug slot [jour=0, heure=8]:', {
+          itemTitle: item.title,
+          itemDate: itemDate.toLocaleDateString('fr-FR'),
+          slotDate: date.toLocaleDateString('fr-FR'),
+          itemDateOnly: itemDateOnly.toLocaleDateString('fr-FR'),
+          slotDateOnly: slotDateOnly.toLocaleDateString('fr-FR'),
+          sameDay,
+          itemHour,
+          hour,
+          hourMatches,
+          willDisplay: sameDay && hourMatches
+        });
       }
-      
+
       return sameDay && hourMatches;
     });
 

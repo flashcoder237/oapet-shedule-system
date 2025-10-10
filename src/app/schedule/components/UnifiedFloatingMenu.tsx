@@ -30,7 +30,11 @@ import {
   CheckCircle,
   Users,
   Activity,
-  Sparkles
+  Sparkles,
+  FileText,
+  CalendarCheck,
+  ClipboardList,
+  Ban
 } from 'lucide-react';
 import { scheduleService } from '@/lib/api/services/schedules';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +52,7 @@ interface Curriculum {
 
 type ViewMode = 'week' | 'day' | 'month';
 type EditMode = 'view' | 'edit' | 'drag';
-type TabMode = 'controls' | 'stats' | 'conflicts' | 'generator';
+type TabMode = 'controls' | 'stats' | 'conflicts' | 'generator' | 'generation';
 
 interface UnifiedFloatingMenuProps {
   selectedClass: string;
@@ -68,6 +72,8 @@ interface UnifiedFloatingMenuProps {
   sessions: ScheduleSession[];
   addToast: (toast: any) => void;
   onGenerateSchedule?: () => void;
+  onShowGenerationConfig?: () => void;
+  onShowOccurrenceManager?: () => void;
 }
 
 export function UnifiedFloatingMenu({
@@ -87,7 +93,9 @@ export function UnifiedFloatingMenu({
   conflicts,
   sessions,
   addToast,
-  onGenerateSchedule
+  onGenerateSchedule,
+  onShowGenerationConfig,
+  onShowOccurrenceManager
 }: UnifiedFloatingMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabMode>('controls');
@@ -194,7 +202,7 @@ export function UnifiedFloatingMenu({
           </div>
 
           {/* Tabs */}
-          <div className="grid grid-cols-4 gap-1 bg-white/50 rounded-lg p-1">
+          <div className="grid grid-cols-5 gap-1 bg-white/50 rounded-lg p-1">
             <Button
               variant={activeTab === 'controls' ? 'default' : 'ghost'}
               size="sm"
@@ -202,7 +210,7 @@ export function UnifiedFloatingMenu({
               className="text-xs h-8"
             >
               <Settings className="w-3 h-3 mr-1" />
-              Config
+              Vue
             </Button>
             <Button
               variant={activeTab === 'stats' ? 'default' : 'ghost'}
@@ -212,6 +220,15 @@ export function UnifiedFloatingMenu({
             >
               <BarChart3 className="w-3 h-3 mr-1" />
               Stats
+            </Button>
+            <Button
+              variant={activeTab === 'generation' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveTab('generation')}
+              className="text-xs h-8"
+            >
+              <Calendar className="w-3 h-3 mr-1" />
+              Gen
             </Button>
             <Button
               variant={activeTab === 'conflicts' ? 'default' : 'ghost'}
@@ -234,7 +251,7 @@ export function UnifiedFloatingMenu({
               className="text-xs h-8"
             >
               <Sparkles className="w-3 h-3 mr-1" />
-              Gen
+              Auto
             </Button>
           </div>
         </CardHeader>
@@ -495,6 +512,71 @@ export function UnifiedFloatingMenu({
                   </div>
                 </div>
               )}
+            </>
+          )}
+
+          {/* GENERATION TAB */}
+          {activeTab === 'generation' && (
+            <>
+              <div className="space-y-4">
+                <div className="text-center pb-2">
+                  <Calendar className="h-10 w-10 text-indigo-500 mx-auto mb-2" />
+                  <h3 className="text-base font-bold text-gray-900 mb-1">
+                    Gestion de Génération
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Configurez et gérez les emplois du temps
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Button
+                    onClick={onShowGenerationConfig}
+                    className="w-full bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700"
+                    size="sm"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Configuration de Génération
+                  </Button>
+
+                  <Button
+                    onClick={onShowOccurrenceManager}
+                    className="w-full bg-gradient-to-r from-teal-500 to-green-600 hover:from-teal-600 hover:to-green-700"
+                    size="sm"
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Gestion des Séances
+                  </Button>
+                </div>
+
+                <div className="pt-3 border-t border-gray-200 space-y-2">
+                  <p className="text-xs text-gray-600 font-medium">
+                    Fonctionnalités:
+                  </p>
+                  <ul className="text-xs text-gray-600 space-y-1.5">
+                    <li className="flex items-center gap-2">
+                      <Settings className="h-3.5 w-3.5 text-indigo-500" />
+                      <span>Configuration des paramètres</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CalendarCheck className="h-3.5 w-3.5 text-blue-500" />
+                      <span>Génération automatique</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <ClipboardList className="h-3.5 w-3.5 text-teal-500" />
+                      <span>Gestion des occurrences</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Edit className="h-3.5 w-3.5 text-green-500" />
+                      <span>Modification de séances</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Ban className="h-3.5 w-3.5 text-red-500" />
+                      <span>Annulation de séances</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </>
           )}
 

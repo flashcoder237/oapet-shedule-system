@@ -242,21 +242,34 @@ export default function Dashboard() {
       console.log('Sessions reçues:', data);
 
       // Transformer les données de l'API en format ScheduleItem
-      const items = (data.sessions || []).map((session: any) => ({
-        id: session.id?.toString() || Math.random().toString(),
-        title: session.course?.name || session.course_name || 'Sans titre',
-        description: session.course?.description || '',
-        type: 'course' as const,
-        startTime: session.specific_start_time || session.time_slot?.start_time || '08:00',
-        endTime: session.specific_end_time || session.time_slot?.end_time || '10:00',
-        date: new Date(session.specific_date || session.date),
-        professor: session.teacher?.name || session.teacher_name,
-        room: session.room?.name || session.room_name,
-        color: '#3B82F6',
-        priority: 'medium' as const,
-        status: 'confirmed' as const
-      }));
+      const items = (data.sessions || []).map((session: any) => {
+        const sessionDate = new Date(session.specific_date || session.date);
 
+        console.log('📅 Session transformée:', {
+          title: session.course?.name || session.course_name,
+          originalDate: session.specific_date || session.date,
+          parsedDate: sessionDate.toLocaleDateString('fr-FR'),
+          dayOfWeek: sessionDate.toLocaleDateString('fr-FR', { weekday: 'long' }),
+          startTime: session.specific_start_time || session.time_slot?.start_time
+        });
+
+        return {
+          id: session.id?.toString() || Math.random().toString(),
+          title: session.course?.name || session.course_name || 'Sans titre',
+          description: session.course?.description || '',
+          type: 'course' as const,
+          startTime: session.specific_start_time || session.time_slot?.start_time || '08:00',
+          endTime: session.specific_end_time || session.time_slot?.end_time || '10:00',
+          date: sessionDate,
+          professor: session.teacher?.name || session.teacher_name,
+          room: session.room?.name || session.room_name,
+          color: '#3B82F6',
+          priority: 'medium' as const,
+          status: 'confirmed' as const
+        };
+      });
+
+      console.log('✅ Items transformés:', items);
       setScheduleItems(items);
     } catch (error) {
       console.error('Erreur lors du chargement des sessions:', error);

@@ -304,3 +304,101 @@ export interface CourseStats {
   courses_by_level: Record<string, number>;
   courses_by_department: Record<string, number>;
 }
+
+// ===== NOUVEAU SYSTÈME D'OCCURRENCES =====
+
+/**
+ * Session Occurrence - Instance concrète d'une session à une date spécifique
+ * Remplace l'ancien système où les sessions se répétaient indéfiniment
+ */
+export interface SessionOccurrence {
+  id: number;
+  session_template: number;
+  session_template_details?: ScheduleSession;
+
+  // Date et horaires (REQUIS dans le nouveau système)
+  actual_date: string;  // Format YYYY-MM-DD
+  start_time: string;   // Format HH:MM
+  end_time: string;     // Format HH:MM
+
+  // Ressources
+  room: number;
+  room_details?: Room;
+  teacher: number;
+  teacher_details?: Teacher;
+
+  // Statut
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+
+  // Tracking des modifications
+  is_room_modified: boolean;
+  is_teacher_modified: boolean;
+  is_time_modified: boolean;
+  is_cancelled: boolean;
+
+  // Métadonnées d'annulation/modification
+  cancellation_reason?: string;
+  cancellation_notes?: string;
+  cancelled_at?: string;
+  cancelled_by?: number;
+  cancelled_by_name?: string;
+  modified_at?: string;
+  modified_by?: number;
+  modified_by_name?: string;
+  notes?: string;
+
+  // Informations dénormalisées du cours (pour affichage rapide)
+  course_code?: string;
+  course_name?: string;
+  room_code?: string;
+  teacher_name?: string;
+
+  // Dates de création/modification
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Configuration de génération d'emploi du temps
+ * Permet de définir comment générer les occurrences à partir des templates
+ */
+export interface ScheduleGenerationConfig {
+  id?: number;
+  schedule: number;
+
+  // Période de génération
+  start_date: string;  // Format YYYY-MM-DD
+  end_date: string;    // Format YYYY-MM-DD
+
+  // Type de récurrence
+  recurrence_type: 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  recurrence_rule?: string;  // iCalendar RRULE format
+
+  // Niveau de flexibilité
+  flexibility_level: 'rigid' | 'balanced' | 'flexible';
+
+  // Contraintes
+  allow_conflicts: boolean;
+  max_sessions_per_day: number;
+  respect_teacher_preferences: boolean;
+  respect_room_preferences: boolean;
+  optimization_priority: 'teacher' | 'room' | 'balanced';
+
+  // Jours exclus et semaines spéciales
+  excluded_dates: string[];  // Format YYYY-MM-DD
+  special_weeks: Array<{
+    start_date: string;
+    end_date: string;
+    type: string;
+    suspend_regular_classes: boolean;
+    description?: string;
+  }>;
+
+  // Métadonnées
+  is_active: boolean;
+  last_generated_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: number;
+  created_by_name?: string;
+}

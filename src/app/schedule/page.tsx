@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import AnimatedBackground from '@/components/ui/animated-background';
-import { Plus, Settings2, X } from 'lucide-react';
+import { Plus, Settings2, X, Calendar } from 'lucide-react';
 
 // Import des composants créés
 import {
@@ -22,19 +22,28 @@ import {
 
 // Import des services API
 import { scheduleService } from '@/lib/api/services/schedules';
+import { occurrenceService } from '@/lib/api/services/occurrences';
 import { courseService } from '@/lib/api/services/courses';
 import { roomService } from '@/lib/api/services/rooms';
+
+// Import du système de feature flags
+import { FEATURE_FLAGS, debugLog, getActiveSystem } from '@/lib/featureFlags';
 
 // Import du générateur IA
 import { AIScheduleGenerator } from '@/components/scheduling/AIScheduleGenerator';
 
+// Import des composants de gestion des occurrences
+import ScheduleGenerationConfig from '@/components/scheduling/ScheduleGenerationConfig';
+import OccurrenceManager from '@/components/scheduling/OccurrenceManager';
+
 // Import des types
-import { 
-  ScheduleSession as ApiScheduleSession, 
-  Teacher, 
-  Course, 
-  Room, 
-  TimeSlot 
+import {
+  ScheduleSession as ApiScheduleSession,
+  SessionOccurrence,
+  Teacher,
+  Course,
+  Room,
+  TimeSlot
 } from '@/types/api';
 
 // Types locaux
@@ -93,6 +102,10 @@ export default function SchedulePage() {
   const [editingSession, setEditingSession] = useState<ScheduleSession | null>(null);
   const [showManagementPanel, setShowManagementPanel] = useState(false);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+
+  // États pour les nouveaux composants d'occurrences
+  const [showGenerationConfig, setShowGenerationConfig] = useState(false);
+  const [showOccurrenceManager, setShowOccurrenceManager] = useState(false);
 
   const { addToast } = useToast();
 
@@ -159,53 +172,134 @@ export default function SchedulePage() {
     }
 
     setSessionsLoading(true);
+    const systemType = getActiveSystem();
+    debugLog(`Loading ${systemType} for curriculum ${selectedCurriculum}`, { viewMode, selectedDate });
+
     try {
       let data;
-      
-      if (viewMode === 'week') {
-        const weekStart = scheduleService.getWeekStart(selectedDate);
-        data = await scheduleService.getWeeklySessions({
-          week_start: weekStart,
-          curriculum: selectedCurriculum
-        });
-        
-        const allSessions = data?.sessions_by_day ? Object.values(data.sessions_by_day).flat() as ScheduleSession[] : [];
-        console.log('WEEKLY SESSIONS LOADED:', allSessions.length, allSessions);
-        setSessions(allSessions);
-        setWeeklyData(data);
-      } else if (viewMode === 'day') {
-        const dateStr = scheduleService.formatDate(selectedDate);
-        data = await scheduleService.getDailySessions({
-          date: dateStr,
-          curriculum: selectedCurriculum
-        });
-        
-        const sessions = data?.sessions || [];
-        console.log('DAILY SESSIONS LOADED:', sessions.length, sessions);
-        setSessions(sessions);
-        setDailyData(data);
-      } else {
-        // Mode mois - pour l'instant, même logique que semaine
-        const weekStart = scheduleService.getWeekStart(selectedDate);
-        data = await scheduleService.getWeeklySessions({
-          week_start: weekStart,
-          curriculum: selectedCurriculum
-        });
-        
-        const allSessions = data?.sessions_by_day ? Object.values(data.sessions_by_day).flat() as ScheduleSession[] : [];
-        setSessions(allSessions);
+
+      // ===== NOUVEAU SYSTÈME (Occurrences) =====
+      if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
+        debugLog('Using NEW occurrences system');
+
+        // TODO: Récupérer le schedule ID à partir du curriculum
+        // Pour l'instant, on utilise curriculum comme proxy
+        const scheduleId = parseInt(selectedCurriculum) || undefined;
+
+        if (viewMode === 'week') {
+          const weekStart = occurrenceService.getWeekStart(selectedDate);
+          data = await occurrenceService.getWeeklyOccurrences({
+            week_start: weekStart,
+            schedule: scheduleId
+          });
+
+          // Convertir les occurrences en format compatible avec l'ancien système
+          const allOccurrences = data?.occurrences_by_day
+            ? Object.values(data.occurrences_by_day).flat() as SessionOccurrence[]
+            : [];
+
+          debugLog('WEEKLY OCCURRENCES LOADED:', allOccurrences.length, allOccurrences);
+
+          // Adapter les occurrences pour qu'elles ressemblent aux sessions
+          const adaptedSessions = allOccurrences.map(occ => ({
+            ...occ,
+            // Ajouter les champs manquants pour compatibilité
+            schedule: occ.session_template,
+            course: occ.session_template_details?.course || 0,
+            specific_date: occ.actual_date,
+            specific_start_time: occ.start_time,
+            specific_end_time: occ.end_time,
+            session_type: occ.session_template_details?.session_type || 'CM',
+            expected_students: occ.session_template_details?.expected_students || 0,
+            // Garder les données d'origine pour le composant
+            __is_occurrence: true,
+          })) as any[];
+
+          setSessions(adaptedSessions);
+          setWeeklyData(data);
+
+        } else if (viewMode === 'day') {
+          const dateStr = occurrenceService.formatDate(selectedDate);
+          data = await occurrenceService.getDailyOccurrences({
+            date: dateStr,
+            schedule: scheduleId
+          });
+
+          const occurrences = data?.occurrences || [];
+          debugLog('DAILY OCCURRENCES LOADED:', occurrences.length, occurrences);
+
+          // Adapter les occurrences
+          const adaptedSessions = occurrences.map(occ => ({
+            ...occ,
+            schedule: occ.session_template,
+            course: occ.session_template_details?.course || 0,
+            specific_date: occ.actual_date,
+            specific_start_time: occ.start_time,
+            specific_end_time: occ.end_time,
+            session_type: occ.session_template_details?.session_type || 'CM',
+            expected_students: occ.session_template_details?.expected_students || 0,
+            __is_occurrence: true,
+          })) as any[];
+
+          setSessions(adaptedSessions);
+          setDailyData(data);
+        }
+      }
+      // ===== ANCIEN SYSTÈME (Sessions) =====
+      else {
+        debugLog('Using OLD sessions system');
+
+        if (viewMode === 'week') {
+          const weekStart = scheduleService.getWeekStart(selectedDate);
+          data = await scheduleService.getWeeklySessions({
+            week_start: weekStart,
+            curriculum: selectedCurriculum
+          });
+
+          const allSessions = data?.sessions_by_day
+            ? Object.values(data.sessions_by_day).flat() as ScheduleSession[]
+            : [];
+          debugLog('WEEKLY SESSIONS LOADED:', allSessions.length, allSessions);
+          setSessions(allSessions);
+          setWeeklyData(data);
+
+        } else if (viewMode === 'day') {
+          const dateStr = scheduleService.formatDate(selectedDate);
+          data = await scheduleService.getDailySessions({
+            date: dateStr,
+            curriculum: selectedCurriculum
+          });
+
+          const sessions = data?.sessions || [];
+          debugLog('DAILY SESSIONS LOADED:', sessions.length, sessions);
+          setSessions(sessions);
+          setDailyData(data);
+
+        } else {
+          // Mode mois - pour l'instant, même logique que semaine
+          const weekStart = scheduleService.getWeekStart(selectedDate);
+          data = await scheduleService.getWeeklySessions({
+            week_start: weekStart,
+            curriculum: selectedCurriculum
+          });
+
+          const allSessions = data?.sessions_by_day
+            ? Object.values(data.sessions_by_day).flat() as ScheduleSession[]
+            : [];
+          setSessions(allSessions);
+        }
       }
 
       // Détecter les conflits
-      if (data && (data.results?.length > 0 || data.sessions?.length > 0 || data.sessions_by_day)) {
+      if (data && (data.results?.length > 0 || data.sessions?.length > 0 || data.sessions_by_day || data.occurrences_by_day)) {
         await detectConflicts();
       }
 
     } catch (error) {
-      console.error('Erreur lors du chargement des sessions:', error);
+      console.error(`Erreur lors du chargement des ${systemType}:`, error);
       addToast({
         title: "Erreur",
-        description: "Impossible de charger les sessions",
+        description: `Impossible de charger les ${systemType === 'occurrences' ? 'occurrences' : 'sessions'}`,
         variant: "destructive"
       });
       setSessions([]);
@@ -274,23 +368,52 @@ export default function SchedulePage() {
   };
 
   const handleSessionDelete = async (sessionId: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) return;
+    // Dans le nouveau système, on annule l'occurrence au lieu de la supprimer
+    if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
+      const reason = prompt('Raison de l\'annulation :');
+      if (!reason) return;
 
-    try {
-      await scheduleService.deleteScheduleSession(sessionId);
-      addToast({
-        title: "Succès",
-        description: "Session supprimée avec succès",
-        variant: "default"
-      });
-      await loadSessions();
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      addToast({
-        title: "Erreur",
-        description: "Impossible de supprimer la session",
-        variant: "destructive"
-      });
+      try {
+        await occurrenceService.cancelOccurrence(sessionId, {
+          reason,
+          notify_students: true,
+          notify_teacher: true
+        });
+        addToast({
+          title: "Succès",
+          description: "Séance annulée avec succès",
+          variant: "default"
+        });
+        await loadSessions();
+      } catch (error: any) {
+        console.error('Erreur lors de l\'annulation:', error);
+        addToast({
+          title: "Erreur",
+          description: error.response?.data?.message || "Impossible d'annuler la séance",
+          variant: "destructive"
+        });
+      }
+    }
+    // Ancien système : suppression classique
+    else {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) return;
+
+      try {
+        await scheduleService.deleteScheduleSession(sessionId);
+        addToast({
+          title: "Succès",
+          description: "Session supprimée avec succès",
+          variant: "default"
+        });
+        await loadSessions();
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        addToast({
+          title: "Erreur",
+          description: "Impossible de supprimer la session",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -305,50 +428,49 @@ export default function SchedulePage() {
     try {
       // Convertir le jour en date spécifique
       const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-      const currentWeekStart = scheduleService.getWeekStart(selectedDate);
+      const currentWeekStart = FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM
+        ? occurrenceService.getWeekStart(selectedDate)
+        : scheduleService.getWeekStart(selectedDate);
       const dayIndex = dayNames.findIndex(d => d === day.toLowerCase());
-      
+
       if (dayIndex === -1) {
         throw new Error('Jour invalide');
       }
-      
+
       const newDate = new Date(currentWeekStart);
-      newDate.setDate(newDate.getDate() + (dayIndex === 0 ? 6 : dayIndex - 1)); // Dimanche = 6, Lundi = 0, etc.
-      
+      newDate.setDate(newDate.getDate() + (dayIndex === 0 ? 6 : dayIndex - 1));
+
       // Calculer l'heure de fin basée sur la durée originale
-      const originalStart = session.specific_start_time || session.time_slot_details?.start_time;
-      const originalEnd = session.specific_end_time || session.time_slot_details?.end_time;
-      
+      const originalStart = session.specific_start_time || (session as any).time_slot_details?.start_time;
+      const originalEnd = session.specific_end_time || (session as any).time_slot_details?.end_time;
+
       let endTime = time;
       if (originalStart && originalEnd) {
         const [startH, startM] = originalStart.split(':').map(Number);
         const [endH, endM] = originalEnd.split(':').map(Number);
         const [newStartH, newStartM] = time.split(':').map(Number);
-        
+
         const originalDuration = (endH * 60 + endM) - (startH * 60 + startM);
         const newEndMinutes = (newStartH * 60 + newStartM) + originalDuration;
-        
+
         const endHour = Math.floor(newEndMinutes / 60);
         const endMinute = newEndMinutes % 60;
         endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
       }
-      
+
       // Vérifier les chevauchements avant de faire le déplacement
       const newDateStr = newDate.toISOString().split('T')[0];
       const hasOverlap = sessions.some(otherSession => {
-        if (otherSession.id === session.id) return false; // Ignorer la session qu'on déplace
-        
-        // Vérifier si c'est le même jour
+        if (otherSession.id === session.id) return false;
+
         const otherDate = otherSession.specific_date;
         if (otherDate !== newDateStr) return false;
-        
-        // Vérifier le chevauchement temporel
+
         const otherStart = otherSession.specific_start_time;
         const otherEnd = otherSession.specific_end_time;
-        
+
         if (!otherStart || !otherEnd) return false;
-        
-        // Convertir en minutes pour comparaison
+
         const [newStartH, newStartM] = time.split(':').map(Number);
         const [newEndH, newEndM] = endTime.split(':').map(Number);
         const [otherStartH, otherStartM] = otherStart.split(':').map(Number);
@@ -357,11 +479,10 @@ export default function SchedulePage() {
         const newEndMinutes = newEndH * 60 + newEndM;
         const otherStartMinutes = otherStartH * 60 + otherStartM;
         const otherEndMinutes = otherEndH * 60 + otherEndM;
-        
-        // Vérification de chevauchement: nouvelles heures chevauchent avec les heures existantes
+
         return (newStartMinutes < otherEndMinutes && newEndMinutes > otherStartMinutes);
       });
-      
+
       if (hasOverlap) {
         addToast({
           title: "Conflit détecté",
@@ -370,7 +491,7 @@ export default function SchedulePage() {
         });
         return;
       }
-      
+
       // Mettre à jour localement d'abord pour un feedback immédiat
       const updatedSessions = sessions.map(s => {
         if (s.id === session.id) {
@@ -384,35 +505,54 @@ export default function SchedulePage() {
         return s;
       });
       setSessions(updatedSessions);
-      
-      // Mettre à jour sur le serveur
-      const updateData = {
-        specific_date: newDateStr,
-        specific_start_time: time,
-        specific_end_time: endTime
-      };
-      
-      await scheduleService.updateScheduleSession(session.id, updateData);
-      
-      addToast({
-        title: "Succès",
-        description: "Session déplacée avec succès",
-        variant: "default"
-      });
-      
+
+      // ===== NOUVEAU SYSTÈME : Utiliser reschedule =====
+      if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
+        await occurrenceService.rescheduleOccurrence(session.id, {
+          new_date: newDateStr,
+          new_start_time: time,
+          new_end_time: endTime,
+          reason: 'Déplacement par drag & drop',
+          notify_students: false,
+          notify_teacher: false
+        });
+
+        addToast({
+          title: "Succès",
+          description: "Séance reprogrammée avec succès",
+          variant: "default"
+        });
+      }
+      // ===== ANCIEN SYSTÈME : Mettre à jour les champs =====
+      else {
+        const updateData = {
+          specific_date: newDateStr,
+          specific_start_time: time,
+          specific_end_time: endTime
+        };
+
+        await scheduleService.updateScheduleSession(session.id, updateData);
+
+        addToast({
+          title: "Succès",
+          description: "Session déplacée avec succès",
+          variant: "default"
+        });
+      }
+
       setHasChanges(true);
-      
+
       // Détecter les nouveaux conflits
       await detectConflicts();
-      
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Erreur lors du déplacement:', error);
       addToast({
         title: "Erreur",
-        description: "Impossible de déplacer la session",
+        description: error.response?.data?.message || "Impossible de déplacer la séance",
         variant: "destructive"
       });
-      
+
       // Recharger les données originales en cas d'erreur
       await loadSessions();
     }
@@ -685,6 +825,8 @@ export default function SchedulePage() {
           sessions={filteredSessions}
           addToast={addToast}
           onGenerateSchedule={handleGenerateSchedule}
+          onShowGenerationConfig={() => setShowGenerationConfig(true)}
+          onShowOccurrenceManager={() => setShowOccurrenceManager(true)}
         />
 
         {/* Formulaire de session */}
@@ -733,6 +875,73 @@ export default function SchedulePage() {
                     setShowAIGenerator(false);
                     loadSessions();
                   }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Configuration de génération d'emploi du temps */}
+        {showGenerationConfig && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  ⚙️ Configuration de Génération
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowGenerationConfig(false)}
+                  className="rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+                <ScheduleGenerationConfig
+                  scheduleId={parseInt(selectedCurriculum) || 1}
+                  onConfigSaved={() => {
+                    setShowGenerationConfig(false);
+                    addToast({
+                      title: "Succès",
+                      description: "Configuration sauvegardée. Vous pouvez maintenant générer l'emploi du temps.",
+                      variant: "default"
+                    });
+                    loadSessions();
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Gestionnaire d'occurrences */}
+        {showOccurrenceManager && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  📋 Gestion des Séances
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowOccurrenceManager(false)}
+                  className="rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+                <OccurrenceManager
+                  scheduleId={parseInt(selectedCurriculum)}
+                  dateFrom={scheduleService.formatDate(
+                    new Date(selectedDate.getTime() - 7 * 24 * 60 * 60 * 1000)
+                  )}
+                  dateTo={scheduleService.formatDate(
+                    new Date(selectedDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+                  )}
                 />
               </div>
             </div>

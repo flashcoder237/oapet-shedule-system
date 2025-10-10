@@ -132,7 +132,9 @@ export function ScheduleGrid({
       // 1. Essayer d'extraire le jour depuis specific_date si disponible
       let sessionDay = null;
       if (session.specific_date) {
-        const date = new Date(session.specific_date);
+        // Parser la date en tant que date locale (évite les problèmes de fuseau horaire)
+        const [year, month, dayNum] = session.specific_date.split('-').map(Number);
+        const date = new Date(year, month - 1, dayNum);
         const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
         sessionDay = dayNames[date.getDay()];
       } else if (session.time_slot_details?.day_of_week) {
@@ -609,9 +611,18 @@ export function ScheduleGrid({
                   {(() => {
                     const daySessions = sessions.filter(session => {
                       if (session.specific_date) {
-                        const date = new Date(session.specific_date);
+                        // Parser la date en tant que date locale (évite les problèmes de fuseau horaire)
+                        const [year, month, day] = session.specific_date.split('-').map(Number);
+                        const date = new Date(year, month - 1, day); // month - 1 car les mois sont 0-indexed
                         const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-                        return dayNames[date.getDay()] === dayKey;
+                        const sessionDayName = dayNames[date.getDay()];
+
+                        // Debug pour comprendre le mapping
+                        if (dayKey === 'lundi' && session.id) {
+                          console.log(`🔍 Session ${session.id} - Date: ${session.specific_date}, Jour calculé: ${sessionDayName}, dayKey: ${dayKey}, Match: ${sessionDayName === dayKey}`);
+                        }
+
+                        return sessionDayName === dayKey;
                       }
                       return false;
                     });

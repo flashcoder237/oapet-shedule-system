@@ -29,6 +29,11 @@ export const API_ENDPOINTS = {
   SCHEDULES: '/schedules/schedules/',
   SCHEDULE_SESSIONS: '/schedules/sessions/',
   CONFLICTS: '/schedules/conflicts/',
+
+  // Nouveau système d'occurrences
+  OCCURRENCES: '/schedules/occurrences/',
+  GENERATION_CONFIGS: '/schedules/generation-configs/',
+  GENERATION: '/schedules/generation/',
   
   // ML Engine
   ML_MODELS: '/ml/models/',
