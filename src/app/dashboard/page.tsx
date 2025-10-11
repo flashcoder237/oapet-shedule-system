@@ -163,15 +163,15 @@ export default function Dashboard() {
       description: 'Créer un nouveau cours',
       icon: <BookOpen className="w-5 h-5" />,
       color: 'bg-blue-500',
-      action: () => console.log('Add course')
+      action: () => window.location.href = '/courses'
     },
     {
       id: 'add-schedule',
       title: 'Planning',
-      description: 'Créer un emploi du temps',
+      description: 'Gérer les emplois du temps',
       icon: <Calendar className="w-5 h-5" />,
       color: 'bg-green-500',
-      action: () => console.log('Add schedule')
+      action: () => window.location.href = '/admin/schedules'
     },
     {
       id: 'add-teacher',
@@ -179,7 +179,7 @@ export default function Dashboard() {
       description: 'Ajouter un enseignant',
       icon: <User className="w-5 h-5" />,
       color: 'bg-purple-500',
-      action: () => console.log('Add teacher')
+      action: () => window.location.href = '/teachers/preferences'
     },
     {
       id: 'add-room',
@@ -187,7 +187,7 @@ export default function Dashboard() {
       description: 'Enregistrer une salle',
       icon: <Building className="w-5 h-5" />,
       color: 'bg-orange-500',
-      action: () => console.log('Add room')
+      action: () => window.location.href = '/rooms'
     }
   ];
 

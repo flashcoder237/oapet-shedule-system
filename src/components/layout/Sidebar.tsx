@@ -28,17 +28,17 @@ export default function Sidebar() {
   const pathname = usePathname();
   
   const navigation = [
-    { 
-      name: 'Accueil', 
-      href: '/', 
+    {
+      name: 'Accueil',
+      href: '/',
       icon: Home,
       description: 'Vue d\'ensemble'
     },
-    { 
-      name: 'Tableau de bord', 
-      href: '/dashboard', 
+    {
+      name: 'Gestion des EDs',
+      href: '/admin/schedules',
       icon: LayoutDashboard,
-      description: 'Statistiques et métriques'
+      description: 'Administration des emplois du temps'
     },
     { 
       name: 'Cours', 

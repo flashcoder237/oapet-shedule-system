@@ -1,11 +1,19 @@
 // src/app/layout.tsx
 import './globals.css';
+import { Lato } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth/context';
 import AppLayoutWrapper from '@/components/layout/AppLayoutWrapper';
 import { Toaster } from '@/components/ui/toaster';
 import { ToastProvider } from '@/components/ui/use-toast';
 import { NotificationProvider } from '@/components/ui/notifications';
 import { ThemeProvider } from '@/components/ui/theme-provider';
+
+const lato = Lato({
+  weight: ['300', '400', '700', '900'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-lato',
+});
 
 export const metadata = {
   title: 'OAPET Schedule System - Système de gestion des emplois du temps avec IA',
@@ -40,7 +48,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="h-full bg-background text-foreground antialiased">
+      <body className={`h-full bg-background text-foreground antialiased ${lato.variable}`} style={{ fontFamily: 'var(--font-lato), system-ui, sans-serif' }}>
         <ThemeProvider>
           <ToastProvider>
             <NotificationProvider>
