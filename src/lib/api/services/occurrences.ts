@@ -155,6 +155,27 @@ export const occurrenceService = {
   },
 
   /**
+   * Mettre à jour une occurrence (date, horaires, etc.)
+   */
+  async updateOccurrence(id: number, data: {
+    actual_date?: string;
+    start_time?: string;
+    end_time?: string;
+    room?: number;
+    teacher?: number;
+    notes?: string;
+  }): Promise<SessionOccurrence> {
+    return apiClient.patch(`${API_ENDPOINTS.OCCURRENCES}${id}/`, data);
+  },
+
+  /**
+   * Supprimer une occurrence
+   */
+  async deleteOccurrence(id: number): Promise<void> {
+    return apiClient.delete(`${API_ENDPOINTS.OCCURRENCES}${id}/`);
+  },
+
+  /**
    * Vérifier les conflits d'une occurrence
    */
   async checkConflicts(id: number): Promise<{

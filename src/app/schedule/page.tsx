@@ -408,44 +408,46 @@ export default function SchedulePage() {
   };
 
   const handleSessionDelete = async (sessionId: number) => {
-    // Dans le nouveau système, on annule l'occurrence au lieu de la supprimer
-    if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
-      const reason = prompt('Raison de l\'annulation :');
-      if (!reason) return;
+    // Demander confirmation avant suppression
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette séance ?')) return;
 
+    // Dans le nouveau système, on supprime directement l'occurrence
+    if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
       try {
-        await occurrenceService.cancelOccurrence(sessionId, {
-          reason,
-          notify_students: true,
-          notify_teacher: true
-        });
+        await occurrenceService.deleteOccurrence(sessionId);
+
+        // Mettre à jour localement en filtrant la session supprimée
+        const updatedSessions = sessions.filter(s => s.id !== sessionId);
+        setSessions(updatedSessions);
+
         addToast({
           title: "Succès",
-          description: "Séance annulée avec succès",
+          description: "Séance supprimée avec succès",
           variant: "default"
         });
-        await loadSessions();
       } catch (error: any) {
-        console.error('Erreur lors de l\'annulation:', error);
+        console.error('Erreur lors de la suppression:', error);
         addToast({
           title: "Erreur",
-          description: error.response?.data?.message || "Impossible d'annuler la séance",
+          description: error.response?.data?.message || "Impossible de supprimer la séance",
           variant: "destructive"
         });
       }
     }
     // Ancien système : suppression classique
     else {
-      if (!confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) return;
-
       try {
         await scheduleService.deleteScheduleSession(sessionId);
+
+        // Mettre à jour localement
+        const updatedSessions = sessions.filter(s => s.id !== sessionId);
+        setSessions(updatedSessions);
+
         addToast({
           title: "Succès",
           description: "Session supprimée avec succès",
           variant: "default"
         });
-        await loadSessions();
       } catch (error) {
         console.error('Erreur lors de la suppression:', error);
         addToast({
@@ -532,28 +534,32 @@ export default function SchedulePage() {
         return;
       }
 
-      // Mettre à jour localement d'abord pour un feedback immédiat
-      const updatedSessions = sessions.map(s => {
-        if (s.id === session.id) {
-          return {
-            ...s,
-            specific_date: newDateStr,
-            specific_start_time: time,
-            specific_end_time: endTime
-          };
-        }
-        return s;
-      });
-      setSessions(updatedSessions);
-
       // ===== NOUVEAU SYSTÈME : Modifier directement l'occurrence =====
       if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
-        // Utiliser l'API PATCH pour modifier directement l'occurrence
-        await apiClient.patch(`/schedules/occurrences/${session.id}/`, {
+        // Attendre la confirmation du backend AVANT de mettre à jour localement
+        const updatedOccurrence = await occurrenceService.updateOccurrence(session.id, {
           actual_date: newDateStr,
           start_time: time,
           end_time: endTime,
         });
+
+        // SEULEMENT SI SUCCÈS : mettre à jour localement avec les données du serveur
+        const updatedSessions = sessions.map(s => {
+          if (s.id === session.id) {
+            return {
+              ...s,
+              actual_date: updatedOccurrence.actual_date,
+              specific_date: updatedOccurrence.actual_date,
+              start_time: updatedOccurrence.start_time,
+              specific_start_time: updatedOccurrence.start_time,
+              end_time: updatedOccurrence.end_time,
+              specific_end_time: updatedOccurrence.end_time,
+              is_time_modified: updatedOccurrence.is_time_modified,
+            };
+          }
+          return s;
+        });
+        setSessions(updatedSessions);
 
         addToast({
           title: "Succès",
@@ -571,6 +577,20 @@ export default function SchedulePage() {
 
         await scheduleService.updateScheduleSession(session.id, updateData);
 
+        // Mettre à jour localement après succès
+        const updatedSessions = sessions.map(s => {
+          if (s.id === session.id) {
+            return {
+              ...s,
+              specific_date: newDateStr,
+              specific_start_time: time,
+              specific_end_time: endTime
+            };
+          }
+          return s;
+        });
+        setSessions(updatedSessions);
+
         addToast({
           title: "Succès",
           description: "Session déplacée avec succès",
@@ -585,14 +605,27 @@ export default function SchedulePage() {
 
     } catch (error: any) {
       console.error('Erreur lors du déplacement:', error);
-      addToast({
-        title: "Erreur",
-        description: error.response?.data?.message || "Impossible de déplacer la séance",
-        variant: "destructive"
-      });
 
-      // Recharger les données originales en cas d'erreur
-      await loadSessions();
+      // Afficher les détails du conflit si disponible
+      if (error.response?.data?.conflicts && error.response.data.conflicts.length > 0) {
+        const conflictDetails = error.response.data.conflicts
+          .map((c: any) => `${c.type}: ${c.message || c.resource}`)
+          .join(', ');
+
+        addToast({
+          title: "Conflit détecté",
+          description: `${error.response.data.message || 'Impossible de déplacer la séance'}. ${conflictDetails}`,
+          variant: "destructive"
+        });
+      } else {
+        addToast({
+          title: "Erreur",
+          description: error.response?.data?.message || "Impossible de déplacer la séance",
+          variant: "destructive"
+        });
+      }
+
+      // Pas besoin de recharger, l'état local n'a pas changé
     }
   };
 

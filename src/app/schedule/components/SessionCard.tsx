@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Clock, 
-  MapPin, 
-  User, 
+import {
+  Clock,
+  MapPin,
+  User,
   AlertTriangle,
   MoreVertical,
   GripVertical,
@@ -36,10 +36,10 @@ const formatTime = (timeString: string) => {
   return timeString.slice(0, 5);
 };
 
-export function SessionCard({ 
-  session, 
-  isDragging, 
-  onDragStart, 
+export function SessionCard({
+  session,
+  isDragging,
+  onDragStart,
   onDragEnd,
   onEdit,
   onDelete,
@@ -48,6 +48,23 @@ export function SessionCard({
   hasConflict
 }: SessionCardProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Ferme le menu quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showMenu]);
 
   const getSessionTypeColor = (type: string) => {
     switch (type) {
@@ -80,6 +97,28 @@ export function SessionCard({
     >
       {(editMode === 'edit' || editMode === 'drag') && (
         <GripVertical className="absolute left-1 top-1 w-3 h-3 opacity-50" />
+      )}
+
+      {/* Indicateur de modification manuelle */}
+      {((session as any).is_room_modified || (session as any).is_teacher_modified || (session as any).is_time_modified) && (
+        <div
+          className="absolute top-1 left-6 w-2 h-2 bg-orange-500 rounded-full animate-pulse"
+          title="Cette séance a été modifiée manuellement"
+        />
+      )}
+
+      {/* Bouton menu en mode edit */}
+      {editMode === 'edit' && (
+        <button
+          className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-white rounded-md shadow-sm hover:bg-gray-100 transition-colors z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          title="Options"
+        >
+          <MoreVertical className="w-4 h-4 text-gray-600" />
+        </button>
       )}
 
       <div className="flex flex-col h-full overflow-visible">
@@ -132,13 +171,14 @@ export function SessionCard({
       <AnimatePresence>
         {showMenu && (
           <motion.div
+            ref={menuRef}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-border z-50"
+            className="absolute top-8 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]"
           >
             <button
-              className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 rounded-t-lg transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(session);
@@ -149,7 +189,7 @@ export function SessionCard({
               Modifier
             </button>
             <button
-              className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 onDuplicate(session);
@@ -160,7 +200,7 @@ export function SessionCard({
               Dupliquer
             </button>
             <button
-              className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-red-600"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-red-600 rounded-b-lg transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(session.id);

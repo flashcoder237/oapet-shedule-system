@@ -73,14 +73,25 @@ export function SessionForm({
 
   useEffect(() => {
     if (editingSession) {
+      // Support pour le nouveau système d'occurrences
+      const sessionAny = editingSession as any;
+      const isOccurrence = sessionAny.__is_occurrence;
+
       setFormData({
         id: editingSession.id,
-        course: editingSession.course || '',
-        teacher: editingSession.teacher || '',
-        room: editingSession.room || '',
+        // Gérer les IDs selon le type de session
+        course: isOccurrence
+          ? sessionAny.session_template_details?.course || editingSession.course || ''
+          : editingSession.course || '',
+        teacher: isOccurrence
+          ? sessionAny.teacher || sessionAny.session_template_details?.teacher || ''
+          : editingSession.teacher || '',
+        room: isOccurrence
+          ? sessionAny.room || sessionAny.session_template_details?.room || ''
+          : editingSession.room || '',
         day: editingSession.time_slot_details?.day_of_week || '',
-        startTime: editingSession.specific_start_time || '',
-        endTime: editingSession.specific_end_time || '',
+        startTime: editingSession.specific_start_time || sessionAny.start_time || '',
+        endTime: editingSession.specific_end_time || sessionAny.end_time || '',
         sessionType: editingSession.session_type as 'CM' | 'TD' | 'TP' | 'EXAM',
         expectedStudents: editingSession.expected_students || 30,
         notes: editingSession.notes || ''
