@@ -74,15 +74,66 @@ export function PrintScheduleModal({
       // Récupérer les données de l'emploi du temps
       const schedule = await scheduleService.getSchedule(scheduleId);
 
-      // Récupérer les occurrences pour la période sélectionnée
-      const params: any = { schedule: scheduleId };
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
+      // Récupérer TOUTES les occurrences en parcourant toutes les semaines de la période
+      console.log('=== RÉCUPÉRATION DES OCCURRENCES ===');
+      console.log('Date début:', dateFrom);
+      console.log('Date fin:', dateTo);
 
-      const occurrencesResponse = await occurrenceService.getOccurrences(params);
+      let allOccurrences: any[] = [];
+
+      if (dateFrom && dateTo) {
+        // Parcourir toutes les semaines de la période
+        const startDate = new Date(dateFrom);
+        const endDate = new Date(dateTo);
+        let currentDate = new Date(startDate);
+        let weekCount = 0;
+
+        while (currentDate <= endDate) {
+          weekCount++;
+          const weekStart = occurrenceService.getWeekStart(currentDate);
+
+          console.log(`Récupération semaine ${weekCount}: ${weekStart}...`);
+
+          try {
+            const weekData = await occurrenceService.getWeeklyOccurrences({
+              week_start: weekStart,
+              schedule: scheduleId
+            });
+
+            // Extraire toutes les occurrences de la semaine
+            const weekOccurrences = weekData?.occurrences_by_day
+              ? Object.values(weekData.occurrences_by_day).flat()
+              : [];
+
+            console.log(`  → ${weekOccurrences.length} occurrences trouvées`);
+
+            allOccurrences = allOccurrences.concat(weekOccurrences);
+          } catch (error) {
+            console.error(`Erreur semaine ${weekStart}:`, error);
+          }
+
+          // Passer à la semaine suivante
+          currentDate.setDate(currentDate.getDate() + 7);
+
+          // Sécurité: limiter à 52 semaines (1 an)
+          if (weekCount > 52) {
+            console.warn('Limite de 52 semaines atteinte');
+            break;
+          }
+        }
+
+        console.log(`✅ Total occurrences récupérées : ${allOccurrences.length} (${weekCount} semaines)`);
+      } else {
+        console.warn('Dates non spécifiées, utilisation de la méthode de pagination');
+        // Fallback: utiliser la pagination si les dates ne sont pas spécifiées
+        const occurrencesResponse = await occurrenceService.getOccurrences({
+          schedule: scheduleId
+        });
+        allOccurrences = occurrencesResponse.results || [];
+      }
 
       // Générer le contenu à imprimer
-      generatePrintContent(schedule, occurrencesResponse.results || []);
+      generatePrintContent(schedule, allOccurrences);
     } catch (error) {
       console.error('Erreur lors de la génération:', error);
       alert('Impossible de générer l\'emploi du temps. Vérifiez que l\'emploi du temps possède des sessions.');
@@ -99,10 +150,14 @@ export function PrintScheduleModal({
       return;
     }
 
+    console.log('=== GÉNÉRATION IMPRESSION ===');
+    console.log('Total occurrences reçues:', occurrences.length);
+    console.log('Échantillon d\'occurrences:', occurrences.slice(0, 3));
+
     // Organiser les occurrences par semaine puis par jour
     const occurrencesByWeek: { [weekKey: string]: { [day: string]: any[] } } = {};
 
-    occurrences.forEach((occ) => {
+    occurrences.forEach((occ, index) => {
       const date = new Date(occ.actual_date);
 
       // Calculer le début de la semaine (lundi)
@@ -121,6 +176,7 @@ export function PrintScheduleModal({
           vendredi: [],
           samedi: [],
         };
+        console.log(`Nouvelle semaine créée: ${weekKey}`);
       }
 
       const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
@@ -129,6 +185,9 @@ export function PrintScheduleModal({
         occurrencesByWeek[weekKey][dayName].push(occ);
       }
     });
+
+    console.log('Nombre de semaines détectées:', Object.keys(occurrencesByWeek).length);
+    console.log('Clés des semaines:', Object.keys(occurrencesByWeek).sort());
 
     // Trier par heure de début
     Object.keys(occurrencesByWeek).forEach((week) => {
@@ -142,12 +201,15 @@ export function PrintScheduleModal({
     const dayLabels = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const dayKeys = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 
-    // Calculer les heures min et max
-    const startHour = 8;
-    const endHour = 19;
+    // Calculer les heures min et max pour couvrir toute la journée
+    const startHour = 7;
+    const endHour = 20;
     const totalMinutes = (endHour - startHour) * 60;
 
     // Fonction pour calculer la position et la hauteur
+    // Échelle: 650px pour 13 heures (780 minutes) = ~0.833px par minute
+    const pixelsPerMinute = 650 / totalMinutes;
+
     const getSessionPosition = (session: any) => {
       const [startH, startM] = session.start_time.split(':').map(Number);
       const [endH, endM] = session.end_time.split(':').map(Number);
@@ -156,8 +218,8 @@ export function PrintScheduleModal({
       const sessionEndMinutes = endH * 60 + endM;
       const gridStartMinutes = startHour * 60;
 
-      const top = sessionStartMinutes - gridStartMinutes;
-      const height = sessionEndMinutes - sessionStartMinutes;
+      const top = (sessionStartMinutes - gridStartMinutes) * pixelsPerMinute;
+      const height = (sessionEndMinutes - sessionStartMinutes) * pixelsPerMinute;
 
       return { top, height };
     };
@@ -212,7 +274,8 @@ export function PrintScheduleModal({
               <div class="day-content">
                 ${Array.from({ length: (endHour - startHour) * 2 }, (_, i) => {
                   const isHour = i % 2 === 0;
-                  return `<div class="time-line ${isHour ? 'hour-line' : 'half-hour-line'}"></div>`;
+                  const topPosition = (i * 30 * pixelsPerMinute);
+                  return `<div class="time-line ${isHour ? 'hour-line' : 'half-hour-line'}" style="top: ${topPosition}px;"></div>`;
                 }).join('')}
                 ${sessionsHtml}
               </div>
@@ -235,8 +298,9 @@ export function PrintScheduleModal({
                     const isFullHour = i % 2 === 0;
                     const hour = startHour + Math.floor(i / 2);
                     const minute = isFullHour ? 0 : 30;
+                    const topPosition = (i * 30 * pixelsPerMinute);
                     return `
-                      <div class="time-label ${isFullHour ? 'full-hour' : 'half-hour'}" style="top: ${i * 30}px;">
+                      <div class="time-label ${isFullHour ? 'full-hour' : 'half-hour'}" style="top: ${topPosition}px;">
                         ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}
                       </div>
                     `;
@@ -283,24 +347,24 @@ export function PrintScheduleModal({
 
             .header {
               text-align: center;
-              margin-bottom: 20px;
-              padding-bottom: 15px;
-              border-bottom: 3px solid #2563eb;
+              margin-bottom: 12px;
+              padding-bottom: 10px;
+              border-bottom: 2px solid #2563eb;
             }
 
             .header h1 {
               color: #1e40af;
-              font-size: 24px;
+              font-size: 18px;
               font-weight: 900;
-              margin-bottom: 6px;
+              margin-bottom: 4px;
               letter-spacing: -0.5px;
             }
 
             .header .subtitle {
               color: #64748b;
-              font-size: 13px;
+              font-size: 11px;
               font-weight: 600;
-              margin-bottom: 4px;
+              margin-bottom: 3px;
             }
 
             .header .status {
@@ -325,11 +389,11 @@ export function PrintScheduleModal({
             .info-grid {
               display: grid;
               grid-template-columns: repeat(4, 1fr);
-              gap: 12px;
-              margin-bottom: 20px;
-              padding: 15px;
+              gap: 8px;
+              margin-bottom: 12px;
+              padding: 10px;
               background: #f8fafc;
-              border-radius: 8px;
+              border-radius: 6px;
               border: 1px solid #e2e8f0;
             }
 
@@ -355,17 +419,22 @@ export function PrintScheduleModal({
             }
 
             .week-section {
+              page-break-after: always;
               page-break-inside: avoid;
-              margin-bottom: 30px;
+              margin-bottom: 20px;
+            }
+
+            .week-section:last-child {
+              page-break-after: auto;
             }
 
             .week-header {
               background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
               color: white;
-              padding: 10px 15px;
-              font-size: 13px;
+              padding: 6px 12px;
+              font-size: 11px;
               font-weight: 700;
-              border-radius: 6px 6px 0 0;
+              border-radius: 4px 4px 0 0;
               margin-bottom: 0;
             }
 
@@ -378,27 +447,27 @@ export function PrintScheduleModal({
             }
 
             .time-column {
-              width: 70px;
+              width: 50px;
               background: #f8fafc;
               border-right: 2px solid #cbd5e1;
               flex-shrink: 0;
             }
 
             .time-header {
-              height: 40px;
+              height: 30px;
               display: flex;
               align-items: center;
               justify-content: center;
               background: #334155;
               color: white;
               font-weight: 700;
-              font-size: 11px;
+              font-size: 9px;
               border-bottom: 1px solid #1e293b;
             }
 
             .time-labels {
               position: relative;
-              height: 660px;
+              height: 650px;
             }
 
             .time-label {
@@ -439,21 +508,21 @@ export function PrintScheduleModal({
             }
 
             .day-header {
-              height: 40px;
+              height: 30px;
               display: flex;
               align-items: center;
               justify-content: center;
               background: #334155;
               color: white;
               font-weight: 700;
-              font-size: 11px;
+              font-size: 9px;
               border-bottom: 1px solid #1e293b;
               border-right: 1px solid #1e293b;
             }
 
             .day-content {
               position: relative;
-              height: 660px;
+              height: 650px;
               background: white;
             }
 
@@ -477,11 +546,11 @@ export function PrintScheduleModal({
               position: absolute;
               left: 4%;
               right: 4%;
-              padding: 6px;
-              border-radius: 4px;
+              padding: 4px;
+              border-radius: 3px;
               overflow: hidden;
-              border-left: 4px solid;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              border-left: 3px solid;
+              box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             }
 
             .session-card.CM {
@@ -503,13 +572,13 @@ export function PrintScheduleModal({
 
             .session-type-badge {
               display: inline-block;
-              padding: 2px 6px;
-              border-radius: 3px;
-              font-size: 8px;
+              padding: 1px 4px;
+              border-radius: 2px;
+              font-size: 7px;
               font-weight: 700;
               text-transform: uppercase;
-              letter-spacing: 0.3px;
-              margin-bottom: 3px;
+              letter-spacing: 0.2px;
+              margin-bottom: 2px;
             }
 
             .session-type-badge.CM { background: #dbeafe; color: #1e40af; }
@@ -519,27 +588,27 @@ export function PrintScheduleModal({
 
             .session-title {
               font-weight: 700;
-              font-size: 10px;
+              font-size: 8px;
               color: #1e293b;
-              margin-bottom: 2px;
+              margin-bottom: 1px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
             }
 
             .session-name {
-              font-size: 9px;
+              font-size: 7px;
               color: #475569;
-              margin-bottom: 3px;
+              margin-bottom: 2px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
             }
 
             .session-info {
-              font-size: 8px;
+              font-size: 6px;
               color: #64748b;
-              line-height: 1.3;
+              line-height: 1.2;
             }
 
             .session-info div {

@@ -73,29 +73,109 @@ export function SessionForm({
 
   useEffect(() => {
     if (editingSession) {
-      // Support pour le nouveau système d'occurrences
-      const sessionAny = editingSession as any;
-      const isOccurrence = sessionAny.__is_occurrence;
+      console.log('=== ÉDITION SESSION - DEBUG ===');
+      console.log('editingSession:', editingSession);
 
-      setFormData({
+      const sessionAny = editingSession as any;
+
+      // Détecter le type de session (Occurrence ou ScheduleSession)
+      const isOccurrence = sessionAny.actual_date !== undefined ||
+                          sessionAny.session_template !== undefined ||
+                          sessionAny.__is_occurrence === true;
+
+      console.log('Type détecté:', isOccurrence ? 'SessionOccurrence' : 'ScheduleSession');
+
+      // Extraction du course ID
+      let courseId = '';
+      if (isOccurrence) {
+        courseId = sessionAny.session_template_details?.course ||
+                  sessionAny.session_template_details?.course_details?.id || '';
+      } else {
+        courseId = editingSession.course || '';
+      }
+      console.log('Course ID:', courseId);
+
+      // Extraction du teacher ID
+      let teacherId = '';
+      if (isOccurrence) {
+        teacherId = sessionAny.teacher ||
+                   sessionAny.teacher_details?.id ||
+                   sessionAny.session_template_details?.teacher || '';
+      } else {
+        teacherId = editingSession.teacher || '';
+      }
+      console.log('Teacher ID:', teacherId);
+
+      // Extraction du room ID
+      let roomId = '';
+      if (isOccurrence) {
+        roomId = sessionAny.room ||
+                sessionAny.room_details?.id ||
+                sessionAny.session_template_details?.room || '';
+      } else {
+        roomId = editingSession.room || '';
+      }
+      console.log('Room ID:', roomId);
+
+      // Extraction du jour
+      let dayOfWeek = '';
+      if (isOccurrence && sessionAny.actual_date) {
+        // Convertir la date en jour de la semaine
+        const date = new Date(sessionAny.actual_date);
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        dayOfWeek = days[date.getDay()];
+      } else {
+        dayOfWeek = editingSession.time_slot_details?.day_of_week || '';
+      }
+      console.log('Day:', dayOfWeek);
+
+      // Extraction des horaires
+      let startTime = '';
+      let endTime = '';
+      if (isOccurrence) {
+        startTime = sessionAny.start_time || '';
+        endTime = sessionAny.end_time || '';
+      } else {
+        startTime = editingSession.specific_start_time ||
+                   editingSession.time_slot_details?.start_time || '';
+        endTime = editingSession.specific_end_time ||
+                 editingSession.time_slot_details?.end_time || '';
+      }
+      console.log('Horaires:', startTime, '-', endTime);
+
+      // Extraction du type de session
+      let sessionType: 'CM' | 'TD' | 'TP' | 'EXAM' = 'CM';
+      if (isOccurrence) {
+        sessionType = (sessionAny.session_template_details?.session_type || 'CM') as 'CM' | 'TD' | 'TP' | 'EXAM';
+      } else {
+        sessionType = (editingSession.session_type || 'CM') as 'CM' | 'TD' | 'TP' | 'EXAM';
+      }
+      console.log('Session type:', sessionType);
+
+      // Extraction du nombre d'étudiants
+      let expectedStudents = 30;
+      if (isOccurrence) {
+        expectedStudents = sessionAny.session_template_details?.expected_students || 30;
+      } else {
+        expectedStudents = editingSession.expected_students || 30;
+      }
+      console.log('Expected students:', expectedStudents);
+
+      const formDataValues = {
         id: editingSession.id,
-        // Gérer les IDs selon le type de session
-        course: isOccurrence
-          ? sessionAny.session_template_details?.course || editingSession.course || ''
-          : editingSession.course || '',
-        teacher: isOccurrence
-          ? sessionAny.teacher || sessionAny.session_template_details?.teacher || ''
-          : editingSession.teacher || '',
-        room: isOccurrence
-          ? sessionAny.room || sessionAny.session_template_details?.room || ''
-          : editingSession.room || '',
-        day: editingSession.time_slot_details?.day_of_week || '',
-        startTime: editingSession.specific_start_time || sessionAny.start_time || '',
-        endTime: editingSession.specific_end_time || sessionAny.end_time || '',
-        sessionType: editingSession.session_type as 'CM' | 'TD' | 'TP' | 'EXAM',
-        expectedStudents: editingSession.expected_students || 30,
+        course: courseId,
+        teacher: teacherId,
+        room: roomId,
+        day: dayOfWeek,
+        startTime: startTime,
+        endTime: endTime,
+        sessionType: sessionType,
+        expectedStudents: expectedStudents,
         notes: editingSession.notes || ''
-      });
+      };
+
+      console.log('Form data final:', formDataValues);
+      setFormData(formDataValues);
     } else {
       // Reset form for new session
       setFormData({

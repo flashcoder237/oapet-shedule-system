@@ -18,6 +18,8 @@ export const occurrenceService = {
     teacher?: number;
     room?: number;
     course?: number;
+    page?: number;
+    page_size?: number;
   }): Promise<PaginatedResponse<SessionOccurrence>> {
     return apiClient.get<PaginatedResponse<SessionOccurrence>>(
       API_ENDPOINTS.OCCURRENCES,
