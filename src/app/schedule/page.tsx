@@ -182,9 +182,18 @@ export default function SchedulePage() {
       if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
         debugLog('Using NEW occurrences system');
 
-        // TODO: Récupérer le schedule ID à partir du curriculum
-        // Pour l'instant, on utilise curriculum comme proxy
-        const scheduleId = parseInt(selectedCurriculum) || undefined;
+        // Récupérer le schedule ID à partir du curriculum code
+        let scheduleId: number | undefined;
+        try {
+          const schedule = await scheduleService.getScheduleByCurriculum(selectedCurriculum);
+          scheduleId = schedule.id;
+          debugLog('Schedule found for curriculum', selectedCurriculum, 'ID:', scheduleId);
+        } catch (error) {
+          console.error('No schedule found for curriculum:', selectedCurriculum, error);
+          // Si pas de schedule, essayer de parser comme ID directement
+          const parsedId = parseInt(selectedCurriculum);
+          scheduleId = isNaN(parsedId) ? undefined : parsedId;
+        }
 
         if (viewMode === 'week') {
           const weekStart = occurrenceService.getWeekStart(selectedDate);
@@ -200,8 +209,10 @@ export default function SchedulePage() {
 
           debugLog('WEEKLY OCCURRENCES LOADED:', allOccurrences.length, allOccurrences);
 
+          console.log('🔍 RAW OCCURRENCE SAMPLE (before adaptation):', allOccurrences[0]);
+
           // Adapter les occurrences pour qu'elles ressemblent aux sessions
-          const adaptedSessions = allOccurrences.map(occ => ({
+          const adaptedSessions = allOccurrences.map((occ: any) => ({
             ...occ,
             // Ajouter les champs manquants pour compatibilité
             schedule: occ.session_template,
@@ -211,14 +222,30 @@ export default function SchedulePage() {
             specific_end_time: occ.end_time,
             session_type: occ.session_template_details?.session_type || 'CM',
             expected_students: occ.session_template_details?.expected_students || 0,
+            // Adapter les détails de cours depuis le format simplifié
+            course_details: {
+              code: occ.course_code,
+              name: occ.course_name,
+            },
+            room_details: {
+              code: occ.room_code,
+            },
+            teacher_details: {
+              user_details: {
+                last_name: occ.teacher_name,
+              },
+            },
             // Garder les données d'origine pour le composant
             __is_occurrence: true,
           })) as any[];
+
+          console.log('✅ ADAPTED SESSION SAMPLE (after adaptation):', adaptedSessions[0]);
 
           setSessions(adaptedSessions);
           setWeeklyData(data);
 
         } else if (viewMode === 'day') {
+          // Le scheduleId a déjà été récupéré ci-dessus
           const dateStr = occurrenceService.formatDate(selectedDate);
           data = await occurrenceService.getDailyOccurrences({
             date: dateStr,
@@ -229,7 +256,7 @@ export default function SchedulePage() {
           debugLog('DAILY OCCURRENCES LOADED:', occurrences.length, occurrences);
 
           // Adapter les occurrences
-          const adaptedSessions = occurrences.map(occ => ({
+          const adaptedSessions = occurrences.map((occ: any) => ({
             ...occ,
             schedule: occ.session_template,
             course: occ.session_template_details?.course || 0,
@@ -238,6 +265,19 @@ export default function SchedulePage() {
             specific_end_time: occ.end_time,
             session_type: occ.session_template_details?.session_type || 'CM',
             expected_students: occ.session_template_details?.expected_students || 0,
+            // Adapter les détails de cours depuis le format simplifié
+            course_details: {
+              code: occ.course_code,
+              name: occ.course_name,
+            },
+            room_details: {
+              code: occ.room_code,
+            },
+            teacher_details: {
+              user_details: {
+                last_name: occ.teacher_name,
+              },
+            },
             __is_occurrence: true,
           })) as any[];
 
@@ -506,20 +546,18 @@ export default function SchedulePage() {
       });
       setSessions(updatedSessions);
 
-      // ===== NOUVEAU SYSTÈME : Utiliser reschedule =====
+      // ===== NOUVEAU SYSTÈME : Modifier directement l'occurrence =====
       if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
-        await occurrenceService.rescheduleOccurrence(session.id, {
-          new_date: newDateStr,
-          new_start_time: time,
-          new_end_time: endTime,
-          reason: 'Déplacement par drag & drop',
-          notify_students: false,
-          notify_teacher: false
+        // Utiliser l'API PATCH pour modifier directement l'occurrence
+        await apiClient.patch(`/schedules/occurrences/${session.id}/`, {
+          actual_date: newDateStr,
+          start_time: time,
+          end_time: endTime,
         });
 
         addToast({
           title: "Succès",
-          description: "Séance reprogrammée avec succès",
+          description: "Séance déplacée avec succès",
           variant: "default"
         });
       }

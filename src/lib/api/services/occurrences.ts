@@ -47,7 +47,22 @@ export const occurrenceService = {
     occurrences: SessionOccurrence[];
     total: number;
   }> {
-    return apiClient.get(`${API_ENDPOINTS.OCCURRENCES}daily/`, params);
+    // Filtrer les valeurs undefined/null
+    const cleanParams: Record<string, any> = {
+      date: params.date
+    };
+
+    if (params.schedule !== undefined) {
+      cleanParams.schedule = params.schedule;
+    }
+    if (params.teacher !== undefined) {
+      cleanParams.teacher = params.teacher;
+    }
+    if (params.room !== undefined) {
+      cleanParams.room = params.room;
+    }
+
+    return apiClient.get(`${API_ENDPOINTS.OCCURRENCES}daily/`, cleanParams);
   },
 
   /**
@@ -73,15 +88,23 @@ export const occurrenceService = {
     };
     total: number;
   }> {
-    // L'API attend 'date' et non 'week_start'
-    const apiParams = {
-      ...params,
-      date: params.week_start || params.date,
-    };
-    // Supprimer week_start car l'API ne le reconnaît pas
-    delete apiParams.week_start;
+    // Filtrer les valeurs undefined/null
+    const cleanParams: Record<string, any> = {};
 
-    return apiClient.get(`${API_ENDPOINTS.OCCURRENCES}weekly/`, apiParams);
+    if (params.week_start || params.date) {
+      cleanParams.date = params.week_start || params.date;
+    }
+    if (params.schedule !== undefined) {
+      cleanParams.schedule = params.schedule;
+    }
+    if (params.teacher !== undefined) {
+      cleanParams.teacher = params.teacher;
+    }
+    if (params.room !== undefined) {
+      cleanParams.room = params.room;
+    }
+
+    return apiClient.get(`${API_ENDPOINTS.OCCURRENCES}weekly/`, cleanParams);
   },
 
   /**

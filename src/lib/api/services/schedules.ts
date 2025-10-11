@@ -74,6 +74,15 @@ export const scheduleService = {
     return apiClient.post<{ message: string }>(`${API_ENDPOINTS.SCHEDULES}${id}/unpublish/`);
   },
 
+  /**
+   * Récupère le schedule actif pour un curriculum donné
+   */
+  async getScheduleByCurriculum(curriculumCode: string): Promise<Schedule> {
+    return apiClient.get<Schedule>(`${API_ENDPOINTS.SCHEDULES}by_curriculum/`, {
+      curriculum: curriculumCode
+    });
+  },
+
   async getWeeklyView(id: number, params?: { week_start?: string }): Promise<any> {
     return apiClient.get(`${API_ENDPOINTS.SCHEDULES}${id}/weekly_view/`, params);
   },

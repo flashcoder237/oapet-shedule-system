@@ -82,13 +82,19 @@ export function SessionCard({
         <GripVertical className="absolute left-1 top-1 w-3 h-3 opacity-50" />
       )}
 
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="font-bold text-sm truncate">
+      <div className="flex flex-col h-full overflow-visible">
+        <div
+          className="font-bold text-sm break-words"
+          title={session.course_details?.code}
+        >
           {session.course_details?.code}
           {hasConflict && <span className="text-red-600 ml-1">⚠</span>}
         </div>
-        
-        <div className="text-xs opacity-90 truncate mt-1">
+
+        <div
+          className="text-xs opacity-90 break-words mt-1 line-clamp-2"
+          title={session.course_details?.name}
+        >
           {session.course_details?.name}
         </div>
         
@@ -105,7 +111,10 @@ export function SessionCard({
           </div>
           <div className="flex items-center gap-1">
             <User className="w-3 h-3" />
-            <span className="truncate">
+            <span
+              className="truncate"
+              title={session.teacher_details?.user_details?.last_name}
+            >
               {session.teacher_details?.user_details?.last_name}
             </span>
           </div>

@@ -204,24 +204,27 @@ export function ScheduleGrid({
 
   // Fonction pour détecter les chevauchements locaux et organiser les sessions
   const getSessionsWithOverlapLayout = (daySessions: ScheduleSession[]) => {
-    const sessionsWithLayout: Array<ScheduleSession & { 
-      overlapIndex: number, 
+    const sessionsWithLayout: Array<ScheduleSession & {
+      overlapIndex: number,
       overlapTotal: number,
-      hasVisualConflict: boolean 
+      hasVisualConflict: boolean
     }> = [];
-    
+
     daySessions.forEach((session, index) => {
       // Trouver toutes les sessions qui chevauchent avec celle-ci
       const overlappingSessions = daySessions.filter((otherSession, otherIndex) => {
         if (otherIndex === index) return false;
-        
+
+        // IMPORTANT: Vérifier que c'est la même date avant de détecter le chevauchement
+        if (session.specific_date !== otherSession.specific_date) return false;
+
         const sessionStart = session.specific_start_time;
         const sessionEnd = session.specific_end_time;
         const otherStart = otherSession.specific_start_time;
         const otherEnd = otherSession.specific_end_time;
-        
+
         if (!sessionStart || !sessionEnd || !otherStart || !otherEnd) return false;
-        
+
         const [sessionStartH, sessionStartM] = sessionStart.split(':').map(Number);
         const [sessionEndH, sessionEndM] = sessionEnd.split(':').map(Number);
         const [otherStartH, otherStartM] = otherStart.split(':').map(Number);
@@ -230,7 +233,7 @@ export function ScheduleGrid({
         const sessionEndMinutes = sessionEndH * 60 + sessionEndM;
         const otherStartMinutes = otherStartH * 60 + otherStartM;
         const otherEndMinutes = otherEndH * 60 + otherEndM;
-        
+
         return (sessionStartMinutes < otherEndMinutes && sessionEndMinutes > otherStartMinutes);
       });
       
