@@ -52,17 +52,37 @@ export function WorkloadAnalysis({
 
   const handleAnalyze = async (isAutoRefresh = false) => {
     try {
-      await analyze(scheduleData);
+      console.log('=== WORKLOAD ANALYSIS - ANALYSE ===');
+      console.log('scheduleData passé:', scheduleData);
+      console.log('scheduleData type:', typeof scheduleData);
+
+      if (scheduleData) {
+        console.log('Nombre d\'enseignants:', scheduleData.teachers?.length || 0);
+        console.log('Nombre d\'occurrences:', scheduleData.occurrences?.length || 0);
+        console.log('Nombre de cours:', scheduleData.courses?.length || 0);
+      }
+
+      const result = await analyze(scheduleData);
+
+      console.log('Résultat de l\'analyse:', result);
+      console.log('Nombre d\'enseignants analysés:', result?.teachers?.length || 0);
+      console.log('Équilibre global:', result?.overall_balance);
+
       setLastRefresh(new Date());
-      
+
       if (!isAutoRefresh) {
         addToast({
           title: "Analyse de charge terminée",
-          description: "Les données de charge de travail ont été mises à jour",
+          description: `${result?.teachers?.length || 0} enseignant(s) analysé(s)`,
           variant: "default"
         });
       }
     } catch (error) {
+      console.error('=== WORKLOAD ANALYSIS - ERREUR ===');
+      console.error('Error:', error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Erreur inconnue');
+      console.error('Stack:', error instanceof Error ? error.stack : null);
+
       addToast({
         title: "Erreur d'analyse",
         description: error instanceof Error ? error.message : "Erreur inconnue",

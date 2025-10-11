@@ -228,66 +228,64 @@ export function AIHub({
           </TabsTrigger>
         </TabsList>
 
-        <AnimatePresence mode="wait">
-          <TabsContent value="analysis" className="space-y-4">
-            <motion.div
-              key="analysis"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <WorkloadAnalysis 
-                scheduleData={scheduleData}
-                autoRefresh={enableAutoRefresh}
-              />
-            </motion.div>
-          </TabsContent>
+        <TabsContent value="analysis" className="space-y-4">
+          <motion.div
+            key="analysis"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <WorkloadAnalysis
+              scheduleData={scheduleData}
+              autoRefresh={enableAutoRefresh}
+            />
+          </motion.div>
+        </TabsContent>
 
-          <TabsContent value="anomalies" className="space-y-4">
-            <motion.div
-              key="anomalies"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <AnomalyDetection 
-                scheduleData={scheduleData}
-                autoDetect={enableAutoRefresh}
-              />
-            </motion.div>
-          </TabsContent>
+        <TabsContent value="anomalies" className="space-y-4">
+          <motion.div
+            key="anomalies"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AnomalyDetection
+              scheduleData={scheduleData}
+              autoDetect={enableAutoRefresh}
+            />
+          </motion.div>
+        </TabsContent>
 
-          <TabsContent value="occupancy" className="space-y-4">
-            <motion.div
-              key="occupancy"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <RoomOccupancyPredictor 
-                autoRefresh={enableAutoRefresh}
-              />
-            </motion.div>
-          </TabsContent>
+        <TabsContent value="occupancy" className="space-y-4">
+          <motion.div
+            key="occupancy"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <RoomOccupancyPredictor
+              autoRefresh={enableAutoRefresh}
+            />
+          </motion.div>
+        </TabsContent>
 
-          <TabsContent value="recommendations" className="space-y-4">
-            <motion.div
-              key="recommendations"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <PersonalizedRecommendations 
-                defaultUserType={userType}
-                autoRefresh={enableAutoRefresh}
-              />
-            </motion.div>
-          </TabsContent>
-        </AnimatePresence>
+        <TabsContent value="recommendations" className="space-y-4">
+          <motion.div
+            key="recommendations"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <PersonalizedRecommendations
+              defaultUserType={userType}
+              autoRefresh={enableAutoRefresh}
+            />
+          </motion.div>
+        </TabsContent>
       </Tabs>
 
       {/* Statistiques globales */}

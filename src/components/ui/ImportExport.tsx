@@ -133,8 +133,27 @@ export function ImportExport({
 
     try {
       const token = localStorage.getItem('auth_token');
-      const templateEndpoint = importEndpoint.replace('/import_data/', '/download_template/');
+
+      // Construire l'endpoint du template de manière plus robuste
+      let templateEndpoint = importEndpoint;
+
+      // Remplacer 'import_data' par 'download_template'
+      if (templateEndpoint.includes('import_data')) {
+        templateEndpoint = templateEndpoint.replace('import_data', 'download_template');
+      } else if (templateEndpoint.includes('import')) {
+        templateEndpoint = templateEndpoint.replace('import', 'download_template');
+      } else {
+        // Si aucun pattern n'est trouvé, ajouter download_template à la fin
+        templateEndpoint = templateEndpoint.replace(/\/$/, '') + '/download_template/';
+      }
+
       const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${templateEndpoint}?format=${format}`;
+
+      console.log('=== TÉLÉCHARGEMENT TEMPLATE ===');
+      console.log('Import endpoint:', importEndpoint);
+      console.log('Template endpoint:', templateEndpoint);
+      console.log('Full URL:', url);
+      console.log('Format:', format);
 
       const response = await fetch(url, {
         headers: {
@@ -142,9 +161,23 @@ export function ImportExport({
         }
       });
 
-      if (!response.ok) throw new Error('Template download failed');
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Template download failed:', errorText);
+        throw new Error(`Template download failed: ${response.status} ${errorText}`);
+      }
 
       const blob = await response.blob();
+      console.log('Blob size:', blob.size, 'bytes');
+      console.log('Blob type:', blob.type);
+
+      if (blob.size === 0) {
+        throw new Error('Le fichier téléchargé est vide');
+      }
+
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -157,15 +190,20 @@ export function ImportExport({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
 
+      console.log('✅ Template téléchargé avec succès');
+
       addToast({
         title: "Template téléchargé",
         description: `Le fichier template a été téléchargé en format ${format.toUpperCase()}`,
       });
-    } catch (error) {
-      console.error('Template download error:', error);
+    } catch (error: any) {
+      console.error('=== ERREUR TÉLÉCHARGEMENT TEMPLATE ===');
+      console.error('Error:', error);
+      console.error('Error message:', error.message);
+
       addToast({
         title: "Erreur de téléchargement",
-        description: "Impossible de télécharger le template",
+        description: error.message || "Impossible de télécharger le template",
         variant: "destructive"
       });
     } finally {

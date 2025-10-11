@@ -182,8 +182,26 @@ export const mlService = {
     model_used: string;
     analyzed_at: string;
   }> {
+    console.log('=== ML SERVICE - analyzeWorkload ===');
+    console.log('scheduleData reçu:', scheduleData ? 'Oui' : 'Non');
+
+    if (scheduleData) {
+      console.log('scheduleData.teachers:', scheduleData.teachers?.length || 0);
+      console.log('scheduleData.occurrences:', scheduleData.occurrences?.length || 0);
+      console.log('scheduleData.courses:', scheduleData.courses?.length || 0);
+    }
+
     const params = scheduleData ? { schedule_data: JSON.stringify(scheduleData) } : {};
-    return apiClient.get('/ml/suggestions/analyze_workload/', params);
+
+    console.log('Appel API: /ml/suggestions/analyze_workload/');
+    console.log('Params size:', JSON.stringify(params).length, 'bytes');
+
+    const result = await apiClient.get('/ml/suggestions/analyze_workload/', params);
+
+    console.log('Résultat API reçu:', result);
+    console.log('Teachers dans résultat:', result?.teachers?.length || 0);
+
+    return result;
   },
 
   // Détection d'anomalies
@@ -202,8 +220,19 @@ export const mlService = {
     model_used: string;
     detected_at: string;
   }> {
+    console.log('=== ML SERVICE - detectAnomalies ===');
+    console.log('scheduleData reçu:', scheduleData ? 'Oui' : 'Non');
+
     const params = scheduleData ? { schedule_data: JSON.stringify(scheduleData) } : {};
-    return apiClient.get('/ml/suggestions/detect_anomalies/', params);
+
+    console.log('Appel API: /ml/suggestions/detect_anomalies/');
+
+    const result = await apiClient.get('/ml/suggestions/detect_anomalies/', params);
+
+    console.log('Anomalies détectées:', result?.total_anomalies || 0);
+    console.log('Score de risque:', result?.risk_score || 0);
+
+    return result;
   },
 
   // Prédiction d'occupation des salles
@@ -220,10 +249,21 @@ export const mlService = {
     model_used: string;
     predicted_at: string;
   }> {
+    console.log('=== ML SERVICE - predictRoomOccupancy ===');
+    console.log('roomId:', roomId || 'Toutes les salles');
+    console.log('dateRange:', dateRange || 'Période par défaut');
+
     const params: any = {};
     if (roomId) params.room_id = roomId;
     if (dateRange) params.date_range = dateRange;
-    return apiClient.get('/ml/suggestions/predict_room_occupancy/', params);
+
+    console.log('Appel API: /ml/suggestions/predict_room_occupancy/');
+
+    const result = await apiClient.get('/ml/suggestions/predict_room_occupancy/', params);
+
+    console.log('Prédictions pour:', result?.predictions?.length || 0, 'salle(s)');
+
+    return result;
   },
 
   // Recommandations d'emploi du temps optimal
@@ -333,8 +373,20 @@ export const mlService = {
     model_used: string;
     generated_at: string;
   }> {
-    return apiClient.post('/ml/suggestions/personalized_recommendations/', {
+    console.log('=== ML SERVICE - getPersonalizedRecommendations ===');
+    console.log('userProfile:', userProfile);
+    console.log('type:', userProfile.type);
+
+    console.log('Appel API: /ml/suggestions/personalized_recommendations/');
+
+    const result = await apiClient.post('/ml/suggestions/personalized_recommendations/', {
       user_profile: userProfile
     });
+
+    console.log('Recommandations générées pour:', result?.user_type);
+    console.log('Score de personnalisation:', result?.personalization_score);
+    console.log('Nombre de catégories:', Object.keys(result?.recommendations || {}).length);
+
+    return result;
   },
 };
