@@ -119,8 +119,8 @@ export default function AIPage() {
       {/* Affichage des statistiques chargées */}
       {aggregatedData && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">
-            📊 Données chargées pour l'IA
+          <h3 className="text-sm font-bold text-blue-900 mb-2">
+            Données chargées pour l'IA
           </h3>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-xs text-blue-700">
             <div>

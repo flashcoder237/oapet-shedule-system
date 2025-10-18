@@ -86,7 +86,7 @@ export function SessionForm({
       console.log('Type détecté:', isOccurrence ? 'SessionOccurrence' : 'ScheduleSession');
 
       // Extraction du course ID
-      let courseId = '';
+      let courseId: string | number = '';
       if (isOccurrence) {
         courseId = sessionAny.session_template_details?.course ||
                   sessionAny.session_template_details?.course_details?.id || '';
@@ -96,7 +96,7 @@ export function SessionForm({
       console.log('Course ID:', courseId);
 
       // Extraction du teacher ID
-      let teacherId = '';
+      let teacherId: string | number = '';
       if (isOccurrence) {
         teacherId = sessionAny.teacher ||
                    sessionAny.teacher_details?.id ||
@@ -107,7 +107,7 @@ export function SessionForm({
       console.log('Teacher ID:', teacherId);
 
       // Extraction du room ID
-      let roomId = '';
+      let roomId: string | number = '';
       if (isOccurrence) {
         roomId = sessionAny.room ||
                 sessionAny.room_details?.id ||

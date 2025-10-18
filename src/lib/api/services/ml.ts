@@ -196,7 +196,19 @@ export const mlService = {
     console.log('Appel API: /ml/suggestions/analyze_workload/');
     console.log('Params size:', JSON.stringify(params).length, 'bytes');
 
-    const result = await apiClient.get('/ml/suggestions/analyze_workload/', params);
+    const result = await apiClient.get<{
+      teachers: Array<{
+        teacher: string;
+        total_hours: number;
+        daily_hours: Record<string, number>;
+        balance_score: number;
+        overloaded_days: string[];
+        recommendations: string[];
+      }>;
+      overall_balance: number;
+      model_used: string;
+      analyzed_at: string;
+    }>('/ml/suggestions/analyze_workload/', params);
 
     console.log('Résultat API reçu:', result);
     console.log('Teachers dans résultat:', result?.teachers?.length || 0);
@@ -227,7 +239,21 @@ export const mlService = {
 
     console.log('Appel API: /ml/suggestions/detect_anomalies/');
 
-    const result = await apiClient.get('/ml/suggestions/detect_anomalies/', params);
+    const result = await apiClient.get<{
+      anomalies: Array<{
+        type: string;
+        severity: string;
+        description: string;
+        location: string;
+        time: string;
+        impact: string;
+      }>;
+      total_anomalies: number;
+      risk_score: number;
+      recommendations: string[];
+      model_used: string;
+      detected_at: string;
+    }>('/ml/suggestions/detect_anomalies/', params);
 
     console.log('Anomalies détectées:', result?.total_anomalies || 0);
     console.log('Score de risque:', result?.risk_score || 0);
@@ -259,7 +285,20 @@ export const mlService = {
 
     console.log('Appel API: /ml/suggestions/predict_room_occupancy/');
 
-    const result = await apiClient.get('/ml/suggestions/predict_room_occupancy/', params);
+    const result = await apiClient.get<{
+      predictions: Array<{
+        room: string;
+        hourly_predictions: Record<string, number>;
+        average_occupancy: number;
+        peak_hours: string[];
+        available_slots: string[];
+        capacity_utilization: number;
+      }>;
+      overall_occupancy?: number;
+      date_range: string;
+      model_used: string;
+      predicted_at: string;
+    }>('/ml/suggestions/predict_room_occupancy/', params);
 
     console.log('Prédictions pour:', result?.predictions?.length || 0, 'salle(s)');
 
@@ -379,7 +418,13 @@ export const mlService = {
 
     console.log('Appel API: /ml/suggestions/personalized_recommendations/');
 
-    const result = await apiClient.post('/ml/suggestions/personalized_recommendations/', {
+    const result = await apiClient.post<{
+      user_type: string;
+      recommendations: Record<string, string[]>;
+      personalization_score: number;
+      model_used: string;
+      generated_at: string;
+    }>('/ml/suggestions/personalized_recommendations/', {
       user_profile: userProfile
     });
 
