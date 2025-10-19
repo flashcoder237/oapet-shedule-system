@@ -66,6 +66,38 @@ export function AIHub({
     return () => clearInterval(timer);
   }, []);
 
+  // Lancer automatiquement l'analyse quand les données sont chargées
+  useEffect(() => {
+    if (scheduleData && !workloadAnalysis.loading && !workloadAnalysis.data) {
+      console.log('🚀 Lancement automatique de l\'analyse de charge...');
+      workloadAnalysis.analyze(scheduleData);
+    }
+  }, [scheduleData]);
+
+  // Lancer automatiquement la détection d'anomalies
+  useEffect(() => {
+    if (scheduleData && !anomalyDetection.loading && !anomalyDetection.data) {
+      console.log('🚀 Lancement automatique de la détection d\'anomalies...');
+      anomalyDetection.detect(scheduleData);
+    }
+  }, [scheduleData]);
+
+  // Lancer automatiquement les prédictions d'occupation
+  useEffect(() => {
+    if (scheduleData && !roomOccupancy.loading && !roomOccupancy.data) {
+      console.log('🚀 Lancement automatique des prédictions d\'occupation...');
+      roomOccupancy.predict();
+    }
+  }, [scheduleData]);
+
+  // Lancer automatiquement les recommandations
+  useEffect(() => {
+    if (!personalizedRecs.loading && !personalizedRecs.data) {
+      console.log('🚀 Lancement automatique des recommandations...');
+      personalizedRecs.getRecommendations({ type: userType });
+    }
+  }, [userType]);
+
   const handleRefreshAll = async () => {
     setIsRefreshing(true);
     try {

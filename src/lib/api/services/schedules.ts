@@ -75,11 +75,11 @@ export const scheduleService = {
   },
 
   /**
-   * Récupère le schedule actif pour un curriculum donné
+   * Récupère le schedule actif pour une classe donnée
    */
-  async getScheduleByCurriculum(curriculumCode: string): Promise<Schedule> {
-    return apiClient.get<Schedule>(`${API_ENDPOINTS.SCHEDULES}by_curriculum/`, {
-      curriculum: curriculumCode
+  async getScheduleByClass(classCode: string): Promise<Schedule> {
+    return apiClient.get<Schedule>(`${API_ENDPOINTS.SCHEDULES}by_class/`, {
+      class: classCode
     });
   },
 
@@ -139,32 +139,32 @@ export const scheduleService = {
   },
 
   // Sessions hebdomadaires
-  async getWeeklySessions(params: { week_start: string; curriculum?: string }): Promise<{
+  async getWeeklySessions(params: { week_start: string; class?: string }): Promise<{
     sessions_by_day: { [key: string]: ScheduleSession[] };
     results: ScheduleSession[];
   }> {
     // Charger toutes les sessions disponibles
     const sessions = await this.getScheduleSessions();
-    
+
     let filteredResults = sessions.results || [];
-    
-    // Filtrer par curriculum si spécifié
-    if (params.curriculum && sessions.results) {
+
+    // Filtrer par classe si spécifié
+    if (params.class && sessions.results) {
       try {
         const schedulesResponse = await this.getSchedules();
-        const schedulesForCurriculum = schedulesResponse.results?.filter((schedule: any) => {
-          return schedule.curriculum_details?.code === params.curriculum;
+        const schedulesForClass = schedulesResponse.results?.filter((schedule: any) => {
+          return schedule.student_class_details?.code === params.class;
         }) || [];
-        
-        const scheduleIds = schedulesForCurriculum.map((s: any) => s.id);
-        
+
+        const scheduleIds = schedulesForClass.map((s: any) => s.id);
+
         filteredResults = sessions.results.filter((session: any) => {
           return scheduleIds.includes(session.schedule);
         });
-        
-        console.log(`Weekly view: Filtered ${sessions.results.length} sessions to ${filteredResults.length} for curriculum ${params.curriculum}`);
+
+        console.log(`Weekly view: Filtered ${sessions.results.length} sessions to ${filteredResults.length} for class ${params.class}`);
       } catch (error) {
-        console.error('Error filtering weekly sessions by curriculum:', error);
+        console.error('Error filtering weekly sessions by class:', error);
       }
     }
     
@@ -299,35 +299,35 @@ export const scheduleService = {
   },
 
   // Legacy method for backward compatibility - reproduit l'ancienne logique et format
-  async getDailySessions(params: { date: string; curriculum?: string }): Promise<any> {
+  async getDailySessions(params: { date: string; class?: string }): Promise<any> {
     const paginatedResponse = await this.getScheduleSessions({ date: params.date });
-    
+
     let filteredResults = paginatedResponse.results || [];
-    
-    // Si un curriculum est spécifié, on doit filtrer les sessions
-    if (params.curriculum && paginatedResponse.results) {
-      // D'abord, récupérer tous les emplois du temps pour trouver ceux du curriculum sélectionné
+
+    // Si une classe est spécifiée, on doit filtrer les sessions
+    if (params.class && paginatedResponse.results) {
+      // D'abord, récupérer tous les emplois du temps pour trouver ceux de la classe sélectionnée
       try {
         const schedulesResponse = await this.getSchedules();
-        const schedulesForCurriculum = schedulesResponse.results?.filter((schedule: any) => {
-          // Le curriculum est identifié par son code
-          return schedule.curriculum_details?.code === params.curriculum;
+        const schedulesForClass = schedulesResponse.results?.filter((schedule: any) => {
+          // La classe est identifiée par son code
+          return schedule.student_class_details?.code === params.class;
         }) || [];
-        
-        const scheduleIds = schedulesForCurriculum.map((s: any) => s.id);
-        
+
+        const scheduleIds = schedulesForClass.map((s: any) => s.id);
+
         // Filtrer les sessions qui appartiennent à ces emplois du temps
         filteredResults = paginatedResponse.results.filter((session: any) => {
           return scheduleIds.includes(session.schedule);
         });
-        
-        console.log(`Filtered ${paginatedResponse.results.length} sessions to ${filteredResults.length} for curriculum ${params.curriculum}`);
+
+        console.log(`Filtered ${paginatedResponse.results.length} sessions to ${filteredResults.length} for class ${params.class}`);
       } catch (error) {
-        console.error('Error filtering by curriculum:', error);
+        console.error('Error filtering by class:', error);
         // En cas d'erreur, retourner toutes les sessions
       }
     }
-    
+
     // Retourner le format attendu par l'ancienne page
     return {
       ...paginatedResponse,

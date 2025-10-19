@@ -63,7 +63,9 @@ export const chatbotService = {
    * Récupère toutes les conversations de l'utilisateur
    */
   async getConversations(): Promise<Conversation[]> {
-    return await apiClient.get<Conversation[]>('/chatbot/conversations/');
+    const response = await apiClient.get<any>('/chatbot/conversations/');
+    // L'API retourne un objet paginé avec results
+    return response.results || response || [];
   },
 
   /**
@@ -80,7 +82,10 @@ export const chatbotService = {
     try {
       return await apiClient.get<Conversation>('/chatbot/active/');
     } catch (error: any) {
-      if (error.response?.status === 404) {
+      // Si pas de conversation active, retourner null
+      if (error.message?.includes('No active conversation') ||
+          error.message?.includes('404') ||
+          error.response?.status === 404) {
         return null;
       }
       throw error;

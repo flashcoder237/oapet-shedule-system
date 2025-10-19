@@ -31,9 +31,11 @@ export default function ConversationHistory({
     setIsLoading(true);
     try {
       const data = await chatbotService.getConversations();
-      setConversations(data);
+      // S'assurer que data est un tableau
+      setConversations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erreur lors du chargement des conversations:', error);
+      setConversations([]);
       addToast({
         title: 'Erreur',
         description: 'Impossible de charger l historique.',

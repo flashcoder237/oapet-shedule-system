@@ -40,11 +40,17 @@ export default function Sidebar() {
       icon: LayoutDashboard,
       description: 'Administration des emplois du temps'
     },
-    { 
-      name: 'Cours', 
-      href: '/courses', 
+    {
+      name: 'Cours',
+      href: '/courses',
       icon: BookOpen,
       description: 'Gestion des cours'
+    },
+    {
+      name: 'Classes',
+      href: '/admin/classes',
+      icon: GraduationCap,
+      description: 'Gestion des classes et effectifs'
     },
     {
       name: 'Emplois du temps',

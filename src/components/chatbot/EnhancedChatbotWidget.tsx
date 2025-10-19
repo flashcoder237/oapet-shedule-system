@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   AlertCircle,
+  Plus,
 } from 'lucide-react';
 import { chatbotService, Message, Conversation } from '@/lib/api/services/chatbot';
 import { Button } from '@/components/ui/button';
@@ -192,6 +193,36 @@ export default function EnhancedChatbotWidget({ isOpen, onClose }: EnhancedChatb
     }
   };
 
+  const handleDeleteCurrentConversation = async () => {
+    if (!conversationId) return;
+
+    if (!confirm('Supprimer cette conversation ?')) return;
+
+    try {
+      await chatbotService.deleteConversation(conversationId);
+      setMessages([]);
+      setConversationId(null);
+      loadActiveConversation();
+      addToast({
+        title: 'Conversation supprimee',
+        description: 'La conversation a ete supprimee avec succes.',
+      });
+    } catch (error) {
+      addToast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer la conversation.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleNewConversation = () => {
+    setConversationId(null);
+    setMessages([]);
+    setViewMode('chat');
+    loadActiveConversation();
+  };
+
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -364,6 +395,35 @@ export default function EnhancedChatbotWidget({ isOpen, onClose }: EnhancedChatb
                       {viewMode === 'analytics' && 'Analytics'}
                     </p>
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {viewMode === 'chat' && (
+                    <>
+                      <button
+                        onClick={handleNewConversation}
+                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                        title="Nouvelle conversation"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                      {conversationId && (
+                        <button
+                          onClick={handleDeleteCurrentConversation}
+                          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                          title="Supprimer cette conversation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <button
+                    onClick={onClose}
+                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    title="Fermer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 

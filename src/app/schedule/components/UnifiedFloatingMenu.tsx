@@ -34,25 +34,25 @@ import {
   FileText,
   CalendarCheck,
   ClipboardList,
-  Ban
+  Ban,
+  TrendingUp
 } from 'lucide-react';
 import { scheduleService } from '@/lib/api/services/schedules';
 import { Badge } from '@/components/ui/badge';
 import { ScheduleSession } from '@/types/api';
+import { CourseCoverage } from '@/components/scheduling/CourseCoverage';
 
-interface Curriculum {
+interface StudentClass {
   id: number;
   code: string;
   name: string;
   level: string;
-  department: {
-    name: string;
-  };
+  department_name: string;
 }
 
 type ViewMode = 'week' | 'day' | 'month';
 type EditMode = 'view' | 'edit' | 'drag';
-type TabMode = 'controls' | 'stats' | 'conflicts' | 'generator' | 'generation';
+type TabMode = 'controls' | 'stats' | 'conflicts' | 'generator' | 'generation' | 'coverage';
 
 interface UnifiedFloatingMenuProps {
   selectedClass: string;
@@ -67,12 +67,11 @@ interface UnifiedFloatingMenuProps {
   onEditModeChange: (mode: EditMode) => void;
   onSave: () => void;
   hasChanges: boolean;
-  curricula: Curriculum[];
+  studentClasses: StudentClass[];
   conflicts: any[];
   sessions: ScheduleSession[];
   addToast: (toast: any) => void;
   onGenerateSchedule?: () => void;
-  onShowGenerationConfig?: () => void;
   onShowOccurrenceManager?: () => void;
 }
 
@@ -89,12 +88,11 @@ export function UnifiedFloatingMenu({
   onEditModeChange,
   onSave,
   hasChanges,
-  curricula,
-  conflicts,
-  sessions,
+  studentClasses = [],
+  conflicts = [],
+  sessions = [],
   addToast,
   onGenerateSchedule,
-  onShowGenerationConfig,
   onShowOccurrenceManager
 }: UnifiedFloatingMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -202,7 +200,7 @@ export function UnifiedFloatingMenu({
           </div>
 
           {/* Tabs */}
-          <div className="grid grid-cols-5 gap-1 bg-white/50 rounded-lg p-1">
+          <div className="grid grid-cols-6 gap-1 bg-white/50 rounded-lg p-1">
             <Button
               variant={activeTab === 'controls' ? 'default' : 'ghost'}
               size="sm"
@@ -220,6 +218,15 @@ export function UnifiedFloatingMenu({
             >
               <BarChart3 className="w-3 h-3 mr-1" />
               Stats
+            </Button>
+            <Button
+              variant={activeTab === 'coverage' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveTab('coverage')}
+              className="text-xs h-8"
+            >
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Couv
             </Button>
             <Button
               variant={activeTab === 'generation' ? 'default' : 'ghost'}
@@ -270,11 +277,18 @@ export function UnifiedFloatingMenu({
                     <SelectValue placeholder="Selectionner une classe" />
                   </SelectTrigger>
                   <SelectContent>
-                    {curricula.map((c: Curriculum) => (
-                      <SelectItem key={c.code} value={c.code}>
-                        <span className="font-medium">{c.name}</span>
-                      </SelectItem>
-                    ))}
+                    {studentClasses && studentClasses.length > 0 ? (
+                      studentClasses.map((c: StudentClass) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">({c.level})</span>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1 text-sm text-muted-foreground">
+                        Aucune classe disponible
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -525,20 +539,11 @@ export function UnifiedFloatingMenu({
                     Gestion de Génération
                   </h3>
                   <p className="text-xs text-gray-600">
-                    Configurez et gérez les emplois du temps
+                    Gérez les emplois du temps
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Button
-                    onClick={onShowGenerationConfig}
-                    className="w-full bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700"
-                    size="sm"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configuration de Génération
-                  </Button>
-
                   <Button
                     onClick={onShowOccurrenceManager}
                     className="w-full bg-gradient-to-r from-teal-500 to-green-600 hover:from-teal-600 hover:to-green-700"
@@ -555,14 +560,6 @@ export function UnifiedFloatingMenu({
                   </p>
                   <ul className="text-xs text-gray-600 space-y-1.5">
                     <li className="flex items-center gap-2">
-                      <Settings className="h-3.5 w-3.5 text-indigo-500" />
-                      <span>Configuration des paramètres</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CalendarCheck className="h-3.5 w-3.5 text-blue-500" />
-                      <span>Génération automatique</span>
-                    </li>
-                    <li className="flex items-center gap-2">
                       <ClipboardList className="h-3.5 w-3.5 text-teal-500" />
                       <span>Gestion des occurrences</span>
                     </li>
@@ -573,6 +570,57 @@ export function UnifiedFloatingMenu({
                     <li className="flex items-center gap-2">
                       <Ban className="h-3.5 w-3.5 text-red-500" />
                       <span>Annulation de séances</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* COVERAGE TAB */}
+          {activeTab === 'coverage' && (
+            <>
+              <div className="space-y-4">
+                <div className="text-center pb-2">
+                  <TrendingUp className="h-10 w-10 text-blue-500 mx-auto mb-2" />
+                  <h3 className="text-base font-bold text-gray-900 mb-1">
+                    Couverture des Cours
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    Vérifiez si tous les cours ont assez d'heures planifiées
+                  </p>
+                </div>
+
+                {selectedClass ? (
+                  <CourseCoverage
+                    scheduleId={parseInt(selectedClass) || undefined}
+                    className="border-0 shadow-none"
+                  />
+                ) : (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 text-center">
+                    <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      Sélectionnez une classe pour voir la couverture des cours
+                    </p>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-gray-200 space-y-2">
+                  <p className="text-xs text-gray-600 font-medium">
+                    Indicateurs:
+                  </p>
+                  <ul className="text-xs text-gray-600 space-y-1.5">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                      <span>Complet: 100%+ des heures requises</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+                      <span>Partiel: Moins de 100% couvert</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Ban className="h-3.5 w-3.5 text-red-500" />
+                      <span>Non couvert: 0% planifié</span>
                     </li>
                   </ul>
                 </div>

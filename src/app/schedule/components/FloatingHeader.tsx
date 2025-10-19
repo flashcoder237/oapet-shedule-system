@@ -27,14 +27,12 @@ import {
 } from 'lucide-react';
 import { scheduleService } from '@/lib/api/services/schedules';
 
-interface Curriculum {
+interface StudentClass {
   id: number;
   code: string;
   name: string;
   level: string;
-  department: {
-    name: string;
-  };
+  department_name: string;
 }
 
 type ViewMode = 'week' | 'day' | 'month';
@@ -53,12 +51,12 @@ interface FloatingHeaderProps {
   onEditModeChange: (mode: EditMode) => void;
   onSave: () => void;
   hasChanges: boolean;
-  curricula: Curriculum[];
+  studentClasses: StudentClass[];
   conflicts: any[];
   addToast: (toast: any) => void;
 }
 
-export function FloatingHeader({ 
+export function FloatingHeader({
   selectedClass,
   onClassChange,
   viewMode,
@@ -71,7 +69,7 @@ export function FloatingHeader({
   onEditModeChange,
   onSave,
   hasChanges,
-  curricula,
+  studentClasses = [],
   conflicts,
   addToast
 }: FloatingHeaderProps) {
@@ -192,11 +190,18 @@ export function FloatingHeader({
                 <SelectValue placeholder="Sélectionner une classe" />
               </SelectTrigger>
               <SelectContent>
-                {curricula.map((c: Curriculum) => (
-                  <SelectItem key={c.code} value={c.code} className="hover:bg-blue-50">
-                    <span className="font-medium">{c.name}</span>
-                  </SelectItem>
-                ))}
+                {studentClasses && studentClasses.length > 0 ? (
+                  studentClasses.map((c: StudentClass) => (
+                    <SelectItem key={c.code} value={c.code} className="hover:bg-blue-50">
+                      <span className="font-medium">{c.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">({c.level})</span>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1 text-sm text-muted-foreground">
+                    Aucune classe disponible
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </motion.div>

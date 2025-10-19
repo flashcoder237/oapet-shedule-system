@@ -38,6 +38,20 @@ interface GenerationConstraints {
   prioritizeTeacherPreferences: boolean;
   allowRoomConflicts: boolean;
   balanceWorkload: boolean;
+  // Nouvelles contraintes
+  minBreakBetweenSessions: number;
+  maxConsecutiveSessions: number;
+  preferredStartTime: string;
+  preferredEndTime: string;
+  maxHoursPerDayStudents: number;
+  maxHoursPerWeekStudents: number;
+  maxHoursPerDayTeachers: number;
+  minRestTimeTeachers: number;
+  distributeEvenly: boolean;
+  avoidSingleSessions: boolean;
+  groupSameSubject: boolean;
+  preferredDays: string[];
+  excludedDays: string[];
 }
 
 interface GenerationResult {
@@ -65,14 +79,14 @@ interface ScheduleMetrics {
   roomUtilization: number;
 }
 
-interface Curriculum {
+interface StudentClass {
   id: number;
   name: string;
   code: string;
   level: string;
-  department: {
-    name: string;
-  };
+  department_name: string;
+  student_count: number;
+  max_capacity: number;
 }
 
 interface AIScheduleGeneratorProps {
@@ -98,11 +112,11 @@ export function AIScheduleGenerator({
   const [endDate, setEndDate] = useState('2025-02-28');
 
   // Gestion des classes disponibles
-  const [availableClasses, setAvailableClasses] = useState<Curriculum[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<StudentClass[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [selectedClasses, setSelectedClasses] = useState<string[]>(selectedClass ? [selectedClass] : []);
 
-  const curriculumIds = selectedClasses;
+  const classIds = selectedClasses;
   const [constraints, setConstraints] = useState<GenerationConstraints>({
     preferredTimeSlots: ['09:00-17:00'],
     avoidTimeSlots: ['12:00-13:00'],
@@ -110,7 +124,21 @@ export function AIScheduleGenerator({
     lunchBreakDuration: 60,
     prioritizeTeacherPreferences: true,
     allowRoomConflicts: false,
-    balanceWorkload: true
+    balanceWorkload: true,
+    // Nouvelles contraintes avec valeurs par défaut
+    minBreakBetweenSessions: 15,
+    maxConsecutiveSessions: 3,
+    preferredStartTime: '08:00',
+    preferredEndTime: '18:00',
+    maxHoursPerDayStudents: 8,
+    maxHoursPerWeekStudents: 30,
+    maxHoursPerDayTeachers: 6,
+    minRestTimeTeachers: 30,
+    distributeEvenly: true,
+    avoidSingleSessions: true,
+    groupSameSubject: false,
+    preferredDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+    excludedDays: ['saturday', 'sunday']
   });
 
   const { addToast } = useToast();
@@ -144,18 +172,14 @@ export function AIScheduleGenerator({
 
       setLoadingClasses(true);
       try {
-        const data = await apiClient.get<any>('/courses/curricula/');
+        const data = await apiClient.get<any>('/courses/classes/');
         console.log('Classes chargées:', data);
 
-        // L'API peut retourner un tableau ou un objet avec results
-        if (Array.isArray(data)) {
-          setAvailableClasses(data as Curriculum[]);
-        } else if (data && Array.isArray(data.results)) {
-          setAvailableClasses(data.results as Curriculum[]);
-        } else if (data && typeof data === 'object') {
-          // Peut-être que les données sont dans une autre propriété
-          const values = Object.values(data).filter(item => item && typeof item === 'object') as Curriculum[];
-          setAvailableClasses(values);
+        // L'API retourne une réponse paginée {count, next, previous, results}
+        if (data && Array.isArray(data.results)) {
+          setAvailableClasses(data.results as StudentClass[]);
+        } else if (Array.isArray(data)) {
+          setAvailableClasses(data as StudentClass[]);
         } else {
           console.error('Format de données inattendu:', data);
           setAvailableClasses([]);
@@ -177,7 +201,7 @@ export function AIScheduleGenerator({
   }, [selectedClass]);
 
   const handleGenerateForPeriod = async () => {
-    if (curriculumIds.length === 0) {
+    if (classIds.length === 0) {
       addToast({
         title: "Erreur",
         description: "Veuillez sélectionner au moins une classe",
@@ -204,7 +228,7 @@ export function AIScheduleGenerator({
         semester: semester,
         start_date: startDate,
         end_date: endDate,
-        curriculum_ids: curriculumIds,
+        class_ids: classIds,
       });
 
       addToast({
@@ -306,7 +330,7 @@ export function AIScheduleGenerator({
   };
 
   // Charger les infos de la classe sélectionnée si besoin
-  const [selectedClassInfo, setSelectedClassInfo] = useState<Curriculum | null>(null);
+  const [selectedClassInfo, setSelectedClassInfo] = useState<StudentClass | null>(null);
 
   useEffect(() => {
     const loadSelectedClass = async () => {
@@ -317,13 +341,13 @@ export function AIScheduleGenerator({
 
           if (isNumericId) {
             // Si c'est un ID, charger directement
-            const data = await apiClient.get<Curriculum>(`/courses/curricula/${selectedClass}/`);
+            const data = await apiClient.get<StudentClass>(`/courses/classes/${selectedClass}/`);
             setSelectedClassInfo(data);
           } else {
-            // Si c'est un code, charger la liste et trouver le curriculum
-            const allCurricula = await apiClient.get<any>('/courses/curricula/');
-            const curricula = Array.isArray(allCurricula) ? allCurricula : allCurricula.results || [];
-            const found = curricula.find((c: Curriculum) => c.code === selectedClass || c.id.toString() === selectedClass);
+            // Si c'est un code, charger la liste et trouver la classe
+            const allClasses = await apiClient.get<any>('/courses/classes/');
+            const classes = Array.isArray(allClasses) ? allClasses : allClasses.results || [];
+            const found = classes.find((c: StudentClass) => c.code === selectedClass || c.id.toString() === selectedClass);
 
             if (found) {
               setSelectedClassInfo(found);
@@ -367,7 +391,7 @@ export function AIScheduleGenerator({
               <div>
                 <p className="font-semibold text-base">{selectedClassInfo.code} - {selectedClassInfo.name}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {selectedClassInfo.level} • {selectedClassInfo.department.name}
+                  {selectedClassInfo.level} • {selectedClassInfo.department_name}
                 </p>
               </div>
             ) : (
@@ -431,72 +455,234 @@ export function AIScheduleGenerator({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="bg-muted/30 rounded-lg p-4 space-y-4"
+                className="bg-muted/30 rounded-lg p-6 space-y-6"
               >
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Heures max/jour
-                    </label>
-                    <Input
-                      type="number"
-                      min="4"
-                      max="12"
-                      value={constraints.maxHoursPerDay}
-                      onChange={(e) => setConstraints(prev => ({
-                        ...prev,
-                        maxHoursPerDay: parseInt(e.target.value)
-                      }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Pause déjeuner
-                    </label>
-                    <Select
-                      value={constraints.lunchBreakDuration.toString()}
-                      onValueChange={(value) => setConstraints(prev => ({
-                        ...prev,
-                        lunchBreakDuration: parseInt(value)
-                      }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="30">30 min</SelectItem>
-                        <SelectItem value="60">1h</SelectItem>
-                        <SelectItem value="90">1h30</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {/* Section 1: Contraintes Horaires */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 text-primary">
+                    <Clock className="w-4 h-4" />
+                    Contraintes Horaires
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Pause minimum (min)
+                      </label>
+                      <Input
+                        type="number"
+                        min="5"
+                        max="60"
+                        value={constraints.minBreakBetweenSessions}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          minBreakBetweenSessions: parseInt(e.target.value)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Sessions consécutives max
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="6"
+                        value={constraints.maxConsecutiveSessions}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          maxConsecutiveSessions: parseInt(e.target.value)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Heure début préférée
+                      </label>
+                      <Input
+                        type="time"
+                        value={constraints.preferredStartTime}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          preferredStartTime: e.target.value
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Heure fin préférée
+                      </label>
+                      <Input
+                        type="time"
+                        value={constraints.preferredEndTime}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          preferredEndTime: e.target.value
+                        }))}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={constraints.prioritizeTeacherPreferences}
-                      onChange={(e) => setConstraints(prev => ({
-                        ...prev,
-                        prioritizeTeacherPreferences: e.target.checked
-                      }))}
-                      className="rounded"
-                    />
-                    <span className="text-sm">Priorité aux préférences enseignants</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={constraints.balanceWorkload}
-                      onChange={(e) => setConstraints(prev => ({
-                        ...prev,
-                        balanceWorkload: e.target.checked
-                      }))}
-                      className="rounded"
-                    />
-                    <span className="text-sm">Équilibrer la charge</span>
-                  </label>
+                <div className="border-t pt-4" />
+
+                {/* Section 2: Charge de Travail Étudiants */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 text-blue-600">
+                    <Users className="w-4 h-4" />
+                    Charge de Travail Étudiants
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Heures max/jour
+                      </label>
+                      <Input
+                        type="number"
+                        min="4"
+                        max="12"
+                        value={constraints.maxHoursPerDayStudents}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          maxHoursPerDayStudents: parseInt(e.target.value)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Heures max/semaine
+                      </label>
+                      <Input
+                        type="number"
+                        min="15"
+                        max="40"
+                        value={constraints.maxHoursPerWeekStudents}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          maxHoursPerWeekStudents: parseInt(e.target.value)
+                        }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4" />
+
+                {/* Section 3: Contraintes Enseignants */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 text-purple-600">
+                    <BookOpen className="w-4 h-4" />
+                    Contraintes Enseignants
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Heures max/jour
+                      </label>
+                      <Input
+                        type="number"
+                        min="2"
+                        max="10"
+                        value={constraints.maxHoursPerDayTeachers}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          maxHoursPerDayTeachers: parseInt(e.target.value)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Repos minimum (min)
+                      </label>
+                      <Input
+                        type="number"
+                        min="15"
+                        max="120"
+                        value={constraints.minRestTimeTeachers}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          minRestTimeTeachers: parseInt(e.target.value)
+                        }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4" />
+
+                {/* Section 4: Distribution des Cours */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 text-green-600">
+                    <Target className="w-4 h-4" />
+                    Distribution des Cours
+                  </h4>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={constraints.distributeEvenly}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          distributeEvenly: e.target.checked
+                        }))}
+                        className="rounded"
+                      />
+                      <span className="text-sm">Distribuer équitablement sur la semaine</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={constraints.avoidSingleSessions}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          avoidSingleSessions: e.target.checked
+                        }))}
+                        className="rounded"
+                      />
+                      <span className="text-sm">Éviter les journées avec une seule session</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={constraints.groupSameSubject}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          groupSameSubject: e.target.checked
+                        }))}
+                        className="rounded"
+                      />
+                      <span className="text-sm">Grouper les sessions d'une même matière</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={constraints.prioritizeTeacherPreferences}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          prioritizeTeacherPreferences: e.target.checked
+                        }))}
+                        className="rounded"
+                      />
+                      <span className="text-sm">Priorité aux préférences enseignants</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={constraints.balanceWorkload}
+                        onChange={(e) => setConstraints(prev => ({
+                          ...prev,
+                          balanceWorkload: e.target.checked
+                        }))}
+                        className="rounded"
+                      />
+                      <span className="text-sm">Équilibrer la charge de travail</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 mt-4">
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    💡 Ces contraintes permettent une génération plus intelligente et personnalisée selon vos besoins
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -700,7 +886,7 @@ export function AIScheduleGenerator({
                         <div className="flex-1">
                           <div className="font-medium text-sm">{classe.code} - {classe.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {classe.level} • {classe.department.name}
+                            {classe.level} • {classe.department_name}
                           </div>
                         </div>
                       </label>

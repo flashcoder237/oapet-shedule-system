@@ -25,6 +25,7 @@ import { scheduleService } from '@/lib/api/services/schedules';
 import { occurrenceService } from '@/lib/api/services/occurrences';
 import { courseService } from '@/lib/api/services/courses';
 import { roomService } from '@/lib/api/services/rooms';
+import { classService } from '@/lib/api/services/classes';
 
 // Import du système de feature flags
 import { FEATURE_FLAGS, debugLog, getActiveSystem } from '@/lib/featureFlags';
@@ -33,7 +34,6 @@ import { FEATURE_FLAGS, debugLog, getActiveSystem } from '@/lib/featureFlags';
 import { AIScheduleGenerator } from '@/components/scheduling/AIScheduleGenerator';
 
 // Import des composants de gestion des occurrences
-import ScheduleGenerationConfig from '@/components/scheduling/ScheduleGenerationConfig';
 import OccurrenceManager from '@/components/scheduling/OccurrenceManager';
 
 // Import des types
@@ -47,14 +47,13 @@ import {
 } from '@/types/api';
 
 // Types locaux
-interface Curriculum {
+interface StudentClass {
   id: number;
   code: string;
   name: string;
   level: string;
-  department: {
-    name: string;
-  };
+  department_name: string;
+  student_count: number;
 }
 
 type ScheduleSession = ApiScheduleSession;
@@ -66,8 +65,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/a
 
 export default function SchedulePage() {
   // États principaux
-  const [curricula, setCurricula] = useState<Curriculum[]>([]);
-  const [selectedCurriculum, setSelectedCurriculum] = useState<string>('');
+  const [studentClasses, setStudentClasses] = useState<StudentClass[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string>('');
   const [sessions, setSessions] = useState<ScheduleSession[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<ScheduleSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,8 +103,8 @@ export default function SchedulePage() {
   const [showAIGenerator, setShowAIGenerator] = useState(false);
 
   // États pour les nouveaux composants d'occurrences
-  const [showGenerationConfig, setShowGenerationConfig] = useState(false);
   const [showOccurrenceManager, setShowOccurrenceManager] = useState(false);
+  const [currentScheduleId, setCurrentScheduleId] = useState<number | undefined>(undefined);
 
   const { addToast } = useToast();
 
@@ -125,14 +124,12 @@ export default function SchedulePage() {
   const timeSlots = generateTimeSlots();
 
   // Fonctions de chargement des données
-  const loadCurricula = async () => {
+  const loadStudentClasses = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/curricula/`);
-      if (!response.ok) throw new Error('Erreur lors du chargement des curricula');
-      const data = await response.json();
-      setCurricula(data.results || []);
+      const data = await classService.getClasses();
+      setStudentClasses(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Erreur lors du chargement des curricula:', error);
+      console.error('Erreur lors du chargement des classes:', error);
       addToast({
         title: "Erreur",
         description: "Impossible de charger les classes",
@@ -165,7 +162,7 @@ export default function SchedulePage() {
   };
 
   const loadSessions = async () => {
-    if (!selectedCurriculum) {
+    if (!selectedClass) {
       setSessions([]);
       setFilteredSessions([]);
       return;
@@ -173,7 +170,7 @@ export default function SchedulePage() {
 
     setSessionsLoading(true);
     const systemType = getActiveSystem();
-    debugLog(`Loading ${systemType} for curriculum ${selectedCurriculum}`, { viewMode, selectedDate });
+    debugLog(`Loading ${systemType} for class ${selectedClass}`, { viewMode, selectedDate });
 
     try {
       let data;
@@ -182,17 +179,19 @@ export default function SchedulePage() {
       if (FEATURE_FLAGS.USE_OCCURRENCES_SYSTEM) {
         debugLog('Using NEW occurrences system');
 
-        // Récupérer le schedule ID à partir du curriculum code
+        // Récupérer le schedule ID à partir du code de classe
         let scheduleId: number | undefined;
         try {
-          const schedule = await scheduleService.getScheduleByCurriculum(selectedCurriculum);
+          const schedule = await scheduleService.getScheduleByClass(selectedClass);
           scheduleId = schedule.id;
-          debugLog('Schedule found for curriculum', selectedCurriculum, 'ID:', scheduleId);
+          setCurrentScheduleId(scheduleId); // Store it for OccurrenceManager
+          debugLog('Schedule found for class', selectedClass, 'ID:', scheduleId);
         } catch (error) {
-          console.error('No schedule found for curriculum:', selectedCurriculum, error);
+          console.error('No schedule found for class:', selectedClass, error);
           // Si pas de schedule, essayer de parser comme ID directement
-          const parsedId = parseInt(selectedCurriculum);
+          const parsedId = parseInt(selectedClass);
           scheduleId = isNaN(parsedId) ? undefined : parsedId;
+          setCurrentScheduleId(scheduleId);
         }
 
         if (viewMode === 'week') {
@@ -293,7 +292,7 @@ export default function SchedulePage() {
           const weekStart = scheduleService.getWeekStart(selectedDate);
           data = await scheduleService.getWeeklySessions({
             week_start: weekStart,
-            curriculum: selectedCurriculum
+            class: selectedClass
           });
 
           const allSessions = data?.sessions_by_day
@@ -307,7 +306,7 @@ export default function SchedulePage() {
           const dateStr = scheduleService.formatDate(selectedDate);
           data = await scheduleService.getDailySessions({
             date: dateStr,
-            curriculum: selectedCurriculum
+            class: selectedClass
           });
 
           const sessions = data?.sessions || [];
@@ -320,7 +319,7 @@ export default function SchedulePage() {
           const weekStart = scheduleService.getWeekStart(selectedDate);
           data = await scheduleService.getWeeklySessions({
             week_start: weekStart,
-            curriculum: selectedCurriculum
+            class: selectedClass
           });
 
           const allSessions = data?.sessions_by_day
@@ -700,15 +699,15 @@ export default function SchedulePage() {
 
   // Effects
   useEffect(() => {
-    loadCurricula();
+    loadStudentClasses();
     loadAuxiliaryData();
   }, []);
 
   useEffect(() => {
-    if (selectedCurriculum) {
+    if (selectedClass) {
       loadSessions();
     }
-  }, [selectedCurriculum, selectedDate, viewMode]);
+  }, [selectedClass, selectedDate, viewMode]);
 
   useEffect(() => {
     applyFilters();
@@ -751,7 +750,7 @@ export default function SchedulePage() {
             />
 
             {/* Grille de planning */}
-            {selectedCurriculum ? (
+            {selectedClass ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -879,8 +878,8 @@ export default function SchedulePage() {
 
         {/* Menu flottant unifié */}
         <UnifiedFloatingMenu
-          selectedClass={selectedCurriculum}
-          onClassChange={setSelectedCurriculum}
+          selectedClass={selectedClass}
+          onClassChange={setSelectedClass}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           selectedDate={selectedDate}
@@ -891,12 +890,11 @@ export default function SchedulePage() {
           onEditModeChange={setEditMode}
           onSave={handleSave}
           hasChanges={hasChanges}
-          curricula={curricula}
+          studentClasses={studentClasses}
           conflicts={backendConflicts}
           sessions={filteredSessions}
           addToast={addToast}
           onGenerateSchedule={handleGenerateSchedule}
-          onShowGenerationConfig={() => setShowGenerationConfig(true)}
           onShowOccurrenceManager={() => setShowOccurrenceManager(true)}
         />
 
@@ -941,44 +939,9 @@ export default function SchedulePage() {
               </div>
               <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
                 <AIScheduleGenerator
-                  selectedClass={selectedCurriculum}
+                  selectedClass={selectedClass}
                   onScheduleGenerated={() => {
                     setShowAIGenerator(false);
-                    loadSessions();
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Configuration de génération d'emploi du temps */}
-        {showGenerationConfig && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  ⚙️ Configuration de Génération
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowGenerationConfig(false)}
-                  className="rounded-full"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-              <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
-                <ScheduleGenerationConfig
-                  scheduleId={parseInt(selectedCurriculum) || 1}
-                  onConfigSaved={() => {
-                    setShowGenerationConfig(false);
-                    addToast({
-                      title: "Succès",
-                      description: "Configuration sauvegardée. Vous pouvez maintenant générer l'emploi du temps.",
-                      variant: "default"
-                    });
                     loadSessions();
                   }}
                 />
@@ -1005,15 +968,21 @@ export default function SchedulePage() {
                 </Button>
               </div>
               <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
-                <OccurrenceManager
-                  scheduleId={parseInt(selectedCurriculum)}
-                  dateFrom={scheduleService.formatDate(
-                    new Date(selectedDate.getTime() - 7 * 24 * 60 * 60 * 1000)
-                  )}
-                  dateTo={scheduleService.formatDate(
-                    new Date(selectedDate.getTime() + 30 * 24 * 60 * 60 * 1000)
-                  )}
-                />
+                {currentScheduleId ? (
+                  <OccurrenceManager
+                    scheduleId={currentScheduleId}
+                    dateFrom={scheduleService.formatDate(
+                      new Date(selectedDate.getTime() - 7 * 24 * 60 * 60 * 1000)
+                    )}
+                    dateTo={scheduleService.formatDate(
+                      new Date(selectedDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+                    )}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600">Veuillez sélectionner une classe pour gérer les séances</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

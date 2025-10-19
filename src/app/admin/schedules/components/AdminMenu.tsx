@@ -12,6 +12,7 @@ import {
   BarChart3,
   FileText,
   Clock,
+  GraduationCap,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -23,6 +24,7 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { label: 'Emplois du temps', href: '/admin/schedules', icon: Calendar },
+  { label: 'Classes', href: '/admin/classes', icon: GraduationCap },
   { label: 'Cours', href: '/courses', icon: BookOpen },
   { label: 'Enseignants', href: '/teachers/preferences', icon: Users },
   { label: 'Salles', href: '/rooms', icon: Building },

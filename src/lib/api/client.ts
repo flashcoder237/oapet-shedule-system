@@ -111,23 +111,29 @@ class ApiClient {
           window.location.reload();
         }
       }
-      
+
       const errorText = await response.text();
       let errorMessage: string;
-      
+
       try {
         const errorData = JSON.parse(errorText);
         errorMessage = errorData.detail || errorData.error || errorData.message || 'Une erreur est survenue';
       } catch {
         errorMessage = errorText || `Erreur ${response.status}: ${response.statusText}`;
       }
-      
-      throw new Error(errorMessage);
+
+      // Créer une erreur avec le statut HTTP attaché
+      const error: any = new Error(errorMessage);
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.response = { status: response.status, statusText: response.statusText };
+
+      throw error;
     }
 
     const text = await response.text();
     if (!text) return {} as T;
-    
+
     try {
       return JSON.parse(text);
     } catch {
@@ -218,10 +224,11 @@ class ApiClient {
     return this.handleResponse<T>(response);
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T>(endpoint: string, data?: any): Promise<T> {
     const response = await fetch(getApiUrl(endpoint), {
       method: 'DELETE',
       headers: this.getHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
     });
 
     return this.handleResponse<T>(response);
