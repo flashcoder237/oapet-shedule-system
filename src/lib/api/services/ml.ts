@@ -191,12 +191,10 @@ export const mlService = {
       console.log('scheduleData.courses:', scheduleData.courses?.length || 0);
     }
 
-    const params = scheduleData ? { schedule_data: JSON.stringify(scheduleData) } : {};
+    console.log('Appel API: POST /ml/suggestions/analyze_workload/');
 
-    console.log('Appel API: /ml/suggestions/analyze_workload/');
-    console.log('Params size:', JSON.stringify(params).length, 'bytes');
-
-    const result = await apiClient.get<{
+    // Utiliser POST au lieu de GET pour envoyer les données volumineuses dans le body
+    const result = await apiClient.post<{
       teachers: Array<{
         teacher: string;
         total_hours: number;
@@ -208,7 +206,7 @@ export const mlService = {
       overall_balance: number;
       model_used: string;
       analyzed_at: string;
-    }>('/ml/suggestions/analyze_workload/', params);
+    }>('/ml/suggestions/analyze_workload/', scheduleData ? { schedule_data: scheduleData } : {});
 
     console.log('Résultat API reçu:', result);
     console.log('Teachers dans résultat:', result?.teachers?.length || 0);
@@ -235,11 +233,10 @@ export const mlService = {
     console.log('=== ML SERVICE - detectAnomalies ===');
     console.log('scheduleData reçu:', scheduleData ? 'Oui' : 'Non');
 
-    const params = scheduleData ? { schedule_data: JSON.stringify(scheduleData) } : {};
+    console.log('Appel API: POST /ml/suggestions/detect_anomalies/');
 
-    console.log('Appel API: /ml/suggestions/detect_anomalies/');
-
-    const result = await apiClient.get<{
+    // Utiliser POST au lieu de GET pour envoyer les données volumineuses dans le body
+    const result = await apiClient.post<{
       anomalies: Array<{
         type: string;
         severity: string;
@@ -253,7 +250,7 @@ export const mlService = {
       recommendations: string[];
       model_used: string;
       detected_at: string;
-    }>('/ml/suggestions/detect_anomalies/', params);
+    }>('/ml/suggestions/detect_anomalies/', scheduleData ? { schedule_data: scheduleData } : {});
 
     console.log('Anomalies détectées:', result?.total_anomalies || 0);
     console.log('Score de risque:', result?.risk_score || 0);
@@ -331,8 +328,9 @@ export const mlService = {
     model_used: string;
     generated_at: string;
   }> {
-    const params = constraints ? { constraints: JSON.stringify(constraints) } : {};
-    return apiClient.get('/ml/suggestions/optimal_schedule_recommendations/', params);
+    // Utiliser POST pour envoyer les contraintes dans le body
+    return apiClient.post('/ml/suggestions/optimal_schedule_recommendations/',
+      constraints ? { constraints } : {});
   },
 
   // Analyse des préférences étudiantes
@@ -373,8 +371,9 @@ export const mlService = {
     model_used: string;
     analyzed_at: string;
   }> {
-    const params = studentData ? { student_data: JSON.stringify(studentData) } : {};
-    return apiClient.get('/ml/suggestions/analyze_student_preferences/', params);
+    // Utiliser POST pour envoyer les données dans le body
+    return apiClient.post('/ml/suggestions/analyze_student_preferences/',
+      studentData ? { student_data: studentData } : {});
   },
 
   // Prédiction de taux de réussite
@@ -397,8 +396,9 @@ export const mlService = {
     model_used: string;
     predicted_at: string;
   }> {
-    const params = courseData ? { course_data: JSON.stringify(courseData) } : {};
-    return apiClient.get('/ml/suggestions/predict_course_success/', params);
+    // Utiliser POST pour envoyer les données dans le body
+    return apiClient.post('/ml/suggestions/predict_course_success/',
+      courseData ? { course_data: courseData } : {});
   },
 
   // Recommandations personnalisées

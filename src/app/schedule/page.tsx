@@ -186,8 +186,19 @@ export default function SchedulePage() {
           scheduleId = schedule.id;
           setCurrentScheduleId(scheduleId); // Store it for OccurrenceManager
           debugLog('Schedule found for class', selectedClass, 'ID:', scheduleId);
-        } catch (error) {
+        } catch (error: any) {
           console.error('No schedule found for class:', selectedClass, error);
+
+          // Afficher une notification à l'utilisateur
+          const errorMessage = error?.error || error?.message || 'Aucun emploi du temps trouvé';
+          const className = error?.student_class?.name || selectedClass;
+
+          addToast({
+            title: 'Emploi du temps non trouvé',
+            description: `${errorMessage} pour la classe ${className}`,
+            variant: 'warning'
+          });
+
           // Si pas de schedule, essayer de parser comme ID directement
           const parsedId = parseInt(selectedClass);
           scheduleId = isNaN(parsedId) ? undefined : parsedId;
@@ -896,6 +907,7 @@ export default function SchedulePage() {
           addToast={addToast}
           onGenerateSchedule={handleGenerateSchedule}
           onShowOccurrenceManager={() => setShowOccurrenceManager(true)}
+          currentScheduleId={currentScheduleId}
         />
 
         {/* Formulaire de session */}

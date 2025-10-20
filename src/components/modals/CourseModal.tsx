@@ -1,15 +1,15 @@
 // src/components/modals/CourseModal.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  BookOpen, 
-  User, 
-  Users, 
-  Clock, 
-  MapPin, 
+import {
+  X,
+  BookOpen,
+  User,
+  Users,
+  Clock,
+  MapPin,
   Calendar,
   Save,
   AlertCircle,
@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { mlService } from '@/lib/api/services/ml';
+import { apiClient } from '@/lib/api/client';
 import SmartFormAssistant from '@/components/forms/SmartFormAssistant';
 import type { Course } from '@/types/api';
 
@@ -85,12 +86,58 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
-  
+
+  // États pour les dropdowns
+  const [teachers, setTeachers] = useState<Array<{ id: number; name: string; code: string }>>([]);
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string }>>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
   // IA - États pour la prédiction de difficulté
   const [aiPrediction, setAiPrediction] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
   const [showFormAssistant, setShowFormAssistant] = useState(true);
+
+  // Charger les enseignants et départements
+  useEffect(() => {
+    const loadData = async () => {
+      if (!isOpen) return;
+
+      setLoadingData(true);
+      try {
+        const [teachersData, departmentsData] = await Promise.all([
+          apiClient.get<any>('/courses/teachers/'),
+          apiClient.get<any>('/courses/departments/')
+        ]);
+
+        // Mapper les enseignants pour avoir le bon format
+        const mappedTeachers = (teachersData.results || teachersData || []).map((teacher: any) => ({
+          id: teacher.id,
+          name: teacher.user_details?.first_name && teacher.user_details?.last_name
+            ? `${teacher.user_details.first_name} ${teacher.user_details.last_name}`
+            : teacher.user_details?.username || `Enseignant #${teacher.id}`,
+          code: teacher.employee_id || teacher.id
+        }));
+
+        // Mapper les départements
+        const mappedDepartments = (departmentsData.results || departmentsData || []).map((dept: any) => ({
+          id: dept.id,
+          name: dept.name,
+          code: dept.code
+        }));
+
+        setTeachers(mappedTeachers);
+        setDepartments(mappedDepartments);
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   useEffect(() => {
     if (course) {
@@ -140,14 +187,6 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
     setCurrentStep(1);
     setErrors({});
   }, [course, isOpen]);
-
-  const departments = [
-    'Médecine',
-    'Pharmacie',
-    'Dentaire',
-    'Sciences Infirmières',
-    'Kinésithérapie'
-  ];
 
   const levels = [
     'L1', 'L2', 'L3', 'L4', 'L5', 'L6',
@@ -208,21 +247,25 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-    
-    // IA - Déclencher l'analyse si les champs clés changent
-    if (['name', 'credits', 'max_students', 'hours_per_week', 'course_type'].includes(field)) {
-      debouncedAnalyzeCourse({ ...formData, [field]: value });
-    }
+
+    // IA - Déclencher l'analyse si les champs clés changent (DÉSACTIVÉ car cause des problèmes de modal)
+    // Vous pouvez l'activer manuellement via un bouton si nécessaire
+    // if (['name', 'credits', 'max_students', 'hours_per_week', 'course_type'].includes(field)) {
+    //   debouncedAnalyzeCourse({ ...formData, [field]: value });
+    // }
   };
 
   const handleBooleanToggle = (field: keyof CourseFormData) => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  // IA - Fonction d'analyse de la difficulté du cours
-  const analyzeCourse = async (courseData: CourseFormData) => {
+  // Ref pour le timeout du debounce
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // IA - Fonction d'analyse de la difficulté du cours (useCallback pour stabiliser)
+  const analyzeCourse = useCallback(async (courseData: CourseFormData) => {
     if (!courseData.name.trim() || !courseData.credits) return;
-    
+
     setIsAnalyzing(true);
     try {
       const prediction = await mlService.predictCourseDifficulty({
@@ -240,30 +283,26 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         course_room_ratio: 2.5,
         utilization_pressure: 0.7
       });
-      
+
       setAiPrediction(prediction);
       setAiRecommendations(prediction.recommendations || []);
-      
-      addToast({
-        title: "Analyse IA terminée",
-        description: `Niveau de difficulté: ${prediction.complexity_level}`,
-        variant: "default"
-      });
     } catch (error) {
       console.error('Erreur d\'analyse IA:', error);
+      // Ne pas afficher de toast d'erreur pour éviter de spammer l'utilisateur
     } finally {
       setIsAnalyzing(false);
     }
-  };
+  }, []);
 
   // IA - Fonction avec debounce pour éviter trop d'appels
-  const debouncedAnalyzeCourse = (() => {
-    let timeoutId: NodeJS.Timeout;
-    return (courseData: CourseFormData) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => analyzeCourse(courseData), 1000);
-    };
-  })();
+  const debouncedAnalyzeCourse = useCallback((courseData: CourseFormData) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      analyzeCourse(courseData);
+    }, 1500); // Augmenté à 1.5s pour réduire les appels
+  }, [analyzeCourse]);
 
   const courseTypes = [
     { value: 'CM', label: 'Cours Magistral' },
@@ -282,9 +321,43 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
     setIsLoading(true);
     try {
       await onSave(formData);
+      addToast({
+        title: 'Succès',
+        description: course ? 'Cours modifié avec succès' : 'Cours créé avec succès',
+        variant: 'default'
+      });
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
+
+      // Extraire les messages d'erreur de l'API
+      let errorMessage = 'Une erreur est survenue lors de la sauvegarde';
+
+      if (error?.code) {
+        errorMessage = Array.isArray(error.code) ? error.code.join(', ') : error.code;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.detail) {
+        errorMessage = error.detail;
+      } else if (typeof error === 'object') {
+        // Si c'est un objet d'erreurs de champs
+        const fieldErrors = Object.entries(error)
+          .map(([field, msgs]: [string, any]) => {
+            const messages = Array.isArray(msgs) ? msgs : [msgs];
+            return `${field}: ${messages.join(', ')}`;
+          })
+          .join('\n');
+
+        if (fieldErrors) {
+          errorMessage = fieldErrors;
+        }
+      }
+
+      addToast({
+        title: 'Erreur de validation',
+        description: errorMessage,
+        variant: 'destructive'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -343,15 +416,27 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         <label className="block text-sm font-medium text-foreground mb-2">
           Enseignant *
         </label>
-        <input
-          type="number"
-          value={formData.teacher || ''}
-          onChange={(e) => handleInputChange('teacher', parseInt(e.target.value) || 0)}
-          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
-            errors.teacher ? 'border-destructive/50' : 'border-border'
-          }`}
-          placeholder="ID de l'enseignant"
-        />
+        {loadingData ? (
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">Chargement...</span>
+          </div>
+        ) : (
+          <select
+            value={formData.teacher || ''}
+            onChange={(e) => handleInputChange('teacher', parseInt(e.target.value) || 0)}
+            className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground ${
+              errors.teacher ? 'border-destructive/50' : 'border-border'
+            }`}
+          >
+            <option value="">Sélectionner un enseignant</option>
+            {teachers.map((teacher) => (
+              <option key={teacher.id} value={teacher.id}>
+                {teacher.name} ({teacher.code})
+              </option>
+            ))}
+          </select>
+        )}
         {errors.teacher && (
           <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />
@@ -364,15 +449,27 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         <label className="block text-sm font-medium text-foreground mb-2">
           Département *
         </label>
-        <input
-          type="number"
-          value={formData.department || ''}
-          onChange={(e) => handleInputChange('department', parseInt(e.target.value) || 0)}
-          className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground ${
-            errors.department ? 'border-destructive/50' : 'border-border'
-          }`}
-          placeholder="ID du département"
-        />
+        {loadingData ? (
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">Chargement...</span>
+          </div>
+        ) : (
+          <select
+            value={formData.department || ''}
+            onChange={(e) => handleInputChange('department', parseInt(e.target.value) || 0)}
+            className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground ${
+              errors.department ? 'border-destructive/50' : 'border-border'
+            }`}
+          >
+            <option value="">Sélectionner un département</option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+        )}
         {errors.department && (
           <p className="text-destructive text-sm mt-1 flex items-center">
             <AlertCircle className="w-4 h-4 mr-1" />

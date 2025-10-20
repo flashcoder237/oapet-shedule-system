@@ -217,7 +217,7 @@ export function WorkloadAnalysis({
           <AnimatePresence>
             {data.teachers.map((teacher: any, index: number) => (
               <motion.div
-                key={teacher.teacher}
+                key={`${teacher.teacher || 'teacher'}-${index}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -239,28 +239,30 @@ export function WorkloadAnalysis({
                 </div>
 
                 {/* Répartition par jour */}
-                <div className="grid grid-cols-5 gap-2 mb-3">
-                  {Object.entries(teacher.daily_hours).map(([day, hours]) => {
-                    const hoursNum = Number(hours);
-                    return (
-                    <div key={day} className="text-center">
-                      <div className="text-xs text-muted-foreground mb-1 capitalize">
-                        {day.substring(0, 3)}
+                {teacher.daily_hours && Object.keys(teacher.daily_hours).length > 0 && (
+                  <div className="grid grid-cols-5 gap-2 mb-3">
+                    {Object.entries(teacher.daily_hours).map(([day, hours]) => {
+                      const hoursNum = Number(hours);
+                      return (
+                      <div key={day} className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1 capitalize">
+                          {day.substring(0, 3)}
+                        </div>
+                        <div className={`text-sm font-medium px-2 py-1 rounded ${
+                          hoursNum > 8 ? 'bg-red-100 text-red-700' :
+                          hoursNum > 6 ? 'bg-amber-100 text-amber-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {hoursNum}h
+                        </div>
                       </div>
-                      <div className={`text-sm font-medium px-2 py-1 rounded ${
-                        hoursNum > 8 ? 'bg-red-100 text-red-700' : 
-                        hoursNum > 6 ? 'bg-amber-100 text-amber-700' : 
-                        'bg-green-100 text-green-700'
-                      }`}>
-                        {hoursNum}h
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Jours surchargés */}
-                {teacher.overloaded_days.length > 0 && (
+                {teacher.overloaded_days && teacher.overloaded_days.length > 0 && (
                   <div className="mb-3">
                     <p className="text-sm text-amber-600 mb-2 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
@@ -270,7 +272,7 @@ export function WorkloadAnalysis({
                 )}
 
                 {/* Recommandations */}
-                {teacher.recommendations.length > 0 && (
+                {teacher.recommendations && teacher.recommendations.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">Recommandations IA:</p>
                     {teacher.recommendations.map((rec: string, idx: number) => (

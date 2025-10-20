@@ -73,6 +73,7 @@ interface UnifiedFloatingMenuProps {
   addToast: (toast: any) => void;
   onGenerateSchedule?: () => void;
   onShowOccurrenceManager?: () => void;
+  currentScheduleId?: number;
 }
 
 export function UnifiedFloatingMenu({
@@ -93,7 +94,8 @@ export function UnifiedFloatingMenu({
   sessions = [],
   addToast,
   onGenerateSchedule,
-  onShowOccurrenceManager
+  onShowOccurrenceManager,
+  currentScheduleId
 }: UnifiedFloatingMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabMode>('controls');
@@ -591,16 +593,16 @@ export function UnifiedFloatingMenu({
                   </p>
                 </div>
 
-                {selectedClass ? (
+                {currentScheduleId ? (
                   <CourseCoverage
-                    scheduleId={parseInt(selectedClass) || undefined}
+                    scheduleId={currentScheduleId}
                     className="border-0 shadow-none"
                   />
                 ) : (
                   <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 text-center">
                     <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
                     <p className="text-sm text-amber-700 dark:text-amber-300">
-                      Sélectionnez une classe pour voir la couverture des cours
+                      {selectedClass ? "Chargement du schedule..." : "Sélectionnez une classe pour voir la couverture des cours"}
                     </p>
                   </div>
                 )}

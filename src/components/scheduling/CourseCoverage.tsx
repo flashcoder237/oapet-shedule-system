@@ -65,7 +65,7 @@ export function CourseCoverage({ scheduleId, className = '' }: CourseCoveragePro
 
     setLoading(true);
     try {
-      const data = await apiClient.get<CourseCoverageData>(`/schedules/${scheduleId}/course_coverage/`);
+      const data = await apiClient.get<CourseCoverageData>(`/schedules/schedules/${scheduleId}/course_coverage/`);
       setCoverage(data);
     } catch (error) {
       console.error('Erreur lors du chargement de la couverture:', error);

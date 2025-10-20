@@ -12,6 +12,7 @@ import {
 import { Upload, Download, FileJson, FileSpreadsheet, FileText, Loader2, CheckCircle, AlertCircle, FileDown } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { apiClient } from '@/lib/api/client';
+import { exportToExcel, exportToCSV, exportToJSON, generateExcelTemplate, importFromExcel } from '@/lib/utils/excelExport';
 
 interface ImportExportProps {
   /**
@@ -58,6 +59,16 @@ interface ImportExportProps {
    * Variante visuelle
    */
   variant?: 'default' | 'outline' | 'ghost';
+
+  /**
+   * Configuration des champs pour le template
+   */
+  templateFields?: Array<{ key: string; label: string; example?: string }>;
+
+  /**
+   * Utiliser l'export côté frontend au lieu du backend
+   */
+  useFrontendExport?: boolean;
 }
 
 export function ImportExport({
@@ -69,7 +80,9 @@ export function ImportExport({
   importFormats = ['csv', 'json', 'excel'],
   exportParams = {},
   size = 'default',
-  variant = 'outline'
+  variant = 'outline',
+  templateFields = [],
+  useFrontendExport = true
 }: ImportExportProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -81,46 +94,80 @@ export function ImportExport({
     setIsExporting(true);
 
     try {
-      const params = {
-        format,
-        ...exportParams
-      };
+      if (useFrontendExport) {
+        // Export côté frontend
+        // Récupérer les données depuis l'API
+        const token = localStorage.getItem('auth_token');
+        const queryString = new URLSearchParams(exportParams).toString();
+        const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${exportEndpoint}${queryString ? '?' + queryString : ''}`;
 
-      // Utiliser fetch pour télécharger le fichier
-      const token = localStorage.getItem('auth_token');
-      const queryString = new URLSearchParams(params).toString();
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${exportEndpoint}?${queryString}`;
+        const response = await fetch(url, {
+          headers: {
+            ...(token ? { 'Authorization': `Token ${token}` } : {})
+          }
+        });
 
-      const response = await fetch(url, {
-        headers: {
-          ...(token ? { 'Authorization': `Token ${token}` } : {})
+        if (!response.ok) throw new Error('Failed to fetch data');
+
+        const data = await response.json();
+        const exportData = Array.isArray(data) ? data : data.results || [];
+        const filename = `${resourceName}_${new Date().toISOString().split('T')[0]}`;
+
+        // Exporter selon le format
+        if (format === 'excel') {
+          exportToExcel(exportData, filename, resourceName);
+        } else if (format === 'csv') {
+          exportToCSV(exportData, filename);
+        } else if (format === 'json') {
+          exportToJSON(exportData, filename);
         }
-      });
 
-      if (!response.ok) throw new Error('Export failed');
+        addToast({
+          title: "Export réussi",
+          description: `${exportData.length} élément(s) exporté(s) en ${format.toUpperCase()}`,
+        });
+      } else {
+        // Export côté backend (ancienne méthode)
+        const params = {
+          format,
+          ...exportParams
+        };
 
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
+        const token = localStorage.getItem('auth_token');
+        const queryString = new URLSearchParams(params).toString();
+        const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${exportEndpoint}?${queryString}`;
 
-      const fileExtension = format === 'excel' ? 'xlsx' : format;
-      link.download = `${resourceName}_${new Date().toISOString().split('T')[0]}.${fileExtension}`;
+        const response = await fetch(url, {
+          headers: {
+            ...(token ? { 'Authorization': `Token ${token}` } : {})
+          }
+        });
 
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
+        if (!response.ok) throw new Error('Export failed');
 
-      addToast({
-        title: "Export reussi",
-        description: `Les donnees ont ete exportees en format ${format.toUpperCase()}`,
-      });
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+
+        const fileExtension = format === 'excel' ? 'xlsx' : format;
+        link.download = `${resourceName}_${new Date().toISOString().split('T')[0]}.${fileExtension}`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+
+        addToast({
+          title: "Export réussi",
+          description: `Les données ont été exportées en format ${format.toUpperCase()}`,
+        });
+      }
     } catch (error) {
       console.error('Export error:', error);
       addToast({
         title: "Erreur d'export",
-        description: "Impossible d'exporter les donnees",
+        description: "Impossible d'exporter les données",
         variant: "destructive"
       });
     } finally {
@@ -132,74 +179,92 @@ export function ImportExport({
     setIsDownloadingTemplate(true);
 
     try {
-      const token = localStorage.getItem('auth_token');
+      if (useFrontendExport && templateFields.length > 0) {
+        // Génération du template côté frontend
+        if (format === 'excel') {
+          generateExcelTemplate(templateFields, resourceName);
+        } else if (format === 'csv') {
+          // Créer un CSV simple avec les en-têtes
+          const headers = templateFields.map(f => f.label).join(',');
+          const examples = templateFields.map(f => f.example || `Exemple ${f.label}`).join(',');
+          const csvContent = `${headers}\n${examples}`;
 
-      // Construire l'endpoint du template de manière plus robuste
-      let templateEndpoint = importEndpoint;
-
-      // Remplacer 'import_data' par 'download_template'
-      if (templateEndpoint.includes('import_data')) {
-        templateEndpoint = templateEndpoint.replace('import_data', 'download_template');
-      } else if (templateEndpoint.includes('import')) {
-        templateEndpoint = templateEndpoint.replace('import', 'download_template');
-      } else {
-        // Si aucun pattern n'est trouvé, ajouter download_template à la fin
-        templateEndpoint = templateEndpoint.replace(/\/$/, '') + '/download_template/';
-      }
-
-      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${templateEndpoint}?format=${format}`;
-
-      console.log('=== TÉLÉCHARGEMENT TEMPLATE ===');
-      console.log('Import endpoint:', importEndpoint);
-      console.log('Template endpoint:', templateEndpoint);
-      console.log('Full URL:', url);
-      console.log('Format:', format);
-
-      const response = await fetch(url, {
-        headers: {
-          ...(token ? { 'Authorization': `Token ${token}` } : {})
+          const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', `template_${resourceName}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else if (format === 'json') {
+          // Créer un JSON avec un exemple
+          const example = templateFields.reduce((acc, field) => ({
+            ...acc,
+            [field.key]: field.example || `Exemple ${field.label}`
+          }), {});
+          exportToJSON([example], `template_${resourceName}`);
         }
-      });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+        addToast({
+          title: "Template téléchargé",
+          description: `Le fichier template a été téléchargé en format ${format.toUpperCase()}`,
+        });
+      } else {
+        // Téléchargement du template depuis le backend (ancienne méthode)
+        const token = localStorage.getItem('auth_token');
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Template download failed:', errorText);
-        throw new Error(`Template download failed: ${response.status} ${errorText}`);
+        // Construire l'endpoint du template de manière plus robuste
+        let templateEndpoint = importEndpoint;
+
+        // Remplacer 'import_data' par 'download_template'
+        if (templateEndpoint.includes('import_data')) {
+          templateEndpoint = templateEndpoint.replace('import_data', 'download_template');
+        } else if (templateEndpoint.includes('import')) {
+          templateEndpoint = templateEndpoint.replace('import', 'download_template');
+        } else {
+          // Si aucun pattern n'est trouvé, ajouter download_template à la fin
+          templateEndpoint = templateEndpoint.replace(/\/$/, '') + '/download_template/';
+        }
+
+        const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}${templateEndpoint}?format=${format}`;
+
+        const response = await fetch(url, {
+          headers: {
+            ...(token ? { 'Authorization': `Token ${token}` } : {})
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Template download failed: ${response.status} ${errorText}`);
+        }
+
+        const blob = await response.blob();
+
+        if (blob.size === 0) {
+          throw new Error('Le fichier téléchargé est vide');
+        }
+
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+
+        const fileExtension = format === 'excel' ? 'xlsx' : format;
+        link.download = `template_${resourceName}.${fileExtension}`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+
+        addToast({
+          title: "Template téléchargé",
+          description: `Le fichier template a été téléchargé en format ${format.toUpperCase()}`,
+        });
       }
-
-      const blob = await response.blob();
-      console.log('Blob size:', blob.size, 'bytes');
-      console.log('Blob type:', blob.type);
-
-      if (blob.size === 0) {
-        throw new Error('Le fichier téléchargé est vide');
-      }
-
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-
-      const fileExtension = format === 'excel' ? 'xlsx' : format;
-      link.download = `template_${resourceName}.${fileExtension}`;
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-
-      console.log('✅ Template téléchargé avec succès');
-
-      addToast({
-        title: "Template téléchargé",
-        description: `Le fichier template a été téléchargé en format ${format.toUpperCase()}`,
-      });
     } catch (error: any) {
-      console.error('=== ERREUR TÉLÉCHARGEMENT TEMPLATE ===');
-      console.error('Error:', error);
-      console.error('Error message:', error.message);
+      console.error('Erreur téléchargement template:', error);
 
       addToast({
         title: "Erreur de téléchargement",

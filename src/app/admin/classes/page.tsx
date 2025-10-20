@@ -129,20 +129,29 @@ export default function ClassesPage() {
 
     try {
       if (editingClass) {
-        await classService.updateClass(editingClass.id, payload)
+        const updatedClass = await classService.updateClass(editingClass.id, payload)
+
+        // Update state immediately
+        setClasses(prevClasses =>
+          prevClasses.map(cls => cls.id === editingClass.id ? updatedClass : cls)
+        )
+
         addToast({
           title: 'Succès',
           description: 'Classe modifiée avec succès',
         })
       } else {
-        await classService.createClass(payload)
+        const newClass = await classService.createClass(payload)
+
+        // Add new class to state immediately
+        setClasses(prevClasses => [...prevClasses, newClass])
+
         addToast({
           title: 'Succès',
           description: 'Classe créée avec succès',
         })
       }
 
-      fetchClasses()
       setShowModal(false)
       resetForm()
     } catch (error: any) {
@@ -159,12 +168,15 @@ export default function ClassesPage() {
     e.preventDefault()
 
     try {
-      await courseService.createDepartment(departmentFormData)
+      const newDepartment = await courseService.createDepartment(departmentFormData)
+
+      // Add new department to state immediately
+      setDepartments(prevDepartments => [...prevDepartments, newDepartment])
+
       addToast({
         title: 'Succès',
         description: 'Département créé avec succès',
       })
-      fetchDepartments()
       setShowDepartmentModal(false)
       setDepartmentFormData({ name: '', code: '', description: '' })
     } catch (error: any) {
@@ -200,11 +212,14 @@ export default function ClassesPage() {
 
     try {
       await classService.deleteClass(id)
+
+      // Remove class from state immediately
+      setClasses(prevClasses => prevClasses.filter(cls => cls.id !== id))
+
       addToast({
         title: 'Succès',
         description: 'Classe supprimée',
       })
-      fetchClasses()
     } catch (error) {
       console.error('Erreur:', error)
       addToast({
@@ -269,12 +284,24 @@ export default function ClassesPage() {
             Départements
           </Button>
           <ImportExport
-            exportEndpoint="/courses/classes/export/"
+            exportEndpoint="/courses/classes/"
             importEndpoint="/courses/classes/import_data/"
             resourceName="classes"
             onImportSuccess={fetchClasses}
             exportFormats={['csv', 'json', 'excel']}
             importFormats={['csv', 'json', 'excel']}
+            useFrontendExport={true}
+            templateFields={[
+              { key: 'name', label: 'Nom', example: 'Licence 1 Informatique A' },
+              { key: 'code', label: 'Code', example: 'L1-INFO-A' },
+              { key: 'level', label: 'Niveau', example: 'L1' },
+              { key: 'section', label: 'Section', example: 'A' },
+              { key: 'department', label: 'Département (ID)', example: '1' },
+              { key: 'curriculum', label: 'Programme (ID)', example: '1' },
+              { key: 'academic_year', label: 'Année académique', example: '2024-2025' },
+              { key: 'student_count', label: 'Nombre d\'étudiants', example: '45' },
+              { key: 'max_capacity', label: 'Capacité maximale', example: '50' }
+            ]}
           />
           <Button
             onClick={() => {

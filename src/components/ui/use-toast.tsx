@@ -10,6 +10,7 @@ type ToastProps = {
   action?: React.ReactNode;
   duration?: number;
   variant?: "default" | "destructive";
+  open?: boolean;
 };
 
 type ToastActionElement = React.ReactElement;
@@ -30,16 +31,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   // Function to add a new toast
   const addToast = (props: Omit<ToastProps, "id">) => {
     const id = Math.random().toString(36).substring(2, 9);
-    const newToast = { ...props, id };
-    
+    const newToast = { ...props, id, open: true };
+
     setToasts((prevToasts) => [...prevToasts, newToast]);
-    
+
     if (props.duration !== Infinity) {
       setTimeout(() => {
         dismissToast(id);
       }, props.duration || 5000);
     }
-    
+
     return id;
   };
 

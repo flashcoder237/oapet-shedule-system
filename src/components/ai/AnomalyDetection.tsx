@@ -233,9 +233,9 @@ export function AnomalyDetection({
               <AlertTriangle className="w-5 h-5" />
               Anomalies détectées ({data.total_anomalies})
             </h4>
-            
+
             <AnimatePresence>
-              {data.anomalies.map((anomaly: any, index: number) => (
+              {data.anomalies && data.anomalies.map((anomaly: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: -20 }}
@@ -282,13 +282,13 @@ export function AnomalyDetection({
         )}
 
         {/* Recommandations IA */}
-        {data.recommendations.length > 0 && (
+        {data.recommendations && data.recommendations.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
               <Lightbulb className="w-5 h-5" />
               Recommandations IA
             </h4>
-            
+
             <ul className="space-y-2">
               {data.recommendations.map((recommendation: string, index: number) => (
                 <li key={index} className="text-sm text-blue-700 flex items-start gap-2">

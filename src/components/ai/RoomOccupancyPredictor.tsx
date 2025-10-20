@@ -19,8 +19,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { useRoomOccupancyPrediction } from '@/hooks/useAI';
 import { useToast } from '@/components/ui/use-toast';
+import { roomService } from '@/lib/api/services/rooms';
+import type { Room } from '@/types/api';
 
 interface RoomOccupancyPredictorProps {
   defaultRoomId?: string;
@@ -29,17 +32,43 @@ interface RoomOccupancyPredictorProps {
   refreshInterval?: number;
 }
 
-export function RoomOccupancyPredictor({ 
+export function RoomOccupancyPredictor({
   defaultRoomId,
   defaultDateRange = 'Aujourd\'hui',
-  autoRefresh = false, 
-  refreshInterval = 120000 
+  autoRefresh = false,
+  refreshInterval = 120000
 }: RoomOccupancyPredictorProps) {
   const { data, loading, error, predict } = useRoomOccupancyPrediction();
   const { addToast } = useToast();
   const [selectedRoom, setSelectedRoom] = useState<string>(defaultRoomId || 'all');
   const [dateRange, setDateRange] = useState<string>(defaultDateRange);
+  const [customDateStart, setCustomDateStart] = useState<string>('');
+  const [customDateEnd, setCustomDateEnd] = useState<string>('');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+
+  // Charger les salles depuis la BD
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoadingRooms(true);
+        const response = await roomService.getRooms();
+        setRooms(response.results || []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des salles:', error);
+        addToast({
+          title: "Erreur",
+          description: "Impossible de charger les salles",
+          variant: "destructive"
+        });
+      } finally {
+        setLoadingRooms(false);
+      }
+    };
+
+    fetchRooms();
+  }, []);
 
   useEffect(() => {
     // Prédiction initiale
@@ -53,14 +82,21 @@ export function RoomOccupancyPredictor({
 
       return () => clearInterval(interval);
     }
-  }, [selectedRoom, dateRange, autoRefresh, refreshInterval]);
+  }, [selectedRoom, dateRange, customDateStart, customDateEnd, autoRefresh, refreshInterval]);
 
   const handlePredict = async (isAutoRefresh = false) => {
     try {
       const roomId = selectedRoom === 'all' ? undefined : selectedRoom;
-      await predict(roomId, dateRange);
+
+      // Déterminer la plage de dates à utiliser
+      let dateRangeToUse = dateRange;
+      if (dateRange === 'Personnalisée' && customDateStart && customDateEnd) {
+        dateRangeToUse = `${customDateStart} - ${customDateEnd}`;
+      }
+
+      await predict(roomId, dateRangeToUse);
       setLastUpdate(new Date());
-      
+
       if (!isAutoRefresh) {
         addToast({
           title: "Prédiction terminée",
@@ -91,17 +127,6 @@ export function RoomOccupancyPredictor({
     return 'Faible';
   };
 
-  const rooms = [
-    { id: 'all', name: 'Toutes les salles' },
-    { id: 'A101', name: 'Salle A101' },
-    { id: 'A102', name: 'Salle A102' },
-    { id: 'B201', name: 'Salle B201' },
-    { id: 'B202', name: 'Salle B202' },
-    { id: 'C301', name: 'Salle C301' },
-    { id: 'D405', name: 'Salle D405' },
-    { id: 'Amphi 1', name: 'Amphithéâtre 1' },
-    { id: 'Amphi 2', name: 'Amphithéâtre 2' }
-  ];
 
   if (loading && !data) {
     return (
@@ -191,20 +216,21 @@ export function RoomOccupancyPredictor({
             <label className="text-sm font-medium text-foreground mb-2 block">
               Salle
             </label>
-            <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+            <Select value={selectedRoom} onValueChange={setSelectedRoom} disabled={loadingRooms}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder={loadingRooms ? "Chargement..." : "Sélectionner une salle"} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Toutes les salles</SelectItem>
                 {rooms.map(room => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name}
+                  <SelectItem key={room.id} value={room.id.toString()}>
+                    {room.name} ({room.building})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          
+
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
               Période
@@ -218,10 +244,42 @@ export function RoomOccupancyPredictor({
                 <SelectItem value="Demain">Demain</SelectItem>
                 <SelectItem value="Cette semaine">Cette semaine</SelectItem>
                 <SelectItem value="Semaine prochaine">Semaine prochaine</SelectItem>
+                <SelectItem value="Personnalisée">Période personnalisée</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
+
+        {/* Sélecteur de dates personnalisé */}
+        {dateRange === 'Personnalisée' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Date de début
+              </label>
+              <Input
+                type="date"
+                value={customDateStart}
+                onChange={(e) => setCustomDateStart(e.target.value)}
+                className="bg-white"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Date de fin
+              </label>
+              <Input
+                type="date"
+                value={customDateEnd}
+                onChange={(e) => setCustomDateEnd(e.target.value)}
+                min={customDateStart}
+                className="bg-white"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Prédictions par salle */}
         {data && (
@@ -234,7 +292,7 @@ export function RoomOccupancyPredictor({
             <AnimatePresence>
               {data.predictions.map((prediction: any, index: number) => (
                 <motion.div
-                  key={prediction.room}
+                  key={`${prediction.room || 'room'}-${index}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -253,58 +311,60 @@ export function RoomOccupancyPredictor({
                   </div>
 
                   {/* Graphique d'occupation par heure */}
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-foreground mb-2">Occupation prévue par heure</p>
-                    <div className="grid grid-cols-6 md:grid-cols-12 gap-1">
-                      {Object.entries(prediction.hourly_predictions).map(([hour, occupancy]) => {
-                        const occupancyRate = Number(occupancy);
-                        return (
-                        <div key={hour} className="text-center">
-                          <div className="text-xs text-muted-foreground mb-1">
-                            {hour}
+                  {prediction.hourly_predictions && Object.keys(prediction.hourly_predictions).length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-foreground mb-2">Occupation prévue par heure</p>
+                      <div className="grid grid-cols-6 md:grid-cols-12 gap-1">
+                        {Object.entries(prediction.hourly_predictions).map(([hour, occupancy]) => {
+                          const occupancyRate = Number(occupancy);
+                          return (
+                          <div key={hour} className="text-center">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {hour}
+                            </div>
+                            <div
+                              className={`h-8 rounded text-xs flex items-center justify-center font-medium ${getOccupancyColor(occupancyRate * 100)}`}
+                              style={{
+                                height: `${Math.max(20, occupancyRate * 40)}px`,
+                                minHeight: '20px'
+                              }}
+                            >
+                              {Math.round(occupancyRate * 100)}%
+                            </div>
                           </div>
-                          <div 
-                            className={`h-8 rounded text-xs flex items-center justify-center font-medium ${getOccupancyColor(occupancyRate * 100)}`}
-                            style={{ 
-                              height: `${Math.max(20, occupancyRate * 40)}px`,
-                              minHeight: '20px'
-                            }}
-                          >
-                            {Math.round(occupancyRate * 100)}%
-                          </div>
-                        </div>
-                      );
-                      })}
+                        );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Créneaux de pointe et disponibles */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {prediction.peak_hours.length > 0 && (
+                    {prediction.peak_hours && prediction.peak_hours.length > 0 && (
                       <div className="bg-red-50 border border-red-200 rounded p-3">
                         <p className="text-sm font-medium text-red-800 mb-2 flex items-center gap-2">
                           <AlertCircle className="w-4 h-4" />
                           Heures de pointe
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {prediction.peak_hours.map((hour: string) => (
-                            <Badge key={hour} variant="destructive" className="text-xs">
+                          {prediction.peak_hours.map((hour: string, idx: number) => (
+                            <Badge key={`peak-${hour}-${idx}`} variant="destructive" className="text-xs">
                               {hour}
                             </Badge>
                           ))}
                         </div>
                       </div>
                     )}
-                    
-                    {prediction.available_slots.length > 0 && (
+
+                    {prediction.available_slots && prediction.available_slots.length > 0 && (
                       <div className="bg-emerald-50 border border-emerald-200 rounded p-3">
                         <p className="text-sm font-medium text-emerald-800 mb-2 flex items-center gap-2">
                           <CheckCircle className="w-4 h-4" />
                           Créneaux disponibles
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {prediction.available_slots.map((hour: string) => (
-                            <Badge key={hour} className="text-xs bg-emerald-100 text-emerald-700">
+                          {prediction.available_slots.map((hour: string, idx: number) => (
+                            <Badge key={`available-${hour}-${idx}`} className="text-xs bg-emerald-100 text-emerald-700">
                               {hour}
                             </Badge>
                           ))}

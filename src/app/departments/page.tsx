@@ -1,59 +1,66 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Building, Users, BookOpen, User, Mail, Phone, MoreVertical } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { motion } from 'framer-motion';
+import {
+  Plus, Search, Edit, Trash2, Building, Users, BookOpen, User, Mail, Phone
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useDepartments, useTeachers } from '@/hooks/useCourses';
+import { Badge } from '@/components/ui/badge';
+import { PageLoading } from '@/components/ui/loading';
+import { useToast } from '@/components/ui/use-toast';
 import { departmentService } from '@/lib/api/services/departments';
 import DepartmentModal from '@/components/modals/DepartmentModal';
-import { ImportExport } from '@/components/ui/ImportExport';
 import type { Department } from '@/types/api';
 import type { CreateDepartmentData, UpdateDepartmentData } from '@/lib/api/services/departments';
-import { useToast } from '@/components/ui/use-toast';
-import { LoadingSpinner } from '@/components/ui/loading';
 
 export default function DepartmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
-  const [departmentsData, setDepartmentsData] = useState<Department[]>([]);
-  const [globalStats, setGlobalStats] = useState<any>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const { departments, loading: departmentsLoading, error: departmentsError } = useDepartments();
-  const { teachers } = useTeachers();
+  const [teachers, setTeachers] = useState<any[]>([]);
+
   const { addToast } = useToast();
 
   // Chargement des données
   useEffect(() => {
-    const loadDepartments = async () => {
+    const loadData = async () => {
       try {
         setIsLoading(true);
-        setError(null);
-        
-        const [departmentsData, statsData] = await Promise.all([
-          departmentService.getDepartments({ search: searchTerm }).catch(() => ({ results: [], count: 0 })),
-          departmentService.getDepartmentsGlobalStats().catch(() => null)
+
+        // Charger les départements et les enseignants
+        const [departmentsData, teachersResponse] = await Promise.all([
+          departmentService.getDepartments({}),
+          fetch('http://localhost:8000/api/courses/teachers/', {
+            headers: {
+              'Authorization': `Token ${localStorage.getItem('auth_token')}`,
+            },
+          }).then(res => res.json()).catch(() => ({ results: [] }))
         ]);
-        
-        setDepartmentsData(departmentsData.results || departments || []);
-        setGlobalStats(statsData);
+
+        const departmentsArray = departmentsData.results || departmentsData || [];
+        setDepartments(departmentsArray);
+
+        const teachersArray = teachersResponse.results || teachersResponse || [];
+        setTeachers(teachersArray);
+
       } catch (error) {
         console.error('Erreur lors du chargement des départements:', error);
-        setError('Erreur lors du chargement des données');
-        // Fallback to hook data if available
-        if (departments && departments.length > 0) {
-          setDepartmentsData(departments);
-        }
+        addToast({
+          title: "Erreur",
+          description: "Impossible de charger les départements",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadDepartments();
-  }, [searchTerm, departments]);
+    loadData();
+  }, [addToast]);
 
   const handleAddDepartment = () => {
     setSelectedDepartment(null);
@@ -68,32 +75,34 @@ export default function DepartmentsPage() {
   const handleSaveDepartment = async (departmentData: CreateDepartmentData | UpdateDepartmentData) => {
     try {
       if (selectedDepartment) {
-        // Update existing department
-        const updatedDepartment = await departmentService.updateDepartment(selectedDepartment.id!, departmentData as UpdateDepartmentData);
-        setDepartmentsData(prev => prev.map(dept => dept.id === selectedDepartment.id ? updatedDepartment : dept));
+        const updatedDepartment = await departmentService.updateDepartment(
+          selectedDepartment.id!,
+          departmentData as UpdateDepartmentData
+        );
+        setDepartments(prevDepartments =>
+          prevDepartments.map(dept => dept.id === selectedDepartment.id ? updatedDepartment : dept)
+        );
       } else {
-        // Create new department
         const newDepartment = await departmentService.createDepartment(departmentData as CreateDepartmentData);
-        setDepartmentsData(prev => [...prev, newDepartment]);
+        setDepartments(prevDepartments => [...prevDepartments, newDepartment]);
       }
-      setShowDepartmentModal(false);
     } catch (error) {
-      throw error; // Re-throw to be handled by the modal
+      throw error;
     }
   };
 
   const handleDeleteDepartment = async (departmentId: number) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce département ?')) return;
-    
+
     try {
       await departmentService.deleteDepartment(departmentId);
-      setDepartmentsData(prev => prev.filter(dept => dept.id !== departmentId));
+      setDepartments(prevDepartments => prevDepartments.filter(dept => dept.id !== departmentId));
+
       addToast({
         title: "Succès",
         description: "Département supprimé avec succès",
       });
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
       addToast({
         title: "Erreur",
         description: "Impossible de supprimer le département",
@@ -102,249 +111,223 @@ export default function DepartmentsPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Erreur lors du chargement des départements</p>
-          <Button onClick={() => window.location.reload()}>Réessayer</Button>
-        </div>
-      </div>
-    );
-  }
-
   // Filtrage des départements
-  const filteredDepartments = departmentsData.filter(dept => 
+  const filteredDepartments = departments.filter(dept =>
     dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dept.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dept.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Statistiques
+  const totalTeachers = departments.reduce((sum, dept) => sum + (dept.teachers_count || 0), 0);
+  const totalCourses = departments.reduce((sum, dept) => sum + (dept.courses_count || 0), 0);
+  const activeDepartments = departments.filter(dept => dept.is_active).length;
+
+  if (isLoading) {
+    return <PageLoading message="Chargement des départements..." />;
+  }
 
   return (
-    <div className="space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestion des Départements</h1>
-          <p className="text-muted-foreground mt-1">Gérez les départements et leurs responsables</p>
-        </div>
-        <div className="flex gap-2">
-          <ImportExport
-            exportEndpoint="/courses/departments/export/"
-            importEndpoint="/courses/departments/import_data/"
-            resourceName="departments"
-            onImportSuccess={() => window.location.reload()}
-            size="default"
-            variant="outline"
-          />
-          <Button onClick={handleAddDepartment} className="bg-primary hover:bg-primary/90">
-            <Plus className="mr-2 h-4 w-4" />
-            Créer un département
-          </Button>
-        </div>
-      </div>
-
-      {/* Statistiques globales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-card">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-primary/10 rounded-full">
-              <Building className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Départements</p>
-              <h3 className="text-2xl font-bold">{departmentsData.length}</h3>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4 bg-card">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-primary/10 rounded-full">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Professeurs</p>
-              <h3 className="text-2xl font-bold">
-                {departments.reduce((sum, dept) => sum + (dept.teachers_count || 0), 0)}
-              </h3>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4 bg-card">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-secondary/10 rounded-full">
-              <Users className="h-6 w-6 text-secondary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Cours</p>
-              <h3 className="text-2xl font-bold">
-                {departments.reduce((sum, dept) => sum + (dept.courses_count || 0), 0)}
-              </h3>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-card">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-accent/10 rounded-full">
-              <BookOpen className="h-6 w-6 text-accent" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Cours</p>
-              <h3 className="text-2xl font-bold">
-                {departments.reduce((sum, dept) => sum + (dept.courses_count || 0), 0)}
-              </h3>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Barre de recherche */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Rechercher un département..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-card"
-          />
-        </div>
-      </div>
-
-      {/* Liste des départements */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {filteredDepartments.map(dept => (
-          <Card key={dept.id} className="p-6 hover:shadow-lg transition-shadow bg-card">
-            {/* En-tête du département */}
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Building className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-foreground">{dept.name}</h3>
-                  <p className="text-sm text-muted-foreground">{dept.description || 'Aucune description'}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Code: {dept.code}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Informations du chef de département */}
-            <div className="bg-muted rounded-lg p-4 mb-4">
-              <h4 className="font-medium text-foreground mb-2">Chef de Département</h4>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <User className="h-4 w-4 text-muted-foreground mr-2" />
-                  <span className="text-sm">{dept.head_of_department_name || 'Non assigné'}</span>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="h-4 w-4 text-muted-foreground mr-2" />
-                  <span className="text-sm text-primary">N/A</span>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 text-muted-foreground mr-2" />
-                  <span className="text-sm">N/A</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Statistiques du département */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="text-center p-3 bg-primary/5 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{dept.teachers_count || 0}</div>
-                <div className="text-xs text-primary">Professeurs</div>
-              </div>
-              <div className="text-center p-3 bg-accent/5 rounded-lg">
-                <div className="text-2xl font-bold text-accent">{dept.courses_count || 0}</div>
-                <div className="text-xs text-accent">Cours</div>
-              </div>
-              <div className="text-center p-3 bg-primary/5 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{dept.is_active ? 'Actif' : 'Inactif'}</div>
-                <div className="text-xs text-primary">Statut</div>
-              </div>
-              <div className="text-center p-3 bg-secondary/5 rounded-lg">
-                <div className="text-2xl font-bold text-secondary">{dept.head_of_department_name || 'N/A'}</div>
-                <div className="text-xs text-secondary">Chef</div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="mb-4">
-              <h5 className="font-medium text-foreground mb-2">Description</h5>
-              <p className="text-sm text-muted-foreground">{dept.description}</p>
-            </div>
-
-            {/* Informations supplémentaires */}
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Code:</span>
-                <span className="font-medium">{dept.code}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Statut:</span>
-                <span className={`font-medium ${dept.is_active ? 'text-primary' : 'text-destructive'}`}>
-                  {dept.is_active ? 'Actif' : 'Inactif'}
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-4 border-t border-border">
-              <Button variant="outline" size="sm" className="flex-1">
-                <Users className="mr-1 h-3 w-3" />
-                Professeurs
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <BookOpen className="mr-1 h-3 w-3" />
-                Cours
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <Building className="mr-1 h-3 w-3" />
-                Détails
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Message si aucun résultat */}
-      {filteredDepartments.length === 0 && (
-        <Card className="p-8 text-center bg-card">
-          <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Aucun département trouvé</h3>
-          <p className="text-muted-foreground mb-4">
-            Aucun département ne correspond à votre recherche.
+          <h1 className="text-3xl font-bold text-foreground">Départements</h1>
+          <p className="text-muted-foreground">
+            Gérez les départements et leurs responsables
           </p>
-          <Button variant="outline" onClick={() => setSearchTerm('')}>
-            Réinitialiser la recherche
-          </Button>
-        </Card>
-      )}
+        </div>
+        <Button onClick={handleAddDepartment} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Nouveau Département
+        </Button>
+      </div>
 
-      {/* Department Modal */}
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <Building className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Départements</p>
+                <p className="text-2xl font-bold">{departments.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <Building className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Départements Actifs</p>
+                <p className="text-2xl font-bold">{activeDepartments}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <Users className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Enseignants</p>
+                <p className="text-2xl font-bold">{totalTeachers}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                <BookOpen className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Cours</p>
+                <p className="text-2xl font-bold">{totalCourses}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtres et Recherche */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Rechercher par nom, code ou description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tableau des départements */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Liste des Départements ({filteredDepartments.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-4 font-semibold">Code</th>
+                  <th className="text-left p-4 font-semibold">Nom</th>
+                  <th className="text-left p-4 font-semibold">Description</th>
+                  <th className="text-left p-4 font-semibold">Chef</th>
+                  <th className="text-left p-4 font-semibold">Enseignants</th>
+                  <th className="text-left p-4 font-semibold">Cours</th>
+                  <th className="text-left p-4 font-semibold">Statut</th>
+                  <th className="text-right p-4 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDepartments.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center p-8 text-muted-foreground">
+                      Aucun département trouvé
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDepartments.map((department, index) => (
+                    <motion.tr
+                      key={department.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="border-b hover:bg-muted/50 transition-colors"
+                    >
+                      <td className="p-4">
+                        <span className="font-mono text-sm font-semibold">
+                          {department.code}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Building className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{department.name}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <p className="text-sm text-muted-foreground truncate max-w-xs">
+                          {department.description || 'Aucune description'}
+                        </p>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">
+                            {department.head_of_department_name || 'Non assigné'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-semibold">{department.teachers_count || 0}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-semibold">{department.courses_count || 0}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        {department.is_active ? (
+                          <Badge className="bg-green-500 text-white">Actif</Badge>
+                        ) : (
+                          <Badge variant="secondary">Inactif</Badge>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditDepartment(department)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteDepartment(department.id!)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal de création/édition */}
       <DepartmentModal
         isOpen={showDepartmentModal}
         onClose={() => setShowDepartmentModal(false)}
