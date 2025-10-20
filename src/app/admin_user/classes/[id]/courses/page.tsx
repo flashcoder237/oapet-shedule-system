@@ -97,7 +97,7 @@ export default function ClassCoursesPage() {
     <div className="p-8">
       <div className="mb-8">
         <button
-          onClick={() => router.push('/admin/classes')}
+          onClick={() => router.push('/admin_user/classes')}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
         >
           <ArrowLeft size={20} />

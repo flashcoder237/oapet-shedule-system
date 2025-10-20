@@ -36,7 +36,7 @@ export default function Sidebar() {
     },
     {
       name: 'Gestion des EDs',
-      href: '/admin/schedules',
+      href: '/admin_user/schedules',
       icon: LayoutDashboard,
       description: 'Administration des emplois du temps'
     },
@@ -48,7 +48,7 @@ export default function Sidebar() {
     },
     {
       name: 'Classes',
-      href: '/admin/classes',
+      href: '/admin_user/classes',
       icon: GraduationCap,
       description: 'Gestion des classes et effectifs'
     },

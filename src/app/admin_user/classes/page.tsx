@@ -488,7 +488,7 @@ export default function ClassesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => router.push(`/admin/classes/${cls.id}/courses`)}
+                            onClick={() => router.push(`/admin_user/classes/${cls.id}/courses`)}
                             title="Gérer les cours"
                             className="hover:bg-primary/10 hover:text-primary"
                           >
