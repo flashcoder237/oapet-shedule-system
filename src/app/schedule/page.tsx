@@ -196,7 +196,7 @@ export default function SchedulePage() {
           addToast({
             title: 'Emploi du temps non trouvé',
             description: `${errorMessage} pour la classe ${className}`,
-            variant: 'warning'
+            variant: 'default'
           });
 
           // Si pas de schedule, essayer de parser comme ID directement

@@ -224,7 +224,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Enseignants</p>
-                  <p className="text-2xl font-bold">{stats.teachers_count || 0}</p>
+                  <p className="text-2xl font-bold">{stats.total_teachers || 0}</p>
                 </div>
               </div>
             </CardContent>

@@ -288,10 +288,16 @@ export interface RoomStats {
   total_rooms: number;
   available_rooms: number;
   occupied_rooms: number;
+  total_capacity: number;
   maintenance_rooms: number;
-  occupancy_rate: number;
-  peak_hours: string[];
-  popular_rooms: Room[];
+  by_type: Array<{ room_type__name: string; count: number }>;
+  by_building: Array<{ building__name: string; building__code: string; count: number }>;
+  capacity_stats: {
+    avg_capacity: number;
+    min_capacity: number;
+    max_capacity: number;
+  };
+  equipment_stats: Record<string, number>;
 }
 
 export interface CourseStats {
