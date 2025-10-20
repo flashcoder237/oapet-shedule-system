@@ -23,8 +23,8 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { label: 'Emplois du temps', href: '/admin_user/schedules', icon: Calendar },
-  { label: 'Classes', href: '/admin_user/classes', icon: GraduationCap },
+  { label: 'Emplois du temps', href: '/gestion-emplois', icon: Calendar },
+  { label: 'Classes', href: '/gestion-classes', icon: GraduationCap },
   { label: 'Cours', href: '/courses', icon: BookOpen },
   { label: 'Enseignants', href: '/teachers/preferences', icon: Users },
   { label: 'Salles', href: '/rooms', icon: Building },

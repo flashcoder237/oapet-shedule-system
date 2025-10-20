@@ -171,7 +171,7 @@ export default function Dashboard() {
       description: 'Gérer les emplois du temps',
       icon: <Calendar className="w-5 h-5" />,
       color: 'bg-green-500',
-      action: () => window.location.href = '/admin_user/schedules'
+      action: () => window.location.href = '/gestion-emplois'
     },
     {
       id: 'add-teacher',
