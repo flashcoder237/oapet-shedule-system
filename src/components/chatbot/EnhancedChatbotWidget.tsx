@@ -80,7 +80,7 @@ export default function EnhancedChatbotWidget({ isOpen, onClose }: EnhancedChatb
             id: 0,
             conversation: 0,
             sender: 'bot',
-            content: "Bonjour ! 👋 Je suis l'assistant intelligent OAPET.\n\nJe peux vous aider avec :\n• 📅 Emplois du temps\n• 📚 Cours et matières\n• 🏫 Salles et équipements\n• 👨‍🏫 Enseignants\n• 📊 Statistiques\n• ⚠️ Détection de conflits\n\nPosez-moi une question ou choisissez parmi les suggestions ci-dessous !",
+            content: "Bonjour ! 👋 Je suis l'assistant intelligent OAPET.\n\nJe peux vous aider avec :\n• Emplois du temps\n• Cours et matières\n• Salles et équipements\n• Enseignants\n• Statistiques\n• Détection de conflits\n\nPosez-moi une question ou choisissez parmi les suggestions ci-dessous !",
             timestamp: new Date().toISOString(),
           },
         ]);

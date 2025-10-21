@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Plus, Search, Edit, Trash2, User, Mail, Shield, Building, UserCheck, UserX
+  Plus, Search, Edit, Trash2, User, Mail, Shield, Building, UserCheck, UserX,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,12 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('date_joined');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [users, setUsers] = useState<UserType[]>([]);
@@ -39,18 +46,27 @@ export default function UsersPage() {
 
   const { addToast } = useToast();
 
-  // Chargement des données
+  // Chargement des données avec pagination et filtres
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
 
-        // Charger les utilisateurs depuis le nouvel endpoint
-        const usersResponse = await fetch('http://localhost:8000/api/users/users/', {
+        // Construction des paramètres de requête
+        const params = new URLSearchParams();
+        params.append('page', currentPage.toString());
+        params.append('page_size', pageSize.toString());
+
+        if (searchTerm) params.append('search', searchTerm);
+        if (selectedRole !== 'all') params.append('role', selectedRole);
+        if (selectedStatus !== 'all') params.append('is_active', selectedStatus);
+
+        // Charger les utilisateurs avec pagination
+        const usersResponse = await fetch(`http://localhost:8000/api/users/users/?${params.toString()}`, {
           headers: {
             'Authorization': `Token ${localStorage.getItem('auth_token')}`,
           },
-        }).then(res => res.json()).catch(() => ({ results: [] }));
+        }).then(res => res.json()).catch(() => ({ results: [], count: 0 }));
 
         const usersArray = (usersResponse.results || []).map((user: any) => ({
           id: user.id,
@@ -60,21 +76,24 @@ export default function UsersPage() {
           last_name: user.last_name,
           role: user.role,
           is_active: user.is_active,
-          department_id: user.profile?.department,
-          department_name: user.profile?.department_name,
-          employee_id: user.profile?.employee_id
+          department_id: user.department_id,
+          department_name: user.department_name,
+          employee_id: user.employee_id
         }));
 
         setUsers(usersArray);
+        setTotalUsers(usersResponse.count || 0);
 
-        // Charger les départements
-        const departmentsResponse = await fetch('http://localhost:8000/api/courses/departments/', {
-          headers: {
-            'Authorization': `Token ${localStorage.getItem('auth_token')}`,
-          },
-        }).then(res => res.json()).catch(() => ({ results: [] }));
+        // Charger les départements (une seule fois)
+        if (departments.length === 0) {
+          const departmentsResponse = await fetch('http://localhost:8000/api/courses/departments/', {
+            headers: {
+              'Authorization': `Token ${localStorage.getItem('auth_token')}`,
+            },
+          }).then(res => res.json()).catch(() => ({ results: [] }));
 
-        setDepartments(departmentsResponse.results || []);
+          setDepartments(departmentsResponse.results || []);
+        }
 
       } catch (error) {
         console.error('Erreur lors du chargement des utilisateurs:', error);
@@ -89,7 +108,7 @@ export default function UsersPage() {
     };
 
     loadData();
-  }, [addToast]);
+  }, [currentPage, pageSize, searchTerm, selectedRole, selectedStatus]);
 
   const handleAddUser = () => {
     setSelectedUser(null);
@@ -107,8 +126,9 @@ export default function UsersPage() {
         const updatedUser = await userService.updateUser(selectedUser.id, userData as UpdateUserData);
         setUsers(prevUsers => prevUsers.map(user => user.id === selectedUser.id ? updatedUser : user));
       } else {
-        const newUser = await userService.createUser(userData as CreateUserData);
-        setUsers(prevUsers => [...prevUsers, newUser]);
+        await userService.createUser(userData as CreateUserData);
+        // Recharger la première page pour voir le nouvel utilisateur
+        setCurrentPage(1);
       }
     } catch (error) {
       throw error;
@@ -120,16 +140,37 @@ export default function UsersPage() {
 
     try {
       await userService.deleteUser(userId);
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+
+      // Si c'était le dernier utilisateur de la page, retourner à la page précédente
+      if (users.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        // Recharger la page actuelle
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+        setTotalUsers(prev => prev - 1);
+      }
 
       addToast({
         title: "Succès",
         description: "Utilisateur supprimé avec succès",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression:', error);
+
+      let errorMessage = "Impossible de supprimer l'utilisateur";
+
+      // Gérer les différents types d'erreurs
+      if (error.status === 404) {
+        errorMessage = "Cet utilisateur n'existe pas ou a déjà été supprimé";
+      } else if (error.status === 403) {
+        errorMessage = "Vous n'avez pas la permission de supprimer cet utilisateur";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       addToast({
         title: "Erreur",
-        description: "Impossible de supprimer l'utilisateur",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -138,29 +179,36 @@ export default function UsersPage() {
   const roles = [
     { value: 'all', label: 'Tous les rôles' },
     { value: 'admin', label: 'Administrateur' },
-    { value: 'professor', label: 'Professeur' },
-    { value: 'staff', label: 'Personnel' }
+    { value: 'teacher', label: 'Enseignant' },
+    { value: 'student', label: 'Étudiant' },
+    { value: 'staff', label: 'Personnel' },
+    { value: 'department_head', label: 'Chef de Département' },
+    { value: 'scheduler', label: 'Planificateur' }
   ];
 
-  // Filtrage des utilisateurs
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = !searchTerm ||
-      user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.username?.toLowerCase().includes(searchTerm.toLowerCase());
+  const statusOptions = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'true', label: 'Actif' },
+    { value: 'false', label: 'Inactif' }
+  ];
 
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    const matchesDepartment = selectedDepartment === 'all' || user.department_name === selectedDepartment;
+  // Fonction pour gérer le changement de recherche avec debounce
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Retour à la première page lors de la recherche
+  };
 
-    return matchesSearch && matchesRole && matchesDepartment;
-  });
+  // Calculer le nombre total de pages
+  const totalPages = Math.ceil(totalUsers / pageSize);
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-      case 'professor': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+      case 'teacher': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+      case 'student': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
       case 'staff': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+      case 'department_head': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
+      case 'scheduler': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-400';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
     }
   };
@@ -168,17 +216,40 @@ export default function UsersPage() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'admin': return 'Administrateur';
-      case 'professor': return 'Professeur';
+      case 'teacher': return 'Enseignant';
+      case 'student': return 'Étudiant';
       case 'staff': return 'Personnel';
+      case 'department_head': return 'Chef de Département';
+      case 'scheduler': return 'Planificateur';
       default: return 'Utilisateur';
     }
   };
 
-  // Statistiques
-  const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.is_active).length;
-  const adminCount = users.filter(user => user.role === 'admin').length;
-  const professorCount = users.filter(user => user.role === 'professor').length;
+  // Statistiques globales
+  const [stats, setStats] = useState({
+    total_users: 0,
+    active_users: 0,
+    admin_users: 0,
+    professor_count: 0
+  });
+
+  // Charger les statistiques
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api/users/users/stats/', {
+          headers: {
+            'Authorization': `Token ${localStorage.getItem('auth_token')}`,
+          },
+        });
+        const data = await response.json();
+        setStats(data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des statistiques:', error);
+      }
+    };
+    loadStats();
+  }, []);
 
   if (isLoading) {
     return <PageLoading message="Chargement des utilisateurs..." />;
@@ -210,7 +281,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Utilisateurs</p>
-                <p className="text-2xl font-bold">{totalUsers}</p>
+                <p className="text-2xl font-bold">{stats.total_users}</p>
               </div>
             </div>
           </CardContent>
@@ -224,7 +295,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Utilisateurs Actifs</p>
-                <p className="text-2xl font-bold">{activeUsers}</p>
+                <p className="text-2xl font-bold">{stats.active_users}</p>
               </div>
             </div>
           </CardContent>
@@ -238,7 +309,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Administrateurs</p>
-                <p className="text-2xl font-bold">{adminCount}</p>
+                <p className="text-2xl font-bold">{stats.admin_users}</p>
               </div>
             </div>
           </CardContent>
@@ -251,8 +322,8 @@ export default function UsersPage() {
                 <User className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Professeurs</p>
-                <p className="text-2xl font-bold">{professorCount}</p>
+                <p className="text-sm text-muted-foreground">Enseignants</p>
+                <p className="text-2xl font-bold">{stats.professor_count}</p>
               </div>
             </div>
           </CardContent>
@@ -262,29 +333,54 @@ export default function UsersPage() {
       {/* Filtres et Recherche */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Rechercher par nom, email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom, email, username..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800 dark:border-gray-700"
+                />
+              </div>
 
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {roles.map(role => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </select>
+              <select
+                value={selectedRole}
+                onChange={(e) => { setSelectedRole(e.target.value); setCurrentPage(1); }}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800 dark:border-gray-700"
+              >
+                {roles.map(role => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedStatus}
+                onChange={(e) => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800 dark:border-gray-700"
+              >
+                {statusOptions.map(status => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800 dark:border-gray-700"
+              >
+                <option value="5">5 par page</option>
+                <option value="10">10 par page</option>
+                <option value="20">20 par page</option>
+                <option value="50">50 par page</option>
+              </select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -292,7 +388,12 @@ export default function UsersPage() {
       {/* Tableau des utilisateurs */}
       <Card>
         <CardHeader>
-          <CardTitle>Liste des Utilisateurs ({filteredUsers.length})</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Liste des Utilisateurs</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              Affichage de {((currentPage - 1) * pageSize) + 1} à {Math.min(currentPage * pageSize, totalUsers)} sur {totalUsers} utilisateurs
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -309,14 +410,14 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length === 0 ? (
+                {users.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center p-8 text-muted-foreground">
                       Aucun utilisateur trouvé
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user, index) => (
+                  users.map((user, index) => (
                     <motion.tr
                       key={user.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -403,6 +504,77 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} sur {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  Premier
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Précédent
+                </Button>
+
+                {/* Numéros de pages */}
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Suivant
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Dernier
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

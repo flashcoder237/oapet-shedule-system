@@ -134,7 +134,7 @@ export default function Sidebar() {
       
       {/* Header */}
       <div className="relative z-10 p-6 border-b border-primary-600/20">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <AnimatePresence mode="wait">
             {!collapsed && (
               <motion.div 
@@ -150,7 +150,7 @@ export default function Sidebar() {
                 </div>
                 <div>
                   <h1 className="font-bold text-xl tracking-tight">OAPET</h1>
-                  <p className="text-xs text-primary-foreground/70">Gestion des emplois du temps</p>
+                  <p className="text-xs text-primary-foreground/70">Gestion des EDTs</p>
                 </div>
               </motion.div>
             )}
@@ -172,37 +172,6 @@ export default function Sidebar() {
           </motion.button>
         </div>
 
-        {/* Quick Stats */}
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.div
-              variants={contentVariants}
-              initial="collapsed"
-              animate="expanded"
-              exit="collapsed"
-              className="grid grid-cols-2 gap-3"
-            >
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="flex items-center gap-2">
-                  <Activity size={16} className="text-success" />
-                  <div>
-                    <p className="text-xs text-primary-foreground/70">Système</p>
-                    <p className="text-sm font-semibold">Actif</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={16} className="text-accent" />
-                  <div>
-                    <p className="text-xs text-primary-foreground/70">Cours</p>
-                    <p className="text-sm font-semibold">45</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
       
       {/* Navigation */}
