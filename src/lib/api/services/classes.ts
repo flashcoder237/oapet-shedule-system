@@ -55,14 +55,27 @@ export interface Course {
 
 export const classService = {
   // Classes
-  async getClasses(params?: {
+  async getClasses(params?: string | {
     level?: string;
     department?: number;
     academic_year?: string;
     is_active?: boolean;
+    teacher?: number;
   }): Promise<StudentClass[]> {
-    const response = await apiClient.get<any>('/courses/classes/', params);
-    // L'API retourne une réponse paginée {count, next, previous, results}
+    let url = '/courses/classes/';
+
+    // Si params est une chaîne de requête, l'ajouter directement à l'URL
+    if (typeof params === 'string') {
+      url += params;
+      const response = await apiClient.get<any>(url);
+      if (response && Array.isArray(response.results)) {
+        return response.results;
+      }
+      return Array.isArray(response) ? response : [];
+    }
+
+    // Sinon, utiliser le comportement normal avec des paramètres d'objet
+    const response = await apiClient.get<any>(url, params);
     if (response && Array.isArray(response.results)) {
       return response.results;
     }

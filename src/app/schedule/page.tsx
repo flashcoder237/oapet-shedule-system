@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import AnimatedBackground from '@/components/ui/animated-background';
 import { Plus, Settings2, X, Calendar } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 // Import des composants créés
 import {
@@ -64,6 +65,10 @@ type EditMode = 'view' | 'edit' | 'drag';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export default function SchedulePage() {
+  // Hook d'authentification et permissions
+  const { user, loading: authLoading, isTeacher, isStudent, canManageSchedules } = useAuth();
+  const isReadOnly = isTeacher() || isStudent();
+
   // États principaux
   const [studentClasses, setStudentClasses] = useState<StudentClass[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -95,6 +100,7 @@ export default function SchedulePage() {
   // États de filtrage
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showOnlyMyCourses, setShowOnlyMyCourses] = useState(false);
   
   // États de formulaire
   const [showSessionForm, setShowSessionForm] = useState(false);
@@ -126,7 +132,28 @@ export default function SchedulePage() {
   // Fonctions de chargement des données
   const loadStudentClasses = async () => {
     try {
-      const data = await classService.getClasses();
+      // Si l'utilisateur est un enseignant, filtrer par son ID
+      let data;
+      if (isTeacher()) {
+        if (user?.teacher_id) {
+          console.log('🔍 Chargement des classes pour l\'enseignant ID:', user.teacher_id);
+          console.log('👤 Utilisateur:', user);
+          data = await classService.getClasses(`?teacher=${user.teacher_id}`);
+          console.log('📚 Classes trouvées pour l\'enseignant:', data.length, data);
+        } else {
+          console.warn('⚠️ Enseignant sans teacher_id! User:', user);
+          addToast({
+            title: "Attention",
+            description: "Votre profil enseignant n'est pas encore configuré. Contactez l'administrateur.",
+            variant: "destructive"
+          });
+          data = [];
+        }
+      } else {
+        console.log('🔍 Chargement de toutes les classes');
+        data = await classService.getClasses();
+        console.log('📚 Total des classes:', data.length);
+      }
       setStudentClasses(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erreur lors du chargement des classes:', error);
@@ -141,16 +168,27 @@ export default function SchedulePage() {
   };
 
   const loadAuxiliaryData = async () => {
+    // Les enseignants et étudiants n'ont pas besoin de ces données (mode lecture seule)
+    if (!canManageSchedules()) {
+      console.log('👀 Mode lecture seule - Pas de chargement des ressources auxiliaires');
+      setCourses([]);
+      setTeachers([]);
+      setRooms([]);
+      return;
+    }
+
     try {
+      console.log('📚 Chargement des ressources auxiliaires (admin/planificateur)');
       const [coursesResponse, teachersResponse, roomsResponse] = await Promise.all([
         courseService.getCourses(),
         courseService.getTeachers(),
         roomService.getRooms()
       ]);
-      
+
       setCourses(coursesResponse.results || []);
       setTeachers(teachersResponse.results || []);
       setRooms(roomsResponse.results || []);
+      console.log(`✅ Chargé: ${coursesResponse.results?.length || 0} cours, ${teachersResponse.results?.length || 0} enseignants, ${roomsResponse.results?.length || 0} salles`);
     } catch (error) {
       console.error('Erreur lors du chargement des données auxiliaires:', error);
       addToast({
@@ -659,6 +697,11 @@ export default function SchedulePage() {
       );
     }
 
+    // Filtre "Mon emploi du temps" pour les enseignants
+    if (showOnlyMyCourses && isTeacher() && user?.teacher_id) {
+      filtered = filtered.filter(session => session.teacher === user.teacher_id);
+    }
+
     setFilteredSessions(filtered);
   };
 
@@ -710,9 +753,12 @@ export default function SchedulePage() {
 
   // Effects
   useEffect(() => {
-    loadStudentClasses();
-    loadAuxiliaryData();
-  }, []);
+    // Attendre que l'authentification soit terminée avant de charger les données
+    if (!authLoading) {
+      loadStudentClasses();
+      loadAuxiliaryData();
+    }
+  }, [authLoading, user]);
 
   useEffect(() => {
     if (selectedClass) {
@@ -722,7 +768,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     applyFilters();
-  }, [sessions, activeFilter, searchTerm]);
+  }, [sessions, activeFilter, searchTerm, showOnlyMyCourses]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
@@ -807,9 +853,9 @@ export default function SchedulePage() {
           </>
         )}
 
-        {/* Boutons d'actions en mode édition/drag */}
+        {/* Boutons d'actions en mode édition/drag - Seulement pour les admins */}
         <AnimatePresence>
-          {(editMode === 'edit' || editMode === 'drag') && (
+          {(editMode === 'edit' || editMode === 'drag') && canManageSchedules() && (
             <>
               {/* Bouton d'ajout de session - repositionné */}
               <motion.div
@@ -898,16 +944,21 @@ export default function SchedulePage() {
           onExport={handleExport}
           onImport={handleImport}
           editMode={editMode}
-          onEditModeChange={setEditMode}
+          onEditModeChange={canManageSchedules() ? setEditMode : undefined}
           onSave={handleSave}
           hasChanges={hasChanges}
           studentClasses={studentClasses}
           conflicts={backendConflicts}
           sessions={filteredSessions}
+          isReadOnly={isReadOnly}
+          canManage={canManageSchedules()}
           addToast={addToast}
           onGenerateSchedule={handleGenerateSchedule}
           onShowOccurrenceManager={() => setShowOccurrenceManager(true)}
           currentScheduleId={currentScheduleId}
+          showOnlyMyCourses={showOnlyMyCourses}
+          onShowOnlyMyCoursesChange={setShowOnlyMyCourses}
+          isTeacher={isTeacher()}
         />
 
         {/* Formulaire de session */}

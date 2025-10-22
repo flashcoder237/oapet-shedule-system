@@ -53,43 +53,43 @@ export const userService = {
     if (filters?.role) params.append('role', filters.role);
     if (filters?.department) params.append('department', filters.department);
     if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
-    
-    return apiClient.get(`/users/?${params.toString()}`);
+
+    return apiClient.get(`/users/users/?${params.toString()}`);
   },
 
   // Récupérer un utilisateur par ID
   async getUser(userId: number): Promise<User> {
-    return apiClient.get(`/users/${userId}/`);
+    return apiClient.get(`/users/users/${userId}/`);
   },
 
   // Créer un nouvel utilisateur
   async createUser(userData: CreateUserData): Promise<User> {
-    return apiClient.post('/users/', userData);
+    return apiClient.post('/users/users/', userData);
   },
 
   // Mettre à jour un utilisateur
   async updateUser(userId: number, userData: UpdateUserData): Promise<User> {
-    return apiClient.patch(`/users/${userId}/`, userData);
+    return apiClient.patch(`/users/users/${userId}/`, userData);
   },
 
   // Supprimer un utilisateur
   async deleteUser(userId: number): Promise<void> {
-    return apiClient.delete(`/users/${userId}/`);
+    return apiClient.delete(`/users/users/${userId}/`);
   },
 
   // Activer/Désactiver un utilisateur
   async toggleUserStatus(userId: number, isActive: boolean): Promise<User> {
-    return apiClient.patch(`/users/${userId}/`, { is_active: isActive });
+    return apiClient.patch(`/users/users/${userId}/`, { is_active: isActive });
   },
 
   // Réinitialiser le mot de passe d'un utilisateur
   async resetUserPassword(userId: number): Promise<{ message: string; temporary_password: string }> {
-    return apiClient.post(`/users/${userId}/reset-password/`);
+    return apiClient.post(`/users/users/${userId}/reset-password/`);
   },
 
   // Assigner un rôle à un utilisateur
   async assignRole(userId: number, role: string): Promise<User> {
-    return apiClient.patch(`/users/${userId}/`, { role });
+    return apiClient.patch(`/users/users/${userId}/`, { role });
   },
 
   // Obtenir les statistiques des utilisateurs
@@ -100,17 +100,17 @@ export const userService = {
     by_role: Record<string, number>;
     by_department: Record<string, number>;
   }> {
-    return apiClient.get('/users/stats/');
+    return apiClient.get('/users/users/stats/');
   },
 
   // Obtenir l'historique des actions d'un utilisateur
   async getUserHistory(userId: number): Promise<any[]> {
-    return apiClient.get(`/users/${userId}/history/`);
+    return apiClient.get(`/users/users/${userId}/history/`);
   },
 
   // Exporter les utilisateurs
   async exportUsers(format: 'csv' | 'excel' | 'pdf' = 'csv'): Promise<Blob> {
-    const response = await apiClient.get(`/users/export/?format=${format}`, {
+    const response = await apiClient.get(`/users/users/export/?format=${format}`, {
       responseType: 'blob'
     });
     return response as Blob;
@@ -123,22 +123,22 @@ export const userService = {
   }> {
     const formData = new FormData();
     formData.append('file', file);
-    
-    return apiClient.post('/users/bulk-import/', formData);
+
+    return apiClient.post('/users/users/bulk-import/', formData);
   },
 
   // Envoyer une invitation par email
   async sendInvitation(email: string, role: string, department_id?: number): Promise<{ message: string }> {
-    return apiClient.post('/users/invite/', { email, role, department_id });
+    return apiClient.post('/users/users/invite/', { email, role, department_id });
   },
 
   // Obtenir les permissions d'un utilisateur
   async getUserPermissions(userId: number): Promise<string[]> {
-    return apiClient.get(`/users/${userId}/permissions/`);
+    return apiClient.get(`/users/users/${userId}/permissions/`);
   },
 
   // Mettre à jour les permissions d'un utilisateur
   async updateUserPermissions(userId: number, permissions: string[]): Promise<{ message: string }> {
-    return apiClient.post(`/users/${userId}/permissions/`, { permissions });
+    return apiClient.post(`/users/users/${userId}/permissions/`, { permissions });
   },
 };

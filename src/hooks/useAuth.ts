@@ -12,6 +12,7 @@ export interface AuthUser {
   role: string;
   is_staff: boolean;
   is_superuser: boolean;
+  teacher_id?: number;
   profile?: {
     role: string;
     phone?: string;
@@ -72,7 +73,8 @@ export function useAuth() {
   };
 
   const isTeacher = () => {
-    return user?.role === 'teacher' || user?.profile?.role === 'teacher';
+    return user?.role === 'professor' || user?.profile?.role === 'professor' ||
+           user?.role === 'teacher' || user?.profile?.role === 'teacher';
   };
 
   const isStudent = () => {

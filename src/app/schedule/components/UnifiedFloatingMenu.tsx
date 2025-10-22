@@ -29,6 +29,7 @@ import {
   Shield,
   CheckCircle,
   Users,
+  User,
   Activity,
   Sparkles,
   FileText,
@@ -64,7 +65,7 @@ interface UnifiedFloatingMenuProps {
   onExport: () => void;
   onImport: () => void;
   editMode: EditMode;
-  onEditModeChange: (mode: EditMode) => void;
+  onEditModeChange?: (mode: EditMode) => void;
   onSave: () => void;
   hasChanges: boolean;
   studentClasses: StudentClass[];
@@ -74,6 +75,11 @@ interface UnifiedFloatingMenuProps {
   onGenerateSchedule?: () => void;
   onShowOccurrenceManager?: () => void;
   currentScheduleId?: number;
+  isReadOnly?: boolean;
+  canManage?: boolean;
+  showOnlyMyCourses?: boolean;
+  onShowOnlyMyCoursesChange?: (value: boolean) => void;
+  isTeacher?: boolean;
 }
 
 export function UnifiedFloatingMenu({
@@ -95,7 +101,12 @@ export function UnifiedFloatingMenu({
   addToast,
   onGenerateSchedule,
   onShowOccurrenceManager,
-  currentScheduleId
+  currentScheduleId,
+  isReadOnly = false,
+  canManage = true,
+  showOnlyMyCourses = false,
+  onShowOnlyMyCoursesChange,
+  isTeacher = false
 }: UnifiedFloatingMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabMode>('controls');
@@ -230,15 +241,17 @@ export function UnifiedFloatingMenu({
               <TrendingUp className="w-3 h-3 mr-1" />
               Couv
             </Button>
-            <Button
-              variant={activeTab === 'generation' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('generation')}
-              className="text-xs h-8"
-            >
-              <Calendar className="w-3 h-3 mr-1" />
-              Gen
-            </Button>
+            {canManage && (
+              <Button
+                variant={activeTab === 'generation' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('generation')}
+                className="text-xs h-8"
+              >
+                <Calendar className="w-3 h-3 mr-1" />
+                Gen
+              </Button>
+            )}
             <Button
               variant={activeTab === 'conflicts' ? 'default' : 'ghost'}
               size="sm"
@@ -253,15 +266,17 @@ export function UnifiedFloatingMenu({
                 </span>
               )}
             </Button>
-            <Button
-              variant={activeTab === 'generator' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('generator')}
-              className="text-xs h-8"
-            >
-              <Sparkles className="w-3 h-3 mr-1" />
-              Auto
-            </Button>
+            {canManage && (
+              <Button
+                variant={activeTab === 'generator' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('generator')}
+                className="text-xs h-8"
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                Auto
+              </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -384,41 +399,81 @@ export function UnifiedFloatingMenu({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-orange-500" />
-                  Mode
-                </label>
-                <div className="grid grid-cols-3 gap-1 bg-muted rounded-lg p-1">
-                  <Button
-                    variant={editMode === 'view' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => onEditModeChange('view')}
-                  >
-                    <Eye className="w-3 h-3 mr-1" />
-                    Vue
-                  </Button>
-                  <Button
-                    variant={editMode === 'edit' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => onEditModeChange('edit')}
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant={editMode === 'drag' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => onEditModeChange('drag')}
-                  >
-                    <Move className="w-3 h-3 mr-1" />
-                    Drag
-                  </Button>
+              {canManage && onEditModeChange && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-orange-500" />
+                    Mode
+                  </label>
+                  <div className="grid grid-cols-3 gap-1 bg-muted rounded-lg p-1">
+                    <Button
+                      variant={editMode === 'view' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => onEditModeChange('view')}
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      Vue
+                    </Button>
+                    <Button
+                      variant={editMode === 'edit' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => onEditModeChange('edit')}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant={editMode === 'drag' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => onEditModeChange('drag')}
+                    >
+                      <Move className="w-3 h-3 mr-1" />
+                      Drag
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {isReadOnly && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <Shield className="h-4 w-4" />
+                    <span className="text-sm font-medium">Mode Lecture Seule</span>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Vous pouvez consulter l'emploi du temps mais pas le modifier
+                  </p>
+                </div>
+              )}
+
+              {/* Toggle "Mon emploi du temps" pour les enseignants */}
+              {isTeacher && onShowOnlyMyCoursesChange && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-purple-700" />
+                      <span className="text-sm font-medium text-purple-700">Mon emploi du temps</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showOnlyMyCourses}
+                        onChange={(e) => onShowOnlyMyCoursesChange(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+                  <p className="text-xs text-purple-600 mt-1">
+                    {showOnlyMyCourses
+                      ? "Affichage de vos cours uniquement"
+                      : "Cliquez pour afficher uniquement vos cours"}
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 {editMode !== 'view' && hasChanges && (
@@ -531,8 +586,8 @@ export function UnifiedFloatingMenu({
             </>
           )}
 
-          {/* GENERATION TAB */}
-          {activeTab === 'generation' && (
+          {/* GENERATION TAB - Seulement pour admins/planificateurs */}
+          {canManage && activeTab === 'generation' && (
             <>
               <div className="space-y-4">
                 <div className="text-center pb-2">
@@ -630,8 +685,8 @@ export function UnifiedFloatingMenu({
             </>
           )}
 
-          {/* GENERATOR TAB */}
-          {activeTab === 'generator' && (
+          {/* GENERATOR TAB - Seulement pour admins/planificateurs */}
+          {canManage && activeTab === 'generator' && (
             <>
               <div className="text-center py-4">
                 <Sparkles className="h-12 w-12 text-purple-500 mx-auto mb-3" />

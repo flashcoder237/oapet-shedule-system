@@ -40,7 +40,7 @@ export default function UserModal({
     last_name: '',
     password: '',
     confirmPassword: '',
-    role: 'teacher',
+    role: 'professor',
     department_id: '',
     employee_id: '',
     is_active: true
@@ -62,7 +62,7 @@ export default function UserModal({
         last_name: user.last_name || '',
         password: '',
         confirmPassword: '',
-        role: user.role || 'teacher',
+        role: user.role || 'professor',
         department_id: user.department_id?.toString() || '',
         employee_id: user.employee_id || '',
         is_active: user.is_active !== false
@@ -76,7 +76,7 @@ export default function UserModal({
         last_name: '',
         password: '',
         confirmPassword: '',
-        role: 'teacher',
+        role: 'professor',
         department_id: '',
         employee_id: '',
         is_active: true
@@ -273,7 +273,7 @@ export default function UserModal({
                   onChange={(e) => handleChange('role', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                 >
-                  <option value="teacher">Enseignant</option>
+                  <option value="professor">Enseignant</option>
                   <option value="student">Étudiant</option>
                   <option value="staff">Personnel</option>
                   <option value="admin">Administrateur</option>

@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api/client';
+import { teacherService } from '@/lib/api/services/teachers';
 
 interface TeacherPreference {
   id: number;
@@ -115,21 +116,21 @@ export default function TeacherPreferencesPage() {
     setLoading(true);
     try {
       // Récupérer l'enseignant courant (simplifié - à adapter selon votre système d'auth)
-      const teacherData = await apiClient.get<Teacher[]>('/courses/teachers/');
+      const teacherData = await teacherService.getTeachers();
       if (teacherData && teacherData.length > 0) {
         setCurrentTeacher(teacherData[0]);
 
         // Charger les préférences
-        const prefs = await apiClient.get<TeacherPreference[]>(
+        const prefs = await apiClient.get<any>(
           `/courses/teacher-preferences/?teacher=${teacherData[0].id}`
         );
-        setPreferences(prefs || []);
+        setPreferences(prefs?.results || prefs || []);
 
         // Charger les indisponibilités
-        const unavails = await apiClient.get<TeacherUnavailability[]>(
+        const unavails = await apiClient.get<any>(
           `/courses/teacher-unavailabilities/?teacher=${teacherData[0].id}`
         );
-        setUnavailabilities(unavails || []);
+        setUnavailabilities(unavails?.results || unavails || []);
       }
     } catch (error) {
       console.error('Erreur chargement:', error);
@@ -172,7 +173,7 @@ export default function TeacherPreferencesPage() {
           break;
       }
 
-      await apiClient.post('/courses/teacher-preferences/', {
+      const newPreference = await apiClient.post('/courses/teacher-preferences/', {
         teacher: currentTeacher.id,
         preference_type: prefType,
         priority: prefPriority,
@@ -181,6 +182,9 @@ export default function TeacherPreferencesPage() {
         is_active: true
       });
 
+      // Mise à jour optimiste - ajouter immédiatement à l'état local
+      setPreferences(prev => [...prev, newPreference]);
+
       addToast({
         title: "Préférence ajoutée",
         description: "Votre préférence a été enregistrée avec succès"
@@ -188,7 +192,6 @@ export default function TeacherPreferencesPage() {
 
       setShowAddPreference(false);
       setPrefReason('');
-      loadData();
     } catch (error) {
       addToast({
         title: "Erreur",
@@ -217,7 +220,10 @@ export default function TeacherPreferencesPage() {
         payload.end_date = unavailData.end_date;
       }
 
-      await apiClient.post('/courses/teacher-unavailabilities/', payload);
+      const newUnavailability = await apiClient.post('/courses/teacher-unavailabilities/', payload);
+
+      // Mise à jour optimiste - ajouter immédiatement à l'état local
+      setUnavailabilities(prev => [...prev, newUnavailability]);
 
       addToast({
         title: "Indisponibilité déclarée",
@@ -226,7 +232,6 @@ export default function TeacherPreferencesPage() {
 
       setShowAddUnavailability(false);
       setUnavailReason('');
-      loadData();
     } catch (error) {
       addToast({
         title: "Erreur",
@@ -239,11 +244,14 @@ export default function TeacherPreferencesPage() {
   const handleDeletePreference = async (id: number) => {
     try {
       await apiClient.delete(`/courses/teacher-preferences/${id}/`);
+
+      // Mise à jour optimiste - retirer immédiatement de l'état local
+      setPreferences(prev => prev.filter(p => p.id !== id));
+
       addToast({
         title: "Préférence supprimée",
         description: "La préférence a été supprimée"
       });
-      loadData();
     } catch (error) {
       addToast({
         title: "Erreur",
@@ -256,11 +264,14 @@ export default function TeacherPreferencesPage() {
   const handleDeleteUnavailability = async (id: number) => {
     try {
       await apiClient.delete(`/courses/teacher-unavailabilities/${id}/`);
+
+      // Mise à jour optimiste - retirer immédiatement de l'état local
+      setUnavailabilities(prev => prev.filter(u => u.id !== id));
+
       addToast({
         title: "Indisponibilité supprimée",
         description: "L'indisponibilité a été supprimée"
       });
-      loadData();
     } catch (error) {
       addToast({
         title: "Erreur",
@@ -273,11 +284,16 @@ export default function TeacherPreferencesPage() {
   const handleTogglePreference = async (id: number, isActive: boolean) => {
     try {
       await apiClient.post(`/courses/teacher-preferences/${id}/toggle_active/`);
+
+      // Mise à jour optimiste - modifier immédiatement l'état local
+      setPreferences(prev => prev.map(p =>
+        p.id === id ? { ...p, is_active: !isActive } : p
+      ));
+
       addToast({
         title: isActive ? "Préférence désactivée" : "Préférence activée",
         description: "Le statut a été modifié"
       });
-      loadData();
     } catch (error) {
       addToast({
         title: "Erreur",

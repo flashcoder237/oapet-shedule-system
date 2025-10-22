@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { mlService } from '@/lib/api/services/ml';
 import { apiClient } from '@/lib/api/client';
+import { teacherService } from '@/lib/api/services/teachers';
 import SmartFormAssistant from '@/components/forms/SmartFormAssistant';
 import type { Course } from '@/types/api';
 
@@ -105,19 +106,12 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
 
       setLoadingData(true);
       try {
-        const [teachersData, departmentsData] = await Promise.all([
-          apiClient.get<any>('/courses/teachers/'),
+        const [mappedTeachers, departmentsData] = await Promise.all([
+          teacherService.getTeachersForSelect(),
           apiClient.get<any>('/courses/departments/')
         ]);
 
-        // Mapper les enseignants pour avoir le bon format
-        const mappedTeachers = (teachersData.results || teachersData || []).map((teacher: any) => ({
-          id: teacher.id,
-          name: teacher.user_details?.first_name && teacher.user_details?.last_name
-            ? `${teacher.user_details.first_name} ${teacher.user_details.last_name}`
-            : teacher.user_details?.username || `Enseignant #${teacher.id}`,
-          code: teacher.employee_id || teacher.id
-        }));
+        console.log(`✅ ${mappedTeachers.length} enseignants chargés`);
 
         // Mapper les départements
         const mappedDepartments = (departmentsData.results || departmentsData || []).map((dept: any) => ({
@@ -129,7 +123,12 @@ export default function CourseModal({ isOpen, onClose, course, onSave }: CourseM
         setTeachers(mappedTeachers);
         setDepartments(mappedDepartments);
       } catch (error) {
-        console.error('Error loading form data:', error);
+        console.error('❌ Erreur lors du chargement des données du formulaire:', error);
+        addToast({
+          title: "Erreur de chargement",
+          description: "Impossible de charger les enseignants et départements",
+          variant: "destructive"
+        });
       } finally {
         setLoadingData(false);
       }

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
 import { departmentService } from '@/lib/api/services/departments';
+import { teacherService } from '@/lib/api/services/teachers';
 import DepartmentModal from '@/components/modals/DepartmentModal';
 import type { Department } from '@/types/api';
 import type { CreateDepartmentData, UpdateDepartmentData } from '@/lib/api/services/departments';
@@ -32,19 +33,13 @@ export default function DepartmentsPage() {
         setIsLoading(true);
 
         // Charger les départements et les enseignants
-        const [departmentsData, teachersResponse] = await Promise.all([
+        const [departmentsData, teachersArray] = await Promise.all([
           departmentService.getDepartments({}),
-          fetch('http://localhost:8000/api/courses/teachers/', {
-            headers: {
-              'Authorization': `Token ${localStorage.getItem('auth_token')}`,
-            },
-          }).then(res => res.json()).catch(() => ({ results: [] }))
+          teacherService.getTeachers()
         ]);
 
         const departmentsArray = departmentsData.results || departmentsData || [];
         setDepartments(departmentsArray);
-
-        const teachersArray = teachersResponse.results || teachersResponse || [];
         setTeachers(teachersArray);
 
       } catch (error) {

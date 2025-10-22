@@ -1,12 +1,13 @@
 // src/lib/api/services/courses.ts
 import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
-import type { 
-  Department, 
-  Teacher, 
-  Course, 
+import { teacherService } from './teachers';
+import type {
+  Department,
+  Teacher,
+  Course,
   PaginatedResponse,
-  DashboardStats 
+  DashboardStats
 } from '@/types/api';
 
 export const courseService = {
@@ -35,16 +36,23 @@ export const courseService = {
     return apiClient.get(`${API_ENDPOINTS.DEPARTMENTS}${id}/stats/`);
   },
 
-  // Enseignants
-  async getTeachers(params?: { 
+  // Enseignants - Délégation vers teacherService
+  async getTeachers(params?: {
     department?: number;
     search?: string;
   }): Promise<PaginatedResponse<Teacher>> {
-    return apiClient.get<PaginatedResponse<Teacher>>(API_ENDPOINTS.TEACHERS, params);
+    // Appeler teacherService.getTeachers et formater en PaginatedResponse
+    const teachers = await teacherService.getTeachers(params);
+    return {
+      results: teachers,
+      count: teachers.length,
+      next: null,
+      previous: null
+    };
   },
 
   async getTeacher(id: number): Promise<Teacher> {
-    return apiClient.get<Teacher>(`${API_ENDPOINTS.TEACHERS}${id}/`);
+    return teacherService.getTeacher(id);
   },
 
   async createTeacher(data: Partial<Teacher>): Promise<Teacher> {

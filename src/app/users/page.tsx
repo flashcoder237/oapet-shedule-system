@@ -204,7 +204,8 @@ export default function UsersPage() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-      case 'teacher': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+      case 'teacher':
+      case 'professor': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
       case 'student': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
       case 'staff': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
       case 'department_head': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
@@ -216,7 +217,8 @@ export default function UsersPage() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'admin': return 'Administrateur';
-      case 'teacher': return 'Enseignant';
+      case 'teacher':
+      case 'professor': return 'Enseignant';
       case 'student': return 'Étudiant';
       case 'staff': return 'Personnel';
       case 'department_head': return 'Chef de Département';
@@ -452,8 +454,8 @@ export default function UsersPage() {
                         <span className="font-mono text-sm">{user.username}</span>
                       </td>
                       <td className="p-4">
-                        <Badge className={getRoleBadgeColor(user.role || 'professor')}>
-                          {getRoleLabel(user.role || 'professor')}
+                        <Badge className={getRoleBadgeColor(user.role || 'student')}>
+                          {getRoleLabel(user.role || 'student')}
                         </Badge>
                       </td>
                       <td className="p-4">
