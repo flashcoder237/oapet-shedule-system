@@ -160,6 +160,19 @@ export default function CoursesPage() {
   // Utiliser les cours filtrés pour les stats si le filtre est actif
   const coursesForStats = showOnlyMyCourses && isTeacher() && user?.teacher_id ? filteredCourses : courses;
 
+  // Debug stats
+  useEffect(() => {
+    console.log('📊 Stats Cours:');
+    console.log('  - Total cours:', courses.length);
+    console.log('  - Cours avec teacher:', courses.filter(c => c.teacher).length);
+    console.log('  - Teachers uniques:', new Set(courses.filter(c => c.teacher).map(c => c.teacher)).size);
+    console.log('  - Exemple cours:', courses.slice(0, 3).map(c => ({
+      name: c.name,
+      teacher: c.teacher,
+      teacher_name: c.teacher_name
+    })));
+  }, [courses]);
+
   // Pagination
   const totalPages = Math.ceil(filteredCourses.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;

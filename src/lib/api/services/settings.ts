@@ -50,45 +50,100 @@ export interface UserSettings {
 export const settingsService = {
   // Récupérer tous les paramètres utilisateur
   async getUserSettings(): Promise<UserSettings> {
+    // TODO: Implémenter l'endpoint backend /users/settings/
+    // Pour l'instant, utiliser les paramètres par défaut
+    return this.getDefaultSettings();
+
+    /* Décommenter quand le backend sera prêt:
     try {
       return await apiClient.get('/users/settings/');
     } catch (error) {
       // Fallback sur les paramètres par défaut
       return this.getDefaultSettings();
     }
+    */
   },
 
   // Sauvegarder les paramètres utilisateur
   async updateUserSettings(settings: Partial<UserSettings>): Promise<UserSettings> {
+    // TODO: Implémenter l'endpoint backend /users/settings/
+    console.log('⚠️ Sauvegarde locale uniquement (backend non implémenté)');
+    const currentSettings = this.loadFromLocalStorage() || this.getDefaultSettings();
+    const updatedSettings = { ...currentSettings, ...settings };
+    this.saveToLocalStorage(updatedSettings);
+    return updatedSettings;
+
+    /* Décommenter quand le backend sera prêt:
     return apiClient.patch('/users/settings/', settings);
+    */
   },
 
   // Sauvegarder une section spécifique
   async updateSettingsSection(section: keyof UserSettings, data: any): Promise<UserSettings> {
+    // TODO: Implémenter l'endpoint backend /users/settings/
+    console.log('⚠️ Sauvegarde locale uniquement (backend non implémenté)');
+    const currentSettings = this.loadFromLocalStorage() || this.getDefaultSettings();
+    const updatedSettings = { ...currentSettings, [section]: data };
+    this.saveToLocalStorage(updatedSettings);
+    return updatedSettings;
+
+    /* Décommenter quand le backend sera prêt:
     return apiClient.patch('/users/settings/', { [section]: data });
+    */
   },
 
   // Réinitialiser aux paramètres par défaut
   async resetToDefault(section?: keyof UserSettings): Promise<UserSettings> {
+    // TODO: Implémenter l'endpoint backend /users/settings/reset/
+    console.log('⚠️ Réinitialisation locale uniquement (backend non implémenté)');
+    const defaultSettings = this.getDefaultSettings();
+    if (section) {
+      const currentSettings = this.loadFromLocalStorage() || defaultSettings;
+      const updatedSettings = { ...currentSettings, [section]: defaultSettings[section] };
+      this.saveToLocalStorage(updatedSettings);
+      return updatedSettings;
+    }
+    this.saveToLocalStorage(defaultSettings);
+    return defaultSettings;
+
+    /* Décommenter quand le backend sera prêt:
     if (section) {
       return apiClient.post(`/users/settings/reset/${section}/`);
     }
     return apiClient.post('/users/settings/reset/');
+    */
   },
 
   // Exporter les paramètres
   async exportSettings(): Promise<Blob> {
+    // TODO: Implémenter l'endpoint backend /users/settings/export/
+    console.log('⚠️ Export local uniquement (backend non implémenté)');
+    const settings = this.loadFromLocalStorage() || this.getDefaultSettings();
+    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+    return blob;
+
+    /* Décommenter quand le backend sera prêt:
     const response = await apiClient.get('/users/settings/export/', {
       responseType: 'blob'
     });
     return response as Blob;
+    */
   },
 
   // Importer les paramètres
   async importSettings(file: File): Promise<UserSettings> {
+    // TODO: Implémenter l'endpoint backend /users/settings/import/
+    console.log('⚠️ Import local uniquement (backend non implémenté)');
+    const text = await file.text();
+    const settings = JSON.parse(text) as UserSettings;
+    this.saveToLocalStorage(settings);
+    return settings;
+
+    /* Décommenter quand le backend sera prêt:
     const formData = new FormData();
     formData.append('file', file);
     return apiClient.post('/users/settings/import/', formData);
+    */
   },
 
   // Paramètres par défaut

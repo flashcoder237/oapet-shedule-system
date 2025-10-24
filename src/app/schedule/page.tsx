@@ -832,6 +832,8 @@ export default function SchedulePage() {
                       onSessionDuplicate={handleSessionDuplicate}
                       onDrop={handleSessionDrop}
                       conflicts={backendConflicts}
+                      onViewModeChange={setViewMode}
+                      onDateChange={setSelectedDate}
                     />
                   </>
                 )}

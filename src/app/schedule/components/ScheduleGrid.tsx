@@ -19,6 +19,8 @@ interface ScheduleGridProps {
   onSessionDuplicate: (session: ScheduleSession) => void;
   onDrop?: (day: string, time: string, session: ScheduleSession) => void;
   conflicts: any[];
+  onViewModeChange?: (mode: ViewMode) => void;
+  onDateChange?: (date: Date) => void;
 }
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -33,7 +35,9 @@ export function ScheduleGrid({
   onSessionDelete,
   onSessionDuplicate,
   onDrop,
-  conflicts
+  conflicts,
+  onViewModeChange,
+  onDateChange
 }: ScheduleGridProps) {
   
   // États pour le drag & drop avec visualisation en direct
@@ -740,20 +744,27 @@ export function ScheduleGrid({
               <div
                 key={index}
                 className={`
-                  min-h-[120px] border-r border-b last:border-r-0 p-1 
+                  min-h-[120px] border-r border-b last:border-r-0 p-1 cursor-pointer
                   ${isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
                   ${isToday ? 'bg-blue-50' : ''}
-                  hover:bg-blue-50 transition-colors
+                  hover:bg-blue-100 transition-colors
                 `}
+                onClick={() => {
+                  // Cliquer sur une journée passe en vue jour
+                  if (onViewModeChange && onDateChange) {
+                    onDateChange(day);
+                    onViewModeChange('day');
+                  }
+                }}
               >
                 <div className={`
                   text-sm font-medium mb-1
                   ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
-                  ${isToday ? 'text-blue-600' : ''}
+                  ${isToday ? 'text-blue-600 font-bold' : ''}
                 `}>
                   {dayOfMonth}
                 </div>
-                
+
                 {/* Sessions du jour */}
                 <div className="space-y-1">
                   {daySessions.slice(0, 3).map((session) => (
@@ -762,8 +773,14 @@ export function ScheduleGrid({
                       className={`
                         text-xs p-1 rounded truncate cursor-pointer
                         ${getSessionTypeColor(session.session_type)}
+                        hover:opacity-80 transition-opacity
                       `}
-                      onClick={() => onSessionEdit(session)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Empêcher le changement de vue
+                        if (editMode !== 'view') {
+                          onSessionEdit(session);
+                        }
+                      }}
                       title={`${session.course_details?.name} - ${session.specific_start_time}`}
                     >
                       <div className="font-medium">{session.course_details?.code}</div>

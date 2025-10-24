@@ -122,60 +122,60 @@ export function UnifiedFloatingMenu({
     conflicts: conflicts.length
   };
 
-  if (!isOpen) {
-    return (
-      <motion.div
-        drag
-        dragMomentum={false}
-        dragElastic={0.1}
-        dragConstraints={{
-          top: -window.innerHeight + 200,
-          bottom: 0,
-          left: -window.innerWidth + 200,
-          right: 0
-        }}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-28 right-6 z-50 cursor-move"
-        onHoverStart={() => setIsHovered(true)}
-        onHoverEnd={() => setIsHovered(false)}
+  // Bouton fermé
+  const closedButton = (
+    <motion.div
+      drag
+      dragMomentum={false}
+      dragElastic={0.1}
+      dragConstraints={{
+        top: -window.innerHeight + 200,
+        bottom: 0,
+        left: -window.innerWidth + 200,
+        right: 0
+      }}
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className="fixed bottom-28 right-6 z-50 cursor-move"
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <Button
+        onClick={() => setIsOpen(true)}
+        className="rounded-full w-16 h-16 shadow-xl bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-purple-600 hover:to-purple-700 p-0 transition-all duration-300 border-2 border-white/20"
       >
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="rounded-full w-16 h-16 shadow-xl bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-purple-600 hover:to-purple-700 p-0 transition-all duration-300 border-2 border-white/20"
-        >
-          <motion.div
-            animate={{
-              rotate: isHovered ? 360 : 0,
-              scale: isHovered ? 1.1 : 1
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            <Settings className="h-7 w-7 text-white" />
-          </motion.div>
-        </Button>
-
-        {conflicts.length > 0 && (
-          <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
-            {conflicts.length}
-          </div>
-        )}
-
         <motion.div
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : 10 }}
-          className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap pointer-events-none"
+          animate={{
+            rotate: isHovered ? 360 : 0,
+            scale: isHovered ? 1.1 : 1
+          }}
+          transition={{ duration: 0.3 }}
         >
-          Parametres emploi du temps
-          <div className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-gray-900 border-t-2 border-b-2 border-t-transparent border-b-transparent"></div>
+          <Settings className="h-7 w-7 text-white" />
         </motion.div>
-      </motion.div>
-    );
-  }
+      </Button>
 
-  return (
+      {conflicts.length > 0 && (
+        <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
+          {conflicts.length}
+        </div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : 10 }}
+        className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap pointer-events-none"
+      >
+        Parametres emploi du temps
+        <div className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0 border-l-4 border-l-gray-900 border-t-2 border-b-2 border-t-transparent border-b-transparent"></div>
+      </motion.div>
+    </motion.div>
+  );
+
+  // Menu ouvert
+  const openMenu = (
     <motion.div
       drag
       dragMomentum={false}
@@ -723,4 +723,7 @@ export function UnifiedFloatingMenu({
       </Card>
     </motion.div>
   );
+
+  // Return the appropriate UI based on isOpen state
+  return isOpen ? openMenu : closedButton;
 }

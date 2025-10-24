@@ -547,7 +547,9 @@ export default function SettingsPage() {
                         <p>Version de l'application: v2.1.0</p>
                         <p>Base de données: PostgreSQL 14.2</p>
                         <p>Dernière sauvegarde: Il y a 2 heures</p>
-                        <p>Statut: <Badge variant="default" className="ml-1">Système opérationnel</Badge></p>
+                        <div>
+                          Statut: <Badge variant="default" className="ml-1">Système opérationnel</Badge>
+                        </div>
                       </div>
                     </div>
                   </div>

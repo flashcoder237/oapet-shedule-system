@@ -114,11 +114,34 @@ export default function TeacherPreferencesPage() {
     { value: 'sunday', label: 'Dimanche' }
   ];
 
-  // Chargement initial : récupérer la liste des enseignants pour admin
+  // Chargement initial : récupérer la liste des enseignants
   useEffect(() => {
     loadTeachers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Définir selectedTeacherId quand user est chargé
+  useEffect(() => {
+    if (!selectedTeacherId && allTeachers.length > 0) {
+      const userIsTeacher = isTeacher();
+      const userTeacherId = user?.teacher_id;
+      const userIsAdmin = canManageSchedules();
+
+      console.log('🔍 Auto-sélection enseignant:');
+      console.log('  - userIsTeacher:', userIsTeacher);
+      console.log('  - userTeacherId:', userTeacherId);
+      console.log('  - userIsAdmin:', userIsAdmin);
+
+      if (userIsTeacher && userTeacherId) {
+        console.log('✅ Sélection teacher_id:', userTeacherId);
+        setSelectedTeacherId(userTeacherId);
+      } else if (userIsAdmin && allTeachers.length > 0) {
+        console.log('✅ Admin - Sélection premier enseignant:', allTeachers[0].id);
+        setSelectedTeacherId(allTeachers[0].id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, allTeachers]);
 
   // Charger les préférences quand un enseignant est sélectionné
   useEffect(() => {
@@ -132,19 +155,8 @@ export default function TeacherPreferencesPage() {
     setLoading(true);
     try {
       const teacherData = await teacherService.getTeachers();
+      console.log('📚 Enseignants chargés:', teacherData.length);
       setAllTeachers(teacherData);
-
-      const userIsTeacher = isTeacher();
-      const userTeacherId = user?.teacher_id;
-      const userIsAdmin = canManageSchedules();
-
-      if (userIsTeacher && userTeacherId) {
-        // Enseignant connecté : charger ses propres préférences
-        setSelectedTeacherId(userTeacherId);
-      } else if (userIsAdmin && teacherData.length > 0) {
-        // Admin : sélectionner le premier enseignant par défaut
-        setSelectedTeacherId(teacherData[0].id);
-      }
     } catch (error) {
       console.error('Erreur chargement enseignants:', error);
       addToast({
