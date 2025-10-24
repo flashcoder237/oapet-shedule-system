@@ -241,7 +241,6 @@ export default function UsersPage() {
     const loadStats = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
-        const usersResponse = await fetch(`${apiUrl}/users/users/?${params.toString()}`);
         const response = await fetch(`${apiUrl}/users/users/stats/`, {
           headers: {
             'Authorization': `Token ${localStorage.getItem('auth_token')}`,
