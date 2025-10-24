@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
+import { Pagination } from '@/components/ui/pagination';
 import { roomService } from '@/lib/api/services/rooms';
 import type { Room, RoomStats } from '@/types/api';
 import RoomModal from '@/components/modals/RoomModal';
@@ -25,6 +26,10 @@ export default function RoomsPage() {
   const [stats, setStats] = useState<RoomStats | null>(null);
   const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
   const [floors, setFloors] = useState<string[]>(['all']);
+
+  // États de pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { addToast } = useToast();
 
@@ -131,6 +136,17 @@ export default function RoomsPage() {
 
     return matchesSearch && matchesBuilding && matchesFloor;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredRooms.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedRooms = filteredRooms.slice(startIndex, endIndex);
+
+  // Réinitialiser à la page 1 si les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedBuilding, selectedFloor]);
 
   if (isLoading) {
     return <PageLoading message="Chargement des salles..." />;
@@ -286,14 +302,14 @@ export default function RoomsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRooms.length === 0 ? (
+                {paginatedRooms.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center p-8 text-muted-foreground">
                       Aucune salle trouvée
                     </td>
                   </tr>
                 ) : (
-                  filteredRooms.map((room, index) => (
+                  paginatedRooms.map((room, index) => (
                     <motion.tr
                       key={room.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -388,6 +404,19 @@ export default function RoomsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {filteredRooms.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredRooms.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemName="salles"
+        />
+      )}
 
       {/* Modal de création/édition */}
       <RoomModal

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PageLoading, LoadingSpinner } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
+import { Pagination } from '@/components/ui/pagination';
 import { courseService } from '@/lib/api/services/courses';
 import CourseModal from '@/components/modals/CourseModal';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +28,11 @@ export default function CoursesPage() {
   const [departments, setDepartments] = useState<Array<{ id: number | string; name: string }>>([]);
   const [levels, setLevels] = useState<string[]>(['all']);
 
-  const { addToast } = useToast();
+  // États de pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const { addToast} = useToast();
 
   // Chargement des données
   useEffect(() => {
@@ -142,6 +147,17 @@ export default function CoursesPage() {
 
     return matchesSearch && matchesDepartment && matchesLevel;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredCourses.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedCourses = filteredCourses.slice(startIndex, endIndex);
+
+  // Réinitialiser à la page 1 si les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDepartment, selectedLevel]);
 
   const getCourseTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -310,14 +326,14 @@ export default function CoursesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCourses.length === 0 ? (
+                {paginatedCourses.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center p-8 text-muted-foreground">
                       Aucun cours trouvé
                     </td>
                   </tr>
                 ) : (
-                  filteredCourses.map((course, index) => (
+                  paginatedCourses.map((course, index) => (
                     <motion.tr
                       key={course.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -396,6 +412,19 @@ export default function CoursesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {filteredCourses.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredCourses.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemName="cours"
+        />
+      )}
 
       {/* Modal de création/édition */}
       <CourseModal

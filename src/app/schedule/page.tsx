@@ -133,7 +133,7 @@ export default function SchedulePage() {
   const loadStudentClasses = async () => {
     try {
       // Si l'utilisateur est un enseignant, filtrer par son ID
-      let data;
+      let data: any[] = [];
       if (isTeacher()) {
         if (user?.teacher_id) {
           console.log('🔍 Chargement des classes pour l\'enseignant ID:', user.teacher_id);

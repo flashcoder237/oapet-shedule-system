@@ -1,26 +1,6 @@
 // src/lib/api/services/teachers.ts
 import { apiClient } from '../client';
-
-export interface Teacher {
-  id: number;
-  employee_id: string;
-  user: number;
-  user_details?: {
-    id: number;
-    username: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    full_name: string;
-  };
-  department: number;
-  department_name?: string;
-  specialization?: string;
-  max_hours_per_week: number;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
+import type { Teacher } from '@/types/api';
 
 export interface TeacherForSelect {
   id: number;

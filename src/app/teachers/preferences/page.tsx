@@ -52,7 +52,7 @@ interface TeacherUnavailability {
   created_at: string;
 }
 
-interface Teacher {
+interface TeacherProfile {
   id: number;
   user: {
     first_name: string;
@@ -67,7 +67,7 @@ interface Teacher {
 export default function TeacherPreferencesPage() {
   const [preferences, setPreferences] = useState<TeacherPreference[]>([]);
   const [unavailabilities, setUnavailabilities] = useState<TeacherUnavailability[]>([]);
-  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
+  const [currentTeacher, setCurrentTeacher] = useState<TeacherProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddPreference, setShowAddPreference] = useState(false);
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -118,7 +118,20 @@ export default function TeacherPreferencesPage() {
       // Récupérer l'enseignant courant (simplifié - à adapter selon votre système d'auth)
       const teacherData = await teacherService.getTeachers();
       if (teacherData && teacherData.length > 0) {
-        setCurrentTeacher(teacherData[0]);
+        // Mapper les données du service vers le format TeacherProfile
+        const teacher = teacherData[0];
+        const teacherProfile: TeacherProfile = {
+          id: teacher.id,
+          user: {
+            first_name: teacher.user_details?.first_name || '',
+            last_name: teacher.user_details?.last_name || '',
+            email: teacher.user_details?.email || ''
+          },
+          department: {
+            name: teacher.department_name || 'Non défini'
+          }
+        };
+        setCurrentTeacher(teacherProfile);
 
         // Charger les préférences
         const prefs = await apiClient.get<any>(
@@ -173,7 +186,7 @@ export default function TeacherPreferencesPage() {
           break;
       }
 
-      const newPreference = await apiClient.post('/courses/teacher-preferences/', {
+      const newPreference = await apiClient.post<TeacherPreference>('/courses/teacher-preferences/', {
         teacher: currentTeacher.id,
         preference_type: prefType,
         priority: prefPriority,
@@ -220,7 +233,7 @@ export default function TeacherPreferencesPage() {
         payload.end_date = unavailData.end_date;
       }
 
-      const newUnavailability = await apiClient.post('/courses/teacher-unavailabilities/', payload);
+      const newUnavailability = await apiClient.post<TeacherUnavailability>('/courses/teacher-unavailabilities/', payload);
 
       // Mise à jour optimiste - ajouter immédiatement à l'état local
       setUnavailabilities(prev => [...prev, newUnavailability]);

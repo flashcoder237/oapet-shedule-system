@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
+import { Pagination } from '@/components/ui/pagination';
 import { departmentService } from '@/lib/api/services/departments';
 import { teacherService } from '@/lib/api/services/teachers';
 import DepartmentModal from '@/components/modals/DepartmentModal';
@@ -23,6 +24,10 @@ export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [teachers, setTeachers] = useState<any[]>([]);
+
+  // États de pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { addToast } = useToast();
 
@@ -112,6 +117,17 @@ export default function DepartmentsPage() {
     dept.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dept.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination
+  const totalPages = Math.ceil(filteredDepartments.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedDepartments = filteredDepartments.slice(startIndex, endIndex);
+
+  // Réinitialiser à la page 1 si le filtre change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Statistiques
   const totalTeachers = departments.reduce((sum, dept) => sum + (dept.teachers_count || 0), 0);
@@ -236,14 +252,14 @@ export default function DepartmentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredDepartments.length === 0 ? (
+                {paginatedDepartments.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center p-8 text-muted-foreground">
                       Aucun département trouvé
                     </td>
                   </tr>
                 ) : (
-                  filteredDepartments.map((department, index) => (
+                  paginatedDepartments.map((department, index) => (
                     <motion.tr
                       key={department.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -321,6 +337,19 @@ export default function DepartmentsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {filteredDepartments.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredDepartments.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          itemName="départements"
+        />
+      )}
 
       {/* Modal de création/édition */}
       <DepartmentModal
