@@ -62,7 +62,8 @@ export default function UsersPage() {
         if (selectedStatus !== 'all') params.append('is_active', selectedStatus);
 
         // Charger les utilisateurs avec pagination
-        const usersResponse = await fetch(`http://localhost:8000/api/users/users/?${params.toString()}`, {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+        const usersResponse = await fetch(`${baseUrl}/users/users/?${params.toString()}`, {
           headers: {
             'Authorization': `Token ${localStorage.getItem('auth_token')}`,
           },
@@ -86,7 +87,7 @@ export default function UsersPage() {
 
         // Charger les départements (une seule fois)
         if (departments.length === 0) {
-          const departmentsResponse = await fetch('http://localhost:8000/api/courses/departments/', {
+          const departmentsResponse = await fetch(`${baseUrl}/courses/departments/`, {
             headers: {
               'Authorization': `Token ${localStorage.getItem('auth_token')}`,
             },
@@ -239,7 +240,9 @@ export default function UsersPage() {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/users/users/stats/', {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+        const usersResponse = await fetch(`${apiUrl}/users/users/?${params.toString()}`);
+        const response = await fetch(`${apiUrl}/users/users/stats/`, {
           headers: {
             'Authorization': `Token ${localStorage.getItem('auth_token')}`,
           },

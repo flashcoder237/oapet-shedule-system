@@ -34,8 +34,8 @@ export function useAuth() {
           setLoading(false);
           return;
         }
-
-        const response = await fetch('http://localhost:8000/api/users/auth/me/', {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+        const response = await fetch(`${apiUrl}/users/auth/me/`, {
           headers: {
             'Authorization': `Token ${token}`,
           },
