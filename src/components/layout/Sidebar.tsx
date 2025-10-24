@@ -22,79 +22,100 @@ import {
   UserCog
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { user, isTeacher, canManageSchedules } = useAuth();
   
   const navigation = [
     {
       name: 'Accueil',
       href: '/',
       icon: Home,
-      description: 'Vue d\'ensemble'
+      description: 'Vue d\'ensemble',
+      allowTeacher: true
     },
     {
       name: 'Gestion des EDs',
       href: '/gestion-emplois',
       icon: LayoutDashboard,
-      description: 'Administration des emplois du temps'
+      description: 'Administration des emplois du temps',
+      allowTeacher: false
     },
     {
       name: 'Cours',
       href: '/courses',
       icon: BookOpen,
-      description: 'Gestion des cours'
+      description: 'Gestion des cours',
+      allowTeacher: true // Lecture seule pour enseignants
     },
     {
       name: 'Classes',
       href: '/gestion-classes',
       icon: GraduationCap,
-      description: 'Gestion des classes et effectifs'
+      description: 'Gestion des classes et effectifs',
+      allowTeacher: false
     },
     {
       name: 'Emplois du temps',
       href: '/schedule',
       icon: Calendar,
-      description: 'Planning et horaires'
+      description: 'Planning et horaires',
+      allowTeacher: true
     },
     {
       name: 'Préférences Enseignants',
       href: '/teachers/preferences',
       icon: UserCog,
-      description: 'Disponibilités et contraintes'
+      description: 'Disponibilités et contraintes',
+      allowTeacher: true
     },
     {
       name: 'Salles',
       href: '/rooms',
       icon: MapPin,
-      description: 'Gestion des espaces'
+      description: 'Gestion des espaces',
+      allowTeacher: true // Lecture seule pour enseignants
     },
-    { 
-      name: 'Utilisateurs', 
-      href: '/users', 
+    {
+      name: 'Utilisateurs',
+      href: '/users',
       icon: Users,
-      description: 'Comptes et permissions'
+      description: 'Comptes et permissions',
+      allowTeacher: false
     },
-    { 
-      name: 'Départements', 
-      href: '/departments', 
+    {
+      name: 'Départements',
+      href: '/departments',
       icon: Building,
-      description: 'Structure organisationnelle'
+      description: 'Structure organisationnelle',
+      allowTeacher: false
     },
-    { 
-      name: 'Intelligence Artificielle', 
-      href: '/ai', 
+    {
+      name: 'Intelligence Artificielle',
+      href: '/ai',
       icon: Brain,
-      description: 'Outils IA et analyses'
+      description: 'Outils IA et analyses',
+      allowTeacher: false
     },
-    { 
-      name: 'Paramètres', 
-      href: '/settings', 
+    {
+      name: 'Paramètres',
+      href: '/settings',
       icon: Settings,
-      description: 'Configuration système'
+      description: 'Configuration système',
+      allowTeacher: true
     },
   ];
+
+  // Filtrer la navigation selon le rôle
+  const filteredNavigation = navigation.filter(item => {
+    if (isTeacher()) {
+      return item.allowTeacher;
+    }
+    return true; // Admin/planificateur voient tout
+  });
 
   const sidebarVariants: Variants = {
     expanded: { 
@@ -177,7 +198,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-6 px-4 relative z-10 overflow-y-auto overflow-x-hidden">
         <ul className="space-y-2">
-          {navigation.map((item, index) => {
+          {filteredNavigation.map((item, index) => {
             const isActive = pathname === item.href || 
               (item.href !== '/' && pathname.startsWith(`${item.href}/`));
             

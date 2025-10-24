@@ -12,8 +12,10 @@ import { PageLoading } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/use-toast';
 import { Pagination } from '@/components/ui/pagination';
 import { roomService } from '@/lib/api/services/rooms';
+import { courseService } from '@/lib/api/services/courses';
 import type { Room, RoomStats } from '@/types/api';
 import RoomModal from '@/components/modals/RoomModal';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,12 +28,15 @@ export default function RoomsPage() {
   const [stats, setStats] = useState<RoomStats | null>(null);
   const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
   const [floors, setFloors] = useState<string[]>(['all']);
+  const [showOnlyMyRooms, setShowOnlyMyRooms] = useState(false);
+  const [teacherRoomIds, setTeacherRoomIds] = useState<Set<number>>(new Set());
 
   // États de pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const { addToast } = useToast();
+  const { canManageSchedules, isTeacher, user } = useAuth();
 
   // Chargement des données
   useEffect(() => {
@@ -47,6 +52,31 @@ export default function RoomsPage() {
         const roomsArray = roomsData.results || [];
         setRooms(roomsArray);
         setStats(statsData);
+
+        // Si enseignant, charger les cours pour identifier les salles utilisées
+        const teacherId = user?.teacher_id;
+        const userIsTeacher = isTeacher();
+
+        if (userIsTeacher && teacherId) {
+          try {
+            const coursesData = await courseService.getCourses();
+            const teacherCourses = (coursesData.results || []).filter(
+              (course: any) => course.teacher === teacherId
+            );
+
+            // Extraire les room IDs des cours de l'enseignant
+            const roomIds = new Set<number>();
+            teacherCourses.forEach((course: any) => {
+              if (course.preferred_room) {
+                roomIds.add(course.preferred_room);
+              }
+            });
+            setTeacherRoomIds(roomIds);
+            console.log(`🧑‍🏫 Enseignant - ${roomIds.size} salles utilisées`);
+          } catch (error) {
+            console.error('Erreur lors du chargement des cours de l\'enseignant:', error);
+          }
+        }
 
         // Extraire les bâtiments uniques
         const uniqueBuildings = new Set(roomsArray.map(r => r.building?.toString()).filter(Boolean));
@@ -76,7 +106,8 @@ export default function RoomsPage() {
     };
 
     loadData();
-  }, [addToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddRoom = () => {
     setSelectedRoom(null);
@@ -134,8 +165,17 @@ export default function RoomsPage() {
     const matchesFloor = selectedFloor === 'all' ||
       String(room.floor) === String(selectedFloor);
 
-    return matchesSearch && matchesBuilding && matchesFloor;
+    // Filtre "Mes Salles" pour les enseignants
+    const matchesMyRooms = !showOnlyMyRooms ||
+      !isTeacher() ||
+      !user?.teacher_id ||
+      (room.id && teacherRoomIds.has(room.id));
+
+    return matchesSearch && matchesBuilding && matchesFloor && matchesMyRooms;
   });
+
+  // Utiliser les salles filtrées pour les stats si le filtre est actif
+  const roomsForStats = showOnlyMyRooms && isTeacher() && user?.teacher_id ? filteredRooms : rooms;
 
   // Pagination
   const totalPages = Math.ceil(filteredRooms.length / pageSize);
@@ -146,7 +186,7 @@ export default function RoomsPage() {
   // Réinitialiser à la page 1 si les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedBuilding, selectedFloor]);
+  }, [searchTerm, selectedBuilding, selectedFloor, showOnlyMyRooms]);
 
   if (isLoading) {
     return <PageLoading message="Chargement des salles..." />;
@@ -162,82 +202,102 @@ export default function RoomsPage() {
             Gérez les salles et leurs équipements
           </p>
         </div>
-        <Button onClick={handleAddRoom} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nouvelle Salle
-        </Button>
+        {canManageSchedules() && (
+          <Button onClick={handleAddRoom} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nouvelle Salle
+          </Button>
+        )}
       </div>
 
       {/* Statistiques */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                  <Building className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Salles</p>
-                  <p className="text-2xl font-bold">{stats.total_rooms || rooms.length}</p>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <Building className="w-6 h-6 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {showOnlyMyRooms ? 'Mes Salles' : 'Total Salles'}
+                </p>
+                <p className="text-2xl font-bold">{roomsForStats.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                  <Monitor className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Disponibles</p>
-                  <p className="text-2xl font-bold">{stats.available_rooms || 0}</p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <Monitor className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {showOnlyMyRooms ? 'Actives' : 'Disponibles'}
+                </p>
+                <p className="text-2xl font-bold">
+                  {showOnlyMyRooms
+                    ? roomsForStats.filter(r => r.is_active).length
+                    : stats?.available_rooms || 0}
+                </p>
+                {!showOnlyMyRooms && (
                   <p className="text-xs text-muted-foreground">
-                    {stats.total_rooms > 0
+                    {stats && stats.total_rooms > 0
                       ? `${Math.round((stats.available_rooms / stats.total_rooms) * 100)}% libres`
                       : '0% libres'}
                   </p>
-                </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                  <Users className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Occupées</p>
-                  <p className="text-2xl font-bold">{stats.occupied_rooms || 0}</p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                <Users className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {showOnlyMyRooms ? 'Bâtiments' : 'Occupées'}
+                </p>
+                <p className="text-2xl font-bold">
+                  {showOnlyMyRooms
+                    ? new Set(roomsForStats.map(r => r.building)).size
+                    : stats?.occupied_rooms || 0}
+                </p>
+                {!showOnlyMyRooms && (
                   <p className="text-xs text-muted-foreground">
-                    {stats.total_rooms > 0
+                    {stats && stats.total_rooms > 0
                       ? `${Math.round((stats.occupied_rooms / stats.total_rooms) * 100)}% occupées`
                       : '0% occupées'}
                   </p>
-                </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                  <Zap className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Capacité Totale</p>
-                  <p className="text-2xl font-bold">{stats.total_capacity || 0}</p>
-                </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <Zap className="w-6 h-6 text-purple-600" />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <div>
+                <p className="text-sm text-muted-foreground">Capacité Totale</p>
+                <p className="text-2xl font-bold">
+                  {roomsForStats.reduce((sum, r) => sum + (r.capacity || 0), 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filtres et Recherche */}
       <Card>
@@ -253,6 +313,20 @@ export default function RoomsPage() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
+
+            {isTeacher() && user?.teacher_id && (
+              <label className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-blue-50 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={showOnlyMyRooms}
+                  onChange={(e) => setShowOnlyMyRooms(e.target.checked)}
+                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary rounded"
+                />
+                <span className="text-sm font-medium text-blue-900 whitespace-nowrap">
+                  Mes Salles
+                </span>
+              </label>
+            )}
 
             <select
               value={selectedBuilding}
@@ -378,23 +452,29 @@ export default function RoomsPage() {
                         )}
                       </td>
                       <td className="p-4">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditRoom(room)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteRoom(room.id!)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {canManageSchedules() ? (
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditRoom(room)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteRoom(room.id!)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end">
+                            <span className="text-sm text-muted-foreground">Lecture seule</span>
+                          </div>
+                        )}
                       </td>
                     </motion.tr>
                   ))

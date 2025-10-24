@@ -15,6 +15,7 @@ import { courseService } from '@/lib/api/services/courses';
 import CourseModal from '@/components/modals/CourseModal';
 import { Badge } from '@/components/ui/badge';
 import type { Course, CourseStats } from '@/types/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,12 +28,14 @@ export default function CoursesPage() {
   const [stats, setStats] = useState<CourseStats | null>(null);
   const [departments, setDepartments] = useState<Array<{ id: number | string; name: string }>>([]);
   const [levels, setLevels] = useState<string[]>(['all']);
+  const [showOnlyMyCourses, setShowOnlyMyCourses] = useState(false);
 
   // États de pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   const { addToast} = useToast();
+  const { canManageSchedules, isTeacher, user } = useAuth();
 
   // Chargement des données
   useEffect(() => {
@@ -145,8 +148,17 @@ export default function CoursesPage() {
     const matchesLevel = selectedLevel === 'all' ||
       course.level === selectedLevel;
 
-    return matchesSearch && matchesDepartment && matchesLevel;
+    // Filtre "Mes Cours" pour les enseignants
+    const matchesMyCourses = !showOnlyMyCourses ||
+      !isTeacher() ||
+      !user?.teacher_id ||
+      course.teacher === user.teacher_id;
+
+    return matchesSearch && matchesDepartment && matchesLevel && matchesMyCourses;
   });
+
+  // Utiliser les cours filtrés pour les stats si le filtre est actif
+  const coursesForStats = showOnlyMyCourses && isTeacher() && user?.teacher_id ? filteredCourses : courses;
 
   // Pagination
   const totalPages = Math.ceil(filteredCourses.length / pageSize);
@@ -157,7 +169,7 @@ export default function CoursesPage() {
   // Réinitialiser à la page 1 si les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedDepartment, selectedLevel]);
+  }, [searchTerm, selectedDepartment, selectedLevel, showOnlyMyCourses]);
 
   const getCourseTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -195,72 +207,82 @@ export default function CoursesPage() {
             Gérez les cours et modules de formation
           </p>
         </div>
-        <Button onClick={handleAddCourse} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nouveau Cours
-        </Button>
+        {canManageSchedules() && (
+          <Button onClick={handleAddCourse} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nouveau Cours
+          </Button>
+        )}
       </div>
 
       {/* Statistiques */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Cours</p>
-                  <p className="text-2xl font-bold">{stats.total_courses || courses.length}</p>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <BookOpen className="w-6 h-6 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {showOnlyMyCourses ? 'Mes Cours' : 'Total Cours'}
+                </p>
+                <p className="text-2xl font-bold">{coursesForStats.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                  <Users className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Cours Actifs</p>
-                  <p className="text-2xl font-bold">{stats.active_courses || courses.filter(c => c.is_active).length}</p>
-                </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <Users className="w-6 h-6 text-green-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-sm text-muted-foreground">Cours Actifs</p>
+                <p className="text-2xl font-bold">{coursesForStats.filter(c => c.is_active).length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                  <User className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Enseignants</p>
-                  <p className="text-2xl font-bold">{stats.total_teachers || 0}</p>
-                </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <User className="w-6 h-6 text-purple-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {showOnlyMyCourses ? 'Départements' : 'Enseignants'}
+                </p>
+                <p className="text-2xl font-bold">
+                  {showOnlyMyCourses
+                    ? new Set(coursesForStats.map(c => c.department)).size
+                    : new Set(coursesForStats.filter(c => c.teacher).map(c => c.teacher)).size}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                  <Clock className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Heures</p>
-                  <p className="text-2xl font-bold">{stats.total_hours || 0}h</p>
-                </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                <Clock className="w-6 h-6 text-orange-600" />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <div>
+                <p className="text-sm text-muted-foreground">Total Heures</p>
+                <p className="text-2xl font-bold">
+                  {coursesForStats.reduce((sum, c) => sum + (c.total_hours || 0), 0)}h
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filtres et Recherche */}
       <Card>
@@ -276,6 +298,20 @@ export default function CoursesPage() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
+
+            {isTeacher() && user?.teacher_id && (
+              <label className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-blue-50 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={showOnlyMyCourses}
+                  onChange={(e) => setShowOnlyMyCourses(e.target.checked)}
+                  className="w-4 h-4 text-primary focus:ring-2 focus:ring-primary rounded"
+                />
+                <span className="text-sm font-medium text-blue-900 whitespace-nowrap">
+                  Mes Cours
+                </span>
+              </label>
+            )}
 
             <select
               value={selectedLevel}
@@ -386,23 +422,29 @@ export default function CoursesPage() {
                         )}
                       </td>
                       <td className="p-4">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditCourse(course)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteCourse(course.id!)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {canManageSchedules() ? (
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditCourse(course)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteCourse(course.id!)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end">
+                            <span className="text-sm text-muted-foreground">Lecture seule</span>
+                          </div>
+                        )}
                       </td>
                     </motion.tr>
                   ))

@@ -22,6 +22,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api/client';
 import { teacherService } from '@/lib/api/services/teachers';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TeacherPreference {
   id: number;
@@ -68,9 +69,14 @@ export default function TeacherPreferencesPage() {
   const [preferences, setPreferences] = useState<TeacherPreference[]>([]);
   const [unavailabilities, setUnavailabilities] = useState<TeacherUnavailability[]>([]);
   const [currentTeacher, setCurrentTeacher] = useState<TeacherProfile | null>(null);
+  const [allTeachers, setAllTeachers] = useState<any[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddPreference, setShowAddPreference] = useState(false);
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
+
+  const { user, isTeacher, canManageSchedules } = useAuth();
+  const isAdmin = canManageSchedules();
 
   // États du formulaire de préférence
   const [prefType, setPrefType] = useState('time_slot');
@@ -108,18 +114,54 @@ export default function TeacherPreferencesPage() {
     { value: 'sunday', label: 'Dimanche' }
   ];
 
+  // Chargement initial : récupérer la liste des enseignants pour admin
   useEffect(() => {
-    loadData();
+    loadTeachers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadData = async () => {
+  // Charger les préférences quand un enseignant est sélectionné
+  useEffect(() => {
+    if (selectedTeacherId) {
+      loadPreferencesForTeacher(selectedTeacherId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTeacherId]);
+
+  const loadTeachers = async () => {
     setLoading(true);
     try {
-      // Récupérer l'enseignant courant (simplifié - à adapter selon votre système d'auth)
       const teacherData = await teacherService.getTeachers();
-      if (teacherData && teacherData.length > 0) {
-        // Mapper les données du service vers le format TeacherProfile
-        const teacher = teacherData[0];
+      setAllTeachers(teacherData);
+
+      const userIsTeacher = isTeacher();
+      const userTeacherId = user?.teacher_id;
+      const userIsAdmin = canManageSchedules();
+
+      if (userIsTeacher && userTeacherId) {
+        // Enseignant connecté : charger ses propres préférences
+        setSelectedTeacherId(userTeacherId);
+      } else if (userIsAdmin && teacherData.length > 0) {
+        // Admin : sélectionner le premier enseignant par défaut
+        setSelectedTeacherId(teacherData[0].id);
+      }
+    } catch (error) {
+      console.error('Erreur chargement enseignants:', error);
+      addToast({
+        title: "Erreur",
+        description: "Impossible de charger les enseignants",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPreferencesForTeacher = async (teacherId: number) => {
+    try {
+      // Trouver l'enseignant sélectionné
+      const teacher = allTeachers.find(t => t.id === teacherId);
+      if (teacher) {
         const teacherProfile: TeacherProfile = {
           id: teacher.id,
           user: {
@@ -132,33 +174,44 @@ export default function TeacherPreferencesPage() {
           }
         };
         setCurrentTeacher(teacherProfile);
-
-        // Charger les préférences
-        const prefs = await apiClient.get<any>(
-          `/courses/teacher-preferences/?teacher=${teacherData[0].id}`
-        );
-        setPreferences(prefs?.results || prefs || []);
-
-        // Charger les indisponibilités
-        const unavails = await apiClient.get<any>(
-          `/courses/teacher-unavailabilities/?teacher=${teacherData[0].id}`
-        );
-        setUnavailabilities(unavails?.results || unavails || []);
       }
+
+      // Charger les préférences
+      const prefs = await apiClient.get<any>(
+        `/courses/teacher-preferences/?teacher=${teacherId}`
+      );
+      setPreferences(prefs?.results || prefs || []);
+
+      // Charger les indisponibilités
+      const unavails = await apiClient.get<any>(
+        `/courses/teacher-unavailabilities/?teacher=${teacherId}`
+      );
+      setUnavailabilities(unavails?.results || unavails || []);
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      console.error('Erreur chargement préférences:', error);
       addToast({
         title: "Erreur",
-        description: "Impossible de charger vos données",
+        description: "Impossible de charger les données de l'enseignant",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleAddPreference = async () => {
-    if (!currentTeacher) return;
+    console.log('🔵 handleAddPreference appelée');
+    console.log('  - selectedTeacherId:', selectedTeacherId);
+    console.log('  - prefType:', prefType);
+    console.log('  - prefPriority:', prefPriority);
+
+    if (!selectedTeacherId) {
+      console.error('❌ Pas de selectedTeacherId, arrêt');
+      addToast({
+        title: "Erreur",
+        description: "Impossible d'identifier l'enseignant",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       let preferenceData = {};
@@ -187,7 +240,7 @@ export default function TeacherPreferencesPage() {
       }
 
       const newPreference = await apiClient.post<TeacherPreference>('/courses/teacher-preferences/', {
-        teacher: currentTeacher.id,
+        teacher: selectedTeacherId,
         preference_type: prefType,
         priority: prefPriority,
         preference_data: preferenceData,
@@ -215,11 +268,24 @@ export default function TeacherPreferencesPage() {
   };
 
   const handleAddUnavailability = async () => {
-    if (!currentTeacher) return;
+    console.log('🟠 handleAddUnavailability appelée');
+    console.log('  - selectedTeacherId:', selectedTeacherId);
+    console.log('  - unavailType:', unavailType);
+    console.log('  - unavailReason:', unavailReason);
+
+    if (!selectedTeacherId) {
+      console.error('❌ Pas de selectedTeacherId, arrêt');
+      addToast({
+        title: "Erreur",
+        description: "Impossible d'identifier l'enseignant",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       const payload: any = {
-        teacher: currentTeacher.id,
+        teacher: selectedTeacherId,
         unavailability_type: unavailType,
         reason: unavailReason
       };
@@ -342,8 +408,10 @@ export default function TeacherPreferencesPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* En-tête */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Mes Préférences d'Enseignement</h1>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold">
+              {isAdmin ? 'Gestion des Préférences Enseignants' : 'Mes Préférences d\'Enseignement'}
+            </h1>
             {currentTeacher && (
               <p className="text-muted-foreground mt-1">
                 {currentTeacher.user.first_name} {currentTeacher.user.last_name} • {currentTeacher.department.name}
@@ -354,6 +422,34 @@ export default function TeacherPreferencesPage() {
             <Settings className="w-5 h-5 text-primary" />
           </div>
         </div>
+
+        {/* Sélecteur d'enseignant pour admin */}
+        {isAdmin && allTeachers.length > 0 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium whitespace-nowrap">
+                  Sélectionner un enseignant :
+                </label>
+                <Select
+                  value={selectedTeacherId?.toString() || ''}
+                  onValueChange={(value) => setSelectedTeacherId(parseInt(value))}
+                >
+                  <SelectTrigger className="w-full max-w-md">
+                    <SelectValue placeholder="Choisir un enseignant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allTeachers.map(teacher => (
+                      <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                        {teacher.user_details?.first_name} {teacher.user_details?.last_name} - {teacher.department_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Résumé */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -405,7 +501,7 @@ export default function TeacherPreferencesPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
-                  Mes Préférences
+                  {isAdmin ? 'Préférences' : 'Mes Préférences'}
                 </CardTitle>
                 <Button
                   onClick={() => setShowAddPreference(true)}
@@ -490,7 +586,7 @@ export default function TeacherPreferencesPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5" />
-                  Mes Indisponibilités
+                  {isAdmin ? 'Indisponibilités' : 'Mes Indisponibilités'}
                 </CardTitle>
                 <Button
                   onClick={() => setShowAddUnavailability(true)}
