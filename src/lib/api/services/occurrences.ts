@@ -110,6 +110,39 @@ export const occurrenceService = {
   },
 
   /**
+   * Vue mensuelle des occurrences
+   */
+  async getMonthlyOccurrences(params: {
+    date: string;  // Format YYYY-MM-DD (n'importe quelle date du mois)
+    schedule?: number;
+    teacher?: number;
+    room?: number;
+  }): Promise<{
+    month_start: string;
+    month_end: string;
+    occurrences_by_date: Record<string, SessionOccurrence[]>;
+    total: number;
+    total_hours: number;
+  }> {
+    // Filtrer les valeurs undefined/null
+    const cleanParams: Record<string, any> = {
+      date: params.date
+    };
+
+    if (params.schedule !== undefined) {
+      cleanParams.schedule = params.schedule;
+    }
+    if (params.teacher !== undefined) {
+      cleanParams.teacher = params.teacher;
+    }
+    if (params.room !== undefined) {
+      cleanParams.room = params.room;
+    }
+
+    return apiClient.get(`${API_ENDPOINTS.OCCURRENCES}monthly/`, cleanParams);
+  },
+
+  /**
    * Annuler une occurrence
    */
   async cancelOccurrence(id: number, data: {

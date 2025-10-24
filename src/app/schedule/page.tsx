@@ -331,6 +331,51 @@ export default function SchedulePage() {
 
           setSessions(adaptedSessions);
           setDailyData(data);
+
+        } else if (viewMode === 'month') {
+          // Le scheduleId a déjà été récupéré ci-dessus
+          const dateStr = occurrenceService.formatDate(selectedDate);
+          data = await occurrenceService.getMonthlyOccurrences({
+            date: dateStr,
+            schedule: scheduleId
+          });
+
+          // Extraire toutes les occurrences de occurrences_by_date
+          const allOccurrences: any[] = [];
+          if (data?.occurrences_by_date) {
+            Object.values(data.occurrences_by_date).forEach((dateOccurrences: any) => {
+              allOccurrences.push(...dateOccurrences);
+            });
+          }
+
+          debugLog('MONTHLY OCCURRENCES LOADED:', allOccurrences.length, allOccurrences);
+
+          // Adapter les occurrences
+          const adaptedSessions = allOccurrences.map((occ: any) => ({
+            ...occ,
+            schedule: occ.session_template,
+            course: occ.session_template_details?.course || 0,
+            specific_date: occ.actual_date,
+            specific_start_time: occ.start_time,
+            specific_end_time: occ.end_time,
+            session_type: occ.session_template_details?.session_type || 'CM',
+            expected_students: occ.session_template_details?.expected_students || 0,
+            course_details: {
+              code: occ.course_code,
+              name: occ.course_name,
+            },
+            room_details: {
+              code: occ.room_code,
+            },
+            teacher_details: {
+              user_details: {
+                last_name: occ.teacher_name,
+              },
+            },
+            __is_occurrence: true,
+          })) as any[];
+
+          setSessions(adaptedSessions);
         }
       }
       // ===== ANCIEN SYSTÈME (Sessions) =====
@@ -379,7 +424,7 @@ export default function SchedulePage() {
       }
 
       // Détecter les conflits
-      if (data && (data.results?.length > 0 || data.sessions?.length > 0 || data.sessions_by_day || data.occurrences_by_day)) {
+      if (data && (data.results?.length > 0 || data.sessions?.length > 0 || data.sessions_by_day || data.occurrences_by_day || data.occurrences_by_date || data.occurrences)) {
         await detectConflicts();
       }
 
