@@ -44,7 +44,11 @@ export function ScheduleGrid({
   const [draggedSession, setDraggedSession] = useState<ScheduleSession | null>(null);
   const [dropTarget, setDropTarget] = useState<{day: string, time: string, y?: number, isValid?: boolean} | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  
+
+  // Refs pour les conteneurs de jour/semaine - TOUJOURS déclarés pour éviter l'erreur de hooks
+  const dayContainerRef = React.useRef<HTMLDivElement>(null);
+  const dayContainerRefs = DAYS.map(() => React.useRef<HTMLDivElement>(null));
+
   // Constantes pour la grille temporelle
   const startHour = 8;
   const endHour = 19;
@@ -439,75 +443,153 @@ export function ScheduleGrid({
   if (viewMode === 'day') {
     const dayName = selectedDate.toLocaleDateString('fr-FR', { weekday: 'long' });
     const dayKey = dayName.toLowerCase();
-    
+    const dateStr = selectedDate.toISOString().split('T')[0];
+
+    // Filtrer les sessions pour cette date exacte
+    const daySessions = sessions.filter(session => {
+      if (session.specific_date) {
+        return session.specific_date === dateStr;
+      }
+      return false;
+    });
+
+    console.log('📅 DAY VIEW - Date:', dateStr, 'Sessions:', daySessions.length, daySessions);
+
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-border">
+      <div className="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
         <div className="p-4 border-b bg-gray-50">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold capitalize">
             {dayName} {selectedDate.toLocaleDateString('fr-FR')}
           </h2>
         </div>
-        
-        <div className="grid grid-cols-[80px_1fr] gap-0">
-          {/* Heures */}
-          <div className="border-r border-border">
-            <div className="h-12 border-b border-border bg-gray-50"></div>
-            {timeSlots.map((time) => (
-              <div
-                key={time}
-                className="h-4 border-b border-border bg-gray-50 flex items-center justify-center text-xs font-medium text-gray-600"
-              >
-                {time.endsWith(':00') ? time : time.endsWith(':30') ? time : ''}
-              </div>
-            ))}
-          </div>
-          
-          {/* Sessions */}
-          <div>
-            <div className="h-12 border-b border-border bg-blue-50 flex items-center justify-center font-medium">
-              Sessions
+
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-[100px_1fr] gap-0" style={{ minWidth: '600px' }}>
+            {/* Colonne des heures */}
+            <div className="relative bg-gray-50 border-r" style={{ height: `${totalMinutes}px` }}>
+              {Array.from({ length: (endHour - startHour) * 2 }, (_, i) => {
+                const isFullHour = i % 2 === 0;
+                const hour = startHour + Math.floor(i / 2);
+                const minute = isFullHour ? 0 : 30;
+                return (
+                  <div
+                    key={i}
+                    className={`absolute left-0 right-0 text-xs p-2 border-t ${
+                      isFullHour
+                        ? 'font-medium text-gray-700 bg-gray-50'
+                        : 'font-normal text-gray-500 bg-gray-25'
+                    }`}
+                    style={{ top: `${i * 30}px`, height: '30px' }}
+                  >
+                    {hour.toString().padStart(2, '0')}:{minute.toString().padStart(2, '0')}
+                  </div>
+                );
+              })}
             </div>
-            {timeSlots.map((time) => (
-              <div
-                key={time}
-                className={`
-                  h-4 border-b border-border p-1 relative transition-all duration-200 group
-                  ${(editMode === 'edit' || editMode === 'drag') && isDragging ? 'hover:bg-blue-100 hover:border-blue-300' : 'hover:bg-blue-50'}
-                  ${dropTarget?.day === dayKey && dropTarget?.time === time ? 'bg-blue-200 border-blue-400 shadow-inner' : ''}
-                `}
-                onDragOver={(e) => handleDayDragOver(e, dayKey, time)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDayDrop(e, dayKey, time)}
-              >
-                {getSessionsForSlot(dayKey, time).map((session) => (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    editMode={editMode}
-                    onEdit={onSessionEdit}
-                    onDelete={onSessionDelete}
-                    onDuplicate={onSessionDuplicate}
-                    onDragStart={(e) => handleDragStart(e, session)}
-                    onDragEnd={handleDragEnd}
-                    isDragging={draggedSession?.id === session.id}
-                    hasConflict={hasConflict(session)}
+
+            {/* Colonne des sessions */}
+            <div
+              ref={dayContainerRef}
+              className={`relative border-l border-gray-200 ${
+                (editMode === 'edit' || editMode === 'drag') ? 'cursor-pointer hover:bg-blue-50' : ''
+              }`}
+              style={{ height: `${totalMinutes}px` }}
+              onDragOver={(e) => handleDragOver(e, dayKey, dayContainerRef)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, dayKey, dayContainerRef)}
+            >
+              {/* Lignes horizontales - grille détaillée */}
+              {Array.from({ length: (endHour - startHour) * 4 }, (_, i) => {
+                const isHour = i % 4 === 0;
+                const isHalfHour = i % 2 === 0;
+                return (
+                  <div
+                    key={i}
+                    className={`absolute left-0 right-0 border-t ${
+                      isHour
+                        ? 'border-gray-300'
+                        : isHalfHour
+                          ? 'border-gray-200'
+                          : 'border-gray-100'
+                    }`}
+                    style={{ top: `${i * 15}px` }}
                   />
-                ))}
-                {/* Indicateur de zone de dépôt */}
-                {(editMode === 'edit' || editMode === 'drag') && getSessionsForSlot(dayKey, time).length === 0 && !isDragging && (
-                  <div className="opacity-0 group-hover:opacity-30 absolute inset-0 bg-blue-200 rounded flex items-center justify-center text-xs text-blue-600 transition-opacity">
-                    +
+                );
+              })}
+
+              {/* Indicateur de drop position avec preview */}
+              {(editMode === 'edit' || editMode === 'drag') && draggedSession && dropTarget?.day === dayKey && dropTarget.y !== undefined && (
+                <div
+                  className="absolute left-0 right-0 z-20 pointer-events-none"
+                  style={{
+                    top: `${Math.round(dropTarget.y / 10) * 10}px`,
+                    height: `${getSessionHeightPixels(draggedSession)}px`
+                  }}
+                >
+                  <div
+                    className={`w-full h-full rounded border-2 border-dashed ${
+                      dropTarget.isValid
+                        ? 'bg-green-100 border-green-400'
+                        : 'bg-red-100 border-red-400'
+                    } opacity-70`}
+                  >
+                    <div className={`text-xs p-1 font-medium ${
+                      dropTarget.isValid ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {draggedSession.course_details?.code}
+                    </div>
                   </div>
-                )}
-                
-                {/* Aperçu du cours en cours de déplacement */}
-                {(editMode === 'edit' || editMode === 'drag') && isDragging && dropTarget?.day === dayKey && dropTarget?.time === time && draggedSession && (
-                  <div className="absolute inset-0 bg-blue-300 rounded border-2 border-blue-500 opacity-60 flex items-center justify-center text-xs text-blue-800 font-medium animate-pulse">
-                    {draggedSession.course_details?.code}
-                  </div>
-                )}
-              </div>
-            ))}
+                </div>
+              )}
+
+              {/* Sessions positionnées selon leur heure et durée réelles */}
+              {(() => {
+                const sessionsWithLayout = getSessionsWithOverlapLayout(daySessions);
+
+                return sessionsWithLayout.map((session) => {
+                  const topPosition = getSessionTopPosition(session);
+                  const height = getSessionHeightPixels(session);
+
+                  if (topPosition < 0 || topPosition >= totalMinutes) return null;
+
+                  // Calcul de la largeur et position horizontale pour les chevauchements
+                  const widthPercent = session.overlapTotal > 1 ? 100 / session.overlapTotal : 100;
+                  const leftPercent = session.overlapTotal > 1 ? (session.overlapIndex * widthPercent) : 0;
+
+                  return (
+                    <div
+                      key={session.id}
+                      className={`absolute z-10 ${session.hasVisualConflict ? 'ring-2 ring-red-400 ring-opacity-60' : ''}`}
+                      style={{
+                        top: `${topPosition}px`,
+                        height: `${height}px`,
+                        left: `${4 + leftPercent * 0.92}%`,
+                        width: `${widthPercent * 0.92}%`,
+                        zIndex: session.hasVisualConflict ? 15 : 10
+                      }}
+                    >
+                      <SessionCard
+                        session={session}
+                        isDragging={draggedSession?.id === session.id}
+                        onDragStart={(e) => handleDragStart(e, session)}
+                        onDragEnd={handleDragEnd}
+                        onEdit={onSessionEdit}
+                        onDelete={onSessionDelete}
+                        onDuplicate={onSessionDuplicate}
+                        editMode={editMode}
+                        hasConflict={hasConflict(session) || session.hasVisualConflict}
+                      />
+                      {/* Indicateur de conflit visuel */}
+                      {session.hasVisualConflict && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white text-white text-xs flex items-center justify-center font-bold">
+                          !
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
         </div>
       </div>
@@ -515,8 +597,6 @@ export function ScheduleGrid({
   }
 
   if (viewMode === 'week') {
-    const dayContainerRefs = DAYS.map(() => React.useRef<HTMLDivElement>(null));
-    
     return (
       <div className="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
         <div className="overflow-x-auto">

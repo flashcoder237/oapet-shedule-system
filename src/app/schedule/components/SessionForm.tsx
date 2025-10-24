@@ -89,7 +89,8 @@ export function SessionForm({
       let courseId: string | number = '';
       if (isOccurrence) {
         courseId = sessionAny.session_template_details?.course ||
-                  sessionAny.session_template_details?.course_details?.id || '';
+                  sessionAny.course_details?.id ||
+                  sessionAny.course || '';
       } else {
         courseId = editingSession.course || '';
       }
@@ -98,9 +99,9 @@ export function SessionForm({
       // Extraction du teacher ID
       let teacherId: string | number = '';
       if (isOccurrence) {
-        teacherId = sessionAny.teacher ||
-                   sessionAny.teacher_details?.id ||
-                   sessionAny.session_template_details?.teacher || '';
+        teacherId = sessionAny.teacher_id ||
+                   sessionAny.teacher ||
+                   sessionAny.teacher_details?.id || '';
       } else {
         teacherId = editingSession.teacher || '';
       }
@@ -109,9 +110,9 @@ export function SessionForm({
       // Extraction du room ID
       let roomId: string | number = '';
       if (isOccurrence) {
-        roomId = sessionAny.room ||
-                sessionAny.room_details?.id ||
-                sessionAny.session_template_details?.room || '';
+        roomId = sessionAny.room_id ||
+                sessionAny.room ||
+                sessionAny.room_details?.id || '';
       } else {
         roomId = editingSession.room || '';
       }
@@ -120,14 +121,28 @@ export function SessionForm({
       // Extraction du jour
       let dayOfWeek = '';
       if (isOccurrence && sessionAny.actual_date) {
-        // Convertir la date en jour de la semaine
-        const date = new Date(sessionAny.actual_date);
-        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        dayOfWeek = days[date.getDay()];
+        try {
+          // Convertir la date en jour de la semaine
+          // Parser la date en tant que date locale pour éviter les problèmes de fuseau horaire
+          const [year, month, day] = sessionAny.actual_date.split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          const dayIndex = date.getDay();
+          dayOfWeek = days[dayIndex] || '';
+          console.log('Day parsing:', {
+            actual_date: sessionAny.actual_date,
+            parsed: date,
+            dayIndex,
+            dayOfWeek
+          });
+        } catch (error) {
+          console.error('Erreur lors du parsing de la date:', error);
+          dayOfWeek = '';
+        }
       } else {
         dayOfWeek = editingSession.time_slot_details?.day_of_week || '';
       }
-      console.log('Day:', dayOfWeek);
+      console.log('Day final:', dayOfWeek);
 
       // Extraction des horaires
       let startTime = '';
@@ -163,18 +178,19 @@ export function SessionForm({
 
       const formDataValues = {
         id: editingSession.id,
-        course: courseId,
-        teacher: teacherId,
-        room: roomId,
-        day: dayOfWeek,
-        startTime: startTime,
-        endTime: endTime,
+        course: courseId || '',
+        teacher: teacherId || '',
+        room: roomId || '',
+        day: dayOfWeek || '',
+        startTime: startTime || '',
+        endTime: endTime || '',
         sessionType: sessionType,
-        expectedStudents: expectedStudents,
-        notes: editingSession.notes || ''
+        expectedStudents: expectedStudents || 30,
+        notes: (isOccurrence ? sessionAny.notes : editingSession.notes) || ''
       };
 
       console.log('Form data final:', formDataValues);
+      console.log('Valeurs non-vides:', Object.entries(formDataValues).filter(([_, v]) => v !== '' && v !== null && v !== undefined));
       setFormData(formDataValues);
     } else {
       // Reset form for new session
@@ -241,8 +257,8 @@ export function SessionForm({
                     <BookOpen className="h-4 w-4 text-blue-500" />
                     Cours
                   </Label>
-                  <Select 
-                    value={formData.course.toString()} 
+                  <Select
+                    value={formData.course ? formData.course.toString() : undefined}
                     onValueChange={(value) => handleChange('course', parseInt(value))}
                   >
                     <SelectTrigger>
@@ -285,8 +301,8 @@ export function SessionForm({
                     <User className="h-4 w-4 text-green-500" />
                     Enseignant
                   </Label>
-                  <Select 
-                    value={formData.teacher.toString()} 
+                  <Select
+                    value={formData.teacher ? formData.teacher.toString() : undefined}
                     onValueChange={(value) => handleChange('teacher', parseInt(value))}
                   >
                     <SelectTrigger>
@@ -307,8 +323,8 @@ export function SessionForm({
                     <MapPin className="h-4 w-4 text-purple-500" />
                     Salle
                   </Label>
-                  <Select 
-                    value={formData.room.toString()} 
+                  <Select
+                    value={formData.room ? formData.room.toString() : undefined}
                     onValueChange={(value) => handleChange('room', parseInt(value))}
                   >
                     <SelectTrigger>
@@ -329,8 +345,8 @@ export function SessionForm({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Jour</Label>
-                  <Select 
-                    value={formData.day} 
+                  <Select
+                    value={formData.day || undefined}
                     onValueChange={(value) => handleChange('day', value)}
                   >
                     <SelectTrigger>
